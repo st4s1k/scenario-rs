@@ -199,15 +199,14 @@ fn sftp_copy(
     info!("{}", "Source:".yellow());
     let source_path = command_config.source_path.as_ref()
         .ok_or_else(|| anyhow!("Expected a source path for SftpCopy action"))?;
+    let source_path = replace_placeholders(source_path, variables);
     info!("{}", source_path.bold());
 
     info!("{}", "Destination:".yellow());
     let destination_path = command_config.destination_path.as_ref()
         .ok_or_else(|| anyhow!("Expected a destination path for SftpCopy action"))?;
-    info!("{}", destination_path.bold());
-
-    let source_path = replace_placeholders(source_path, variables);
     let destination_path = replace_placeholders(destination_path, variables);
+    info!("{}", destination_path.bold());
 
     let sftp = session.sftp()?;
     let mut buffer = Vec::new();
