@@ -29,10 +29,11 @@ pub mod deploy_rs {
         pub error_message: Option<String>,
         pub source_path: Option<String>,
         pub destination_path: Option<String>,
+        pub rollback: Option<Vec<CommandConfig>>,
     }
 
     #[derive(Deserialize)]
-    pub struct Config {
+    pub struct DeployConfig {
         pub credentials: Credentials,
         pub server: Server,
         pub variables: HashMap<String, String>,

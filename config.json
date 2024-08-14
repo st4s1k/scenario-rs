@@ -20,39 +20,97 @@
     {
       "action": "RemoteSudo",
       "description": "Stopping the service on remote server",
-      "command": "sudo -S {remote_service_script_path} stop",
+      "command": "{remote_service_script_path} stop",
       "error_message": "Failed to stop the service on the remote server."
     },
     {
       "action": "RemoteSudo",
       "description": "Creating backup of current deployment",
-      "command": "sudo -S cp -a {remote_deploy_path} {backup_path}",
-      "error_message": "Failed to create backup of the current deployment."
+      "command": "cp -a {remote_deploy_path} {backup_path}",
+      "error_message": "Failed to create backup of the current deployment.",
+      "rollback": [
+        {
+          "action": "RemoteSudo",
+          "description": "Starting the service on remote server",
+          "command": "{remote_service_script_path} start",
+          "error_message": "Failed to start the service on the remote server."
+        }
+      ]
     },
     {
       "action": "RemoteSudo",
       "description": "Removing current deployment",
-      "command": "sudo -S rm {remote_deploy_path} -f",
-      "error_message": "Failed to remove the current deployment."
+      "command": "rm {remote_deploy_path} -f",
+      "error_message": "Failed to remove the current deployment.",
+      "rollback": [
+        {
+          "action": "RemoteSudo",
+          "description": "Starting the service on remote server",
+          "command": "{remote_service_script_path} start",
+          "error_message": "Failed to start the service on the remote server."
+        }
+      ]
     },
     {
       "action": "SftpCopy",
       "description": "Copying new deploy file to server",
       "source_path": "{local_jar_path}",
       "destination_path": "{remote_base_path}/{local_jar_basename}",
-      "error_message": "Failed to copy new deploy file to server."
+      "error_message": "Failed to copy new deploy file to server.",
+      "rollback": [
+        {
+          "action": "RemoteSudo",
+          "description": "Restoring backup of current deployment",
+          "command": "cp -a {backup_path} {remote_deploy_path}",
+          "error_message": "Failed to restore backup of the current deployment."
+        },
+        {
+          "action": "RemoteSudo",
+          "description": "Starting the service on remote server",
+          "command": "{remote_service_script_path} start",
+          "error_message": "Failed to start the service on the remote server."
+        }
+      ]
     },
     {
       "action": "RemoteSudo",
       "description": "Deploying the new file",
-      "command": "sudo -S mv {remote_base_path}/{local_jar_basename} {remote_deploy_path}",
-      "error_message": "Failed to deploy the new file."
+      "command": "mv {remote_base_path}/{local_jar_basename} {remote_deploy_path}",
+      "error_message": "Failed to deploy the new file.",
+      "rollback": [
+        {
+          "action": "RemoteSudo",
+          "description": "Restoring backup of current deployment",
+          "command": "cp -a {backup_path} {remote_deploy_path}",
+          "error_message": "Failed to restore backup of the current deployment."
+        },
+        {
+          "action": "RemoteSudo",
+          "description": "Starting the service on remote server",
+          "command": "{remote_service_script_path} start",
+          "error_message": "Failed to start the service on the remote server."
+        }
+      ]
     },
     {
       "action": "RemoteSudo",
       "description": "Starting the service on remote server",
-      "command": "sudo -S {remote_service_script_path} start",
-      "error_message": "Failed to start the service on the remote server."
+      "command": "{remote_service_script_path} start",
+      "error_message": "Failed to start the service on the remote server.",
+      "rollback": [
+        {
+          "action": "RemoteSudo",
+          "description": "Restoring backup of current deployment",
+          "command": "cp -a {backup_path} {remote_deploy_path}",
+          "error_message": "Failed to restore backup of the current deployment."
+        },
+        {
+          "action": "RemoteSudo",
+          "description": "Starting the service on remote server",
+          "command": "{remote_service_script_path} start",
+          "error_message": "Failed to start the service on the remote server."
+        }
+      ]
     }
   ]
 }
