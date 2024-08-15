@@ -31,7 +31,7 @@ struct Cli {
 }
 
 fn main() {
-    let cli = Cli::parse();
+    let cli: Cli = Cli::parse();
 
     let server: Server = Server::new(&cli.host, &cli.port);
 
@@ -39,14 +39,14 @@ fn main() {
     let password: &str = &cli.password;
     let credentials: Credentials = Credentials::new(username, password);
 
-    let timestamp: &String = &Local::now().format("%Y-%m-%dT%H%M%S%:z").to_string();
-    let local_jar_path = cli.jar.as_ref()
+    let timestamp: String = Local::now().format("%Y-%m-%dT%H%M%S%:z").to_string();
+    let local_jar_path: String = cli.jar.as_ref()
         .expect("Failed to get jar file path")
         .as_path()
         .as_os_str().to_os_string()
         .into_string()
         .expect("Failed to convert jar file path to string");
-    let local_jar_basename = cli.jar.as_ref()
+    let local_jar_basename: String = cli.jar.as_ref()
         .expect("Failed to get jar file path")
         .as_path()
         .file_name()
@@ -55,13 +55,14 @@ fn main() {
         .into_string()
         .expect("Failed to convert jar file basename to string");
 
-    let mut additional_variables: HashMap<String, String> = HashMap::new();
-    additional_variables.insert("username".to_string(), username.to_string());
-    additional_variables.insert("timestamp".to_string(), timestamp.to_string());
-    additional_variables.insert("local_jar_path".to_string(), local_jar_path);
-    additional_variables.insert("local_jar_basename".to_string(), local_jar_basename);
+    let additional_variables: HashMap<String, String> = HashMap::from([
+        ("username".to_string(), username.to_string()),
+        ("timestamp".to_string(), timestamp),
+        ("local_jar_path".to_string(), local_jar_path),
+        ("local_jar_basename".to_string(), local_jar_basename)
+    ]);
 
-    let scenario_file_path = cli.scenario
+    let scenario_file_path: PathBuf = cli.scenario
         .expect("Failed to get scenario file path");
     let scenario_file: File = File::open(scenario_file_path)
         .expect("Failed to open scenario file");
