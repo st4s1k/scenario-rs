@@ -1,4 +1,4 @@
-use crate::data::{Credentials, RemoteSudo, Scenario, ScenarioConfig, Server, SftpCopy, Step, Variables};
+use crate::data::{Credentials, InternalVariables, InternalVariablesConfig, RemoteSudo, Scenario, ScenarioConfig, Server, SftpCopy, Step, Variables};
 use anyhow::{anyhow, Context, Result};
 use colored::Colorize;
 use regex::Regex;
@@ -7,8 +7,8 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::ops::{Deref, DerefMut};
-use std::path::Path;
+use std::ops::Deref;
+use std::path::{Path, PathBuf};
 use tracing::{debug, error, info};
 use tracing_subscriber::FmtSubscriber;
 
@@ -20,20 +20,28 @@ impl Scenario {
     pub fn new(
         server: Server,
         credentials: Credentials,
-        scenario_file: File,
-        additional_variables: HashMap<String, String>,
+        scenario_file_path: PathBuf,
+        internal_variables: InternalVariables,
     ) -> Result<Scenario> {
-        let mut scenario_config: ScenarioConfig = serde_json::from_reader(scenario_file)
+        let scenario_file: File = File::open(scenario_file_path)
+            .expect("Failed to open scenario file");
+        let config: ScenarioConfig = serde_json::from_reader(scenario_file)
             .with_context(|| "Failed to parse scenario file")?;
 
-        for (key, value) in additional_variables {
-            scenario_config.variables.deref_mut().insert(key, value);
-        };
+        internal_variables
+            .validate(&config.variables.internal)
+            .with_context(|| "Expected internal variables do not match the actual")?;
 
+        let mut variables_map = HashMap::<String, String>::new();
+        variables_map.extend(internal_variables.clone());
+        variables_map.extend(config.variables.custom.clone());
+
+        let variables = Variables(variables_map);
         let mut scenario = Scenario {
             server,
             credentials,
-            config: scenario_config,
+            variables,
+            config,
         };
 
         scenario.resolve_placeholders()
@@ -43,7 +51,7 @@ impl Scenario {
     }
 
     fn resolve_placeholders(&mut self) -> Result<()> {
-        let variables = &mut self.config.variables;
+        let variables = &mut self.variables;
         variables.resolve_placeholders()
             .with_context(|| "Failed to resolve placeholders in variables")?;
         for step in &mut self.config.steps {
@@ -316,3 +324,25 @@ where
 
 impl HasPlaceholders for String {}
 impl HasPlaceholders for &str {}
+
+impl InternalVariables {
+    fn validate(&self, config: &InternalVariablesConfig) -> Result<()> {
+        let undeclared_but_found =
+            self.keys().into_iter()
+                .filter(|var| !config.contains(var))
+                .map(|var| var.to_string())
+                .collect::<Vec<String>>();
+        let declared_but_not_found =
+            config.iter()
+                .filter(|&var| !&self.contains_key(var))
+                .map(|var| var.to_string())
+                .collect::<Vec<String>>();
+
+        if !undeclared_but_found.is_empty()
+            || !declared_but_not_found.is_empty() {
+            return Err(anyhow!("undeclared: {:?}, not found: {:?}", undeclared_but_found, declared_but_not_found));
+        }
+
+        Ok(())
+    }
+}

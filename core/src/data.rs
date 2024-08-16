@@ -5,6 +5,7 @@ use std::ops::{Deref, DerefMut};
 pub struct Scenario {
     pub(crate) server: Server,
     pub(crate) credentials: Credentials,
+    pub(crate) variables: Variables,
     pub(crate) config: ScenarioConfig,
 }
 
@@ -30,17 +31,18 @@ pub struct Credentials {
 }
 
 impl Credentials {
-    pub fn new(user: &str, password: &str) -> Credentials {
-        Credentials {
-            username: user.to_string(),
-            password: password.to_string(),
-        }
+    pub fn new(username: String, password: String) -> Credentials {
+        Credentials { username, password }
+    }
+
+    pub fn username(&self) -> &str {
+        &self.username
     }
 }
 
 #[derive(Deserialize, Debug)]
 pub struct ScenarioConfig {
-    pub(crate) variables: Variables,
+    pub(crate) variables: VariablesConfig,
     pub(crate) complete_message: Option<String>,
     pub(crate) steps: Vec<Step>,
 }
@@ -98,8 +100,7 @@ impl Step {
     }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct Variables(HashMap<String, String>);
+pub struct Variables(pub(crate) HashMap<String, String>);
 
 impl Deref for Variables {
     type Target = HashMap<String, String>;
@@ -109,6 +110,66 @@ impl Deref for Variables {
 }
 
 impl DerefMut for Variables {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct InternalVariables(HashMap<String, String>);
+
+impl InternalVariables {
+    pub fn new<const N: usize>(variables: [(String, String); N]) -> InternalVariables {
+        InternalVariables(HashMap::from(variables))
+    }
+}
+
+impl Deref for InternalVariables {
+    type Target = HashMap<String, String>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for InternalVariables {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct VariablesConfig {
+    pub(crate) internal: InternalVariablesConfig,
+    pub(crate) custom: CustomVariables,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct InternalVariablesConfig(Vec<String>);
+
+impl Deref for InternalVariablesConfig {
+    type Target = Vec<String>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for InternalVariablesConfig {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct CustomVariables(HashMap<String, String>);
+
+impl Deref for CustomVariables {
+    type Target = HashMap<String, String>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for CustomVariables {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }

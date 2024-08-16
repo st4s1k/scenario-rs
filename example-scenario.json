@@ -1,10 +1,18 @@
 {
   "variables": {
-    "service_name": "my-service",
-    "remote_service_script_path": "/usr/local/bin/{service_name}.sh",
-    "remote_deploy_path": "/usr/local/{service_name}/{service_name}.jar",
-    "backup_path": "/u01/backup/{service_name}/{service_name}-{timestamp}.jar",
-    "remote_base_path": "/home/{username}"
+    "internal": [
+      "service_name",
+      "username",
+      "timestamp",
+      "local_jar_path",
+      "local_jar_basename"
+    ],
+    "custom": {
+      "remote_service_script_path": "/usr/local/bin/{service_name}.sh",
+      "remote_deploy_path": "/usr/local/{service_name}/{service_name}.jar",
+      "backup_path": "/u01/backup/{service_name}/{service_name}-{timestamp}.jar",
+      "remote_base_path": "/home/{username}"
+    }
   },
   "complete_message": "Deployment completed successfully!",
   "steps": [
