@@ -1,6 +1,9 @@
+use crate::error::ScenarioConfigError;
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::fs::File;
 use std::ops::{Deref, DerefMut};
+use std::path::PathBuf;
 
 pub struct Scenario {
     pub(crate) server: Server,
@@ -43,8 +46,19 @@ impl Credentials {
 #[derive(Deserialize, Debug)]
 pub struct ScenarioConfig {
     pub(crate) variables: VariablesConfig,
-    pub(crate) complete_message: Option<String>,
     pub(crate) steps: Vec<Step>,
+}
+
+impl TryFrom<PathBuf> for ScenarioConfig {
+    type Error = ScenarioConfigError;
+
+    fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
+        let config_file: File = File::open(value)
+            .map_err(ScenarioConfigError::CannotOpenFile)?;
+        let config = serde_json::from_reader(config_file)
+            .map_err(ScenarioConfigError::CannotReadJson)?;
+        Ok(config)
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -116,22 +130,22 @@ impl DerefMut for Variables {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct InternalVariables(HashMap<String, String>);
+pub struct RequiredVariables(HashMap<String, String>);
 
-impl InternalVariables {
-    pub fn new<const N: usize>(variables: [(String, String); N]) -> InternalVariables {
-        InternalVariables(HashMap::from(variables))
+impl RequiredVariables {
+    pub fn new<const N: usize>(variables: [(String, String); N]) -> RequiredVariables {
+        RequiredVariables(HashMap::from(variables))
     }
 }
 
-impl Deref for InternalVariables {
+impl Deref for RequiredVariables {
     type Target = HashMap<String, String>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl DerefMut for InternalVariables {
+impl DerefMut for RequiredVariables {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -139,37 +153,37 @@ impl DerefMut for InternalVariables {
 
 #[derive(Deserialize, Debug)]
 pub struct VariablesConfig {
-    pub(crate) internal: InternalVariablesConfig,
-    pub(crate) custom: CustomVariables,
+    pub(crate) required: RequiredVariablesConfig,
+    pub(crate) defined: DefinedVariables,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct InternalVariablesConfig(Vec<String>);
+pub struct RequiredVariablesConfig(Vec<String>);
 
-impl Deref for InternalVariablesConfig {
+impl Deref for RequiredVariablesConfig {
     type Target = Vec<String>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl DerefMut for InternalVariablesConfig {
+impl DerefMut for RequiredVariablesConfig {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
 #[derive(Deserialize, Debug)]
-pub struct CustomVariables(HashMap<String, String>);
+pub struct DefinedVariables(HashMap<String, String>);
 
-impl Deref for CustomVariables {
+impl Deref for DefinedVariables {
     type Target = HashMap<String, String>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl DerefMut for CustomVariables {
+impl DerefMut for DefinedVariables {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
