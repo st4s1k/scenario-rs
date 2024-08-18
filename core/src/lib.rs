@@ -1,40 +1,44 @@
-use crate::data::{
-    Credentials,
-    RemoteSudo,
-    RequiredVariables,
-    RequiredVariablesConfig,
-    Scenario,
-    ScenarioConfig,
-    Server,
-    SftpCopy,
-    Step,
-    Variables,
+use crate::{
+    data::{
+        Credentials,
+        ExecutionLifecycle,
+        RemoteSudo,
+        RemoteSudoLifecycle,
+        RequiredVariables,
+        RequiredVariablesConfig,
+        RollbackLifecycle,
+        Scenario,
+        ScenarioConfig,
+        Server,
+        SftpCopy,
+        SftpCopyLifecycle,
+        Step,
+        StepLifecycle,
+        Variables,
+    },
+    error::{
+        PlaceholderResolutionError,
+        RemoteSudoError,
+        RequiredVariablesError,
+        ScenarioError,
+        SftpCopyError,
+        StepError,
+    },
 };
-use crate::error::{
-    PlaceholderResolutionError,
-    RemoteSudoError,
-    RequiredVariablesError,
-    ScenarioError,
-    SftpCopyError,
-    StepError,
-};
-use colored::Colorize;
+use indicatif::ProgressBar;
 use regex::Regex;
 use ssh2::{Channel, Session};
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::{Read, Write};
-use std::net::TcpStream;
-use std::ops::Deref;
-use std::path::Path;
-use tracing::{debug, info};
-use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::FmtSubscriber;
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{Read, Write},
+    net::TcpStream,
+    ops::Deref,
+    path::Path,
+};
 
 pub mod data;
 pub mod error;
-
-const SEPARATOR: &'static str = "------------------------------------------------------------";
 
 impl Scenario {
     pub fn new(
@@ -76,21 +80,21 @@ impl Scenario {
     }
 
     pub fn execute(&self) -> Result<(), ScenarioError> {
-        let _tracing_guard =
-            FmtSubscriber::builder()
-                .compact()
-                .without_time()
-                .set_default();
+        self.execute_with_lifecycle(ExecutionLifecycle::default())
+    }
 
-        let session: &Session = &self.new_session()?;
+    pub fn execute_with_lifecycle(
+        &self,
+        mut lifecycle: ExecutionLifecycle,
+    ) -> Result<(), ScenarioError> {
+        let session: Session = self.new_session()?;
 
-        let total_steps: usize = (&self.config.steps).len();
+        (lifecycle.before)(&self);
 
-        for (index, step) in self.config.steps.iter().enumerate() {
-            let step_number: usize = index + 1;
-            let description = step.description();
-            info!("{}", format!("[{step_number}/{total_steps}] {description}").purple());
-            self.execute_command(session, step)?;
+        let steps = &self.config.steps;
+        for (index, step) in steps.iter().enumerate() {
+            (lifecycle.step.before)(index, step, &steps);
+            self.execute_step(&session, step, &mut lifecycle.step)?;
         }
 
         Ok(())
@@ -115,25 +119,26 @@ impl Scenario {
         Ok(session)
     }
 
-    fn execute_command(
+    fn execute_step(
         &self,
         session: &Session,
         step: &Step,
+        lifecycle: &mut StepLifecycle,
     ) -> Result<(), ScenarioError> {
         let error_message = step.error_message().to_string();
         let credentials = &self.credentials;
 
         let step_result = match step {
             Step::RemoteSudo { remote_sudo, .. } =>
-                remote_sudo.execute(credentials, &session)
+                remote_sudo.execute(credentials, session, &mut lifecycle.remote_sudo)
                     .map_err(|error| ScenarioError::CannotExecuteRemoteSudoCommand(error, error_message)),
             Step::SftpCopy { sftp_copy, .. } =>
-                sftp_copy.execute(&session)
+                sftp_copy.execute(session, &mut lifecycle.sftp_copy)
                     .map_err(|error| ScenarioError::CannotExecuteSftpCopyCommand(error, error_message))
         };
 
         if let Err(error) = step_result {
-            step.rollback(&credentials, &session)
+            step.rollback(&credentials, session, &mut lifecycle.rollback)
                 .map_err(ScenarioError::CannotRollbackStep)?;
             return Err(error);
         };
@@ -147,25 +152,21 @@ impl Step {
         &self,
         credentials: &Credentials,
         session: &Session,
+        lifecycle: &mut RollbackLifecycle,
     ) -> Result<(), StepError> {
+        (lifecycle.before)(&self);
         if let Some(rollback_steps) = self.rollback_steps() {
             for (index, rollback_step) in rollback_steps.iter().enumerate() {
-                let step_number = index + 1;
-                let total_rollback_steps = rollback_steps.len();
-                let description = rollback_step.description();
-                info!("{}", SEPARATOR);
-                info!("{}", format!("[{}] [{step_number}/{total_rollback_steps}] {}", "rollback".red(), description).purple());
+                (lifecycle.step.before)(index, rollback_step, rollback_steps);
                 match rollback_step {
                     Step::RemoteSudo { remote_sudo, .. } =>
-                        remote_sudo.execute(&credentials, &session)
+                        remote_sudo.execute(&credentials, &session, &mut lifecycle.step.remote_sudo)
                             .map_err(StepError::CannotRollbackRemoteSudo)?,
                     Step::SftpCopy { sftp_copy, .. } =>
-                        sftp_copy.execute(&session)
+                        sftp_copy.execute(&session, &mut lifecycle.step.sftp_copy)
                             .map_err(StepError::CannotRollbackSftpCopy)?
                 }
             }
-        } else {
-            info!("[{}] No rollback actions found", "rollback".red());
         }
         Ok(())
     }
@@ -187,27 +188,18 @@ impl RemoteSudo {
         &self,
         credentials: &Credentials,
         session: &Session,
+        lifecycle: &mut RemoteSudoLifecycle,
     ) -> Result<(), RemoteSudoError> {
-        info!("{}", "Executing:".yellow());
+        (lifecycle.before)(&self);
 
-        let command = &self.command;
-        info!("{}", command.bold());
-
-        let password = &credentials.password;
         let mut channel: Channel = session.channel_session()
             .map_err(RemoteSudoError::CannotEstablishSessionChannel)?;
+        let password = &credentials.password;
+        let command = &self.command;
         channel.exec(&format!("echo {password} | sudo -S {command}"))
             .map_err(RemoteSudoError::CannotExecuteRemoteCommand)?;
 
-        let mut output = String::new();
-        channel.read_to_string(&mut output)
-            .map_err(RemoteSudoError::CannotReadRemoteCommandOutput)?;
-        let output = output.trim();
-        info!("{}", output.chars().take(1000).collect::<String>().trim());
-        if output.len() > 1000 {
-            debug!("{}", output);
-            info!("...output truncated...");
-        }
+        (lifecycle.channel_established)(&mut channel);
 
         let exit_status = channel.exit_status()
             .map_err(RemoteSudoError::CannotObtainRemoteCommandExitStatus)?;
@@ -230,35 +222,33 @@ impl SftpCopy {
     fn execute(
         &self,
         session: &Session,
+        lifecycle: &mut SftpCopyLifecycle,
     ) -> Result<(), SftpCopyError> {
-        info!("{}", "Source:".yellow());
-        let source_path = &self.source_path;
-        info!("{}", source_path.bold());
-
-        info!("{}", "Destination:".yellow());
-        let destination_path = &self.destination_path;
-        info!("{}", destination_path.bold());
+        (lifecycle.before)(&self);
 
         let sftp = session.sftp()
             .map_err(SftpCopyError::CannotOpenChannelAndInitializeSftp)?;
 
-        let mut source_file = File::open(&(&self.source_path))
+        let mut source_file = File::open(&self.source_path)
             .map_err(SftpCopyError::CannotOpenSourceFile)?;
-        let destination_file = sftp.create(Path::new(&destination_path))
+        let mut destination_file = sftp.create(Path::new(&self.destination_path))
             .map_err(SftpCopyError::CannotCreateDestinationFile)?;
 
-        let metadata = source_file.metadata()
-            .map_err(SftpCopyError::CannotQuerySourceMetadata)?;
-        let pb = indicatif::ProgressBar::new(metadata.len());
-        let mut destination_file = pb.wrap_write(destination_file);
-        let mut buffer = Vec::new();
+        let pb = ProgressBar::hidden();
 
-        source_file.read_to_end(&mut buffer)
+        (lifecycle.files_ready)(&source_file, &mut destination_file, &pb);
+
+        let mut copy_buffer = Vec::new();
+
+        source_file.read_to_end(&mut copy_buffer)
             .map_err(SftpCopyError::CannotReadSourceFile)?;
-        destination_file.write_all(&buffer)
+
+        pb.wrap_write(destination_file).write_all(&copy_buffer)
             .map_err(SftpCopyError::CannotWriteDestinationFile)?;
 
-        pb.finish_with_message("Copied source file to destination");
+        pb.finish();
+
+        (lifecycle.after)();
 
         Ok(())
     }

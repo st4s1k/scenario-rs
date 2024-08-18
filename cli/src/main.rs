@@ -3,14 +3,33 @@ use clap::Parser;
 use colored::Colorize;
 use deploy_rs_core::{
     data::Credentials,
+    data::ExecutionLifecycle,
+    data::RemoteSudo,
+    data::RemoteSudoLifecycle,
     data::RequiredVariables,
+    data::RollbackLifecycle,
+    data::RollbackStepLifecycle,
     data::Scenario,
     data::ScenarioConfig,
     data::Server,
+    data::SftpCopy,
+    data::SftpCopyLifecycle,
+    data::Step,
+    data::StepLifecycle,
 };
-use std::path::PathBuf;
-use std::process::ExitCode;
-use tracing::{error, info};
+use indicatif::{
+    ProgressBar,
+    ProgressDrawTarget,
+    ProgressState,
+    ProgressStyle,
+};
+use std::{
+    fs::File,
+    io::Read,
+    path::PathBuf,
+    process::ExitCode,
+};
+use tracing::{debug, error, info, warn};
 use tracing_subscriber::FmtSubscriber;
 
 #[derive(Parser, Debug)]
@@ -108,7 +127,9 @@ fn main() -> ExitCode {
         }
     };
 
-    match deploy_scenario.execute() {
+    let lifecycle = execution_lifecycle();
+
+    match deploy_scenario.execute_with_lifecycle(lifecycle) {
         Ok(_) => {
             info!("{}", SEPARATOR);
             info!("{}", "Deployment completed successfully!".cyan());
@@ -122,4 +143,101 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+fn execution_lifecycle() -> ExecutionLifecycle {
+    let mut lifecycle = ExecutionLifecycle::default();
+    lifecycle.step = step_lifecycle();
+    lifecycle
+}
+
+fn step_lifecycle() -> StepLifecycle {
+    let mut lifecycle = StepLifecycle::default();
+    lifecycle.before =
+        |index: usize, step: &Step, steps: &Vec<Step>| {
+            let step_number: usize = index + 1;
+            let description = step.description();
+            let total_steps: usize = (&steps).len();
+            info!("{}", SEPARATOR);
+            info!("{}", format!("[{step_number}/{total_steps}] {description}").purple());
+        };
+    lifecycle.remote_sudo = remote_sudo_lifecycle();
+    lifecycle.sftp_copy = sftp_copy_lifecycle();
+    lifecycle.rollback = rollback_lifecycle();
+    lifecycle
+}
+
+fn remote_sudo_lifecycle() -> RemoteSudoLifecycle {
+    let mut lifecycle = RemoteSudoLifecycle::default();
+    lifecycle.before = |remote_sudo: &RemoteSudo| {
+        info!("{}", "Executing:".yellow());
+        info!("{}", &remote_sudo.command().bold());
+    };
+    lifecycle.channel_established = |channel: &mut dyn Read| {
+        let mut output = String::new();
+        if (*channel).read_to_string(&mut output).is_err() {
+            warn!("{}", SEPARATOR);
+            warn!("Channel output is not a valid UTF-8");
+            warn!("{}", SEPARATOR);
+            return;
+        }
+        let output = output.trim();
+        info!("{}", output.chars().take(1000).collect::<String>().trim());
+        if output.len() > 1000 {
+            debug!("{}", output);
+            info!("...output truncated...");
+        }
+    };
+    lifecycle
+}
+
+fn sftp_copy_lifecycle() -> SftpCopyLifecycle {
+    let mut lifecycle = SftpCopyLifecycle::default();
+    lifecycle.before = |sftp_copy: &SftpCopy| {
+        info!("{}", "Source:".yellow());
+        info!("{}", &sftp_copy.source_path().bold());
+        info!("{}", "Destination:".yellow());
+        info!("{}", &sftp_copy.destination_path().bold());
+    };
+    lifecycle.files_ready =
+        |source_file: &File, _, pb: &ProgressBar| {
+            if let Ok(metadata) = source_file.metadata() {
+                pb.set_length(metadata.len());
+                pb.set_draw_target(ProgressDrawTarget::stderr());
+                pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})").unwrap()
+                    .with_key("eta", |state: &ProgressState, w: &mut dyn std::fmt::Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
+                    .progress_chars("#>-"));
+            } else {
+                warn!("{}", SEPARATOR);
+                warn!("Cannot query source file metadata");
+                warn!("{}", SEPARATOR);
+            }
+        };
+    lifecycle
+}
+
+fn rollback_lifecycle() -> RollbackLifecycle {
+    let mut lifecycle = RollbackLifecycle::default();
+    lifecycle.before =
+        |step: &Step| {
+            if step.rollback_steps().is_none() {
+                info!("{}", SEPARATOR);
+                info!("[{}] No rollback actions found", "rollback".red());
+            }
+        };
+    lifecycle.step = rollback_step_lifecycle();
+    lifecycle
+}
+
+fn rollback_step_lifecycle() -> RollbackStepLifecycle {
+    let mut lifecycle = RollbackStepLifecycle::default();
+    lifecycle.before =
+        |index: usize, rollback_step: &Step, rollback_steps: &Vec<Step>| {
+            let step_number = index + 1;
+            let total_rollback_steps = rollback_steps.len();
+            let description = rollback_step.description();
+            info!("{}", SEPARATOR);
+            info!("{}", format ! ("[{}] [{step_number}/{total_rollback_steps}] {}", "rollback".red(), description).purple());
+        };
+    lifecycle
 }

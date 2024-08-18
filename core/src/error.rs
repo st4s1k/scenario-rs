@@ -50,8 +50,6 @@ pub enum RemoteSudoError {
     CannotEstablishSessionChannel(#[source] ssh2::Error),
     #[error("Cannot execute remote command")]
     CannotExecuteRemoteCommand(#[source] ssh2::Error),
-    #[error("Cannot read remote command output")]
-    CannotReadRemoteCommandOutput(#[source] std::io::Error),
     #[error("Cannot obtain exit status of remote command")]
     CannotObtainRemoteCommandExitStatus(#[source] ssh2::Error),
     #[error("Remote command failed with status code {0}")]
@@ -68,8 +66,6 @@ pub enum SftpCopyError {
     CannotOpenSourceFile(#[source] std::io::Error),
     #[error("Cannot create a destination file")]
     CannotCreateDestinationFile(#[source] ssh2::Error),
-    #[error("Cannot query source file metadata")]
-    CannotQuerySourceMetadata(#[source] std::io::Error),
     #[error("Cannot read from source file")]
     CannotReadSourceFile(#[source] std::io::Error),
     #[error("Cannot write to destination file")]
