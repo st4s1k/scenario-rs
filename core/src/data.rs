@@ -1,13 +1,6 @@
-use crate::error::ScenarioConfigError;
-use indicatif::ProgressBar;
-use serde::Deserialize;
-use std::{
-    collections::HashMap,
-    fs::File,
-    io::{Read, Write},
-    ops::{Deref, DerefMut},
-    path::PathBuf,
-};
+use crate::data::config::ScenarioConfig;
+use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
 
 pub struct Scenario {
     pub(crate) server: Server,
@@ -16,7 +9,6 @@ pub struct Scenario {
     pub(crate) config: ScenarioConfig,
 }
 
-#[derive(Deserialize, Debug)]
 pub struct Server {
     pub(crate) host: String,
     pub(crate) port: String,
@@ -31,7 +23,6 @@ impl Server {
     }
 }
 
-#[derive(Deserialize, Debug)]
 pub struct Credentials {
     pub(crate) username: String,
     pub(crate) password: String,
@@ -44,93 +35,6 @@ impl Credentials {
 
     pub fn username(&self) -> &str {
         &self.username
-    }
-}
-
-#[derive(Deserialize, Debug)]
-pub struct ScenarioConfig {
-    pub(crate) variables: VariablesConfig,
-    pub(crate) steps: Vec<Step>,
-}
-
-impl TryFrom<PathBuf> for ScenarioConfig {
-    type Error = ScenarioConfigError;
-
-    fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
-        let config_file: File = File::open(value)
-            .map_err(ScenarioConfigError::CannotOpenFile)?;
-        let config = serde_json::from_reader(config_file)
-            .map_err(ScenarioConfigError::CannotReadJson)?;
-        Ok(config)
-    }
-}
-
-#[derive(Deserialize, Debug)]
-pub struct RemoteSudo {
-    pub(crate) command: String,
-}
-
-impl RemoteSudo {
-    pub fn command(&self) -> &str {
-        &self.command
-    }
-}
-
-#[derive(Deserialize, Debug)]
-pub struct SftpCopy {
-    pub(crate) source_path: String,
-    pub(crate) destination_path: String,
-}
-
-impl SftpCopy {
-    pub fn source_path(&self) -> &str {
-        &self.source_path
-    }
-
-    pub fn destination_path(&self) -> &str {
-        &self.destination_path
-    }
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(tag = "type")]
-pub enum Step {
-    RemoteSudo {
-        description: String,
-        error_message: String,
-        rollback_steps: Option<Vec<Step>>,
-        #[serde(flatten)]
-        remote_sudo: RemoteSudo,
-    },
-    SftpCopy {
-        description: String,
-        error_message: String,
-        rollback_steps: Option<Vec<Step>>,
-        #[serde(flatten)]
-        sftp_copy: SftpCopy,
-    },
-}
-
-impl Step {
-    pub fn description(&self) -> &str {
-        match self {
-            Step::RemoteSudo { description, .. } => description,
-            Step::SftpCopy { description, .. } => description,
-        }
-    }
-
-    pub fn error_message(&self) -> &str {
-        match self {
-            Step::RemoteSudo { error_message, .. } => error_message,
-            Step::SftpCopy { error_message, .. } => error_message,
-        }
-    }
-
-    pub fn rollback_steps(&self) -> Option<&Vec<Step>> {
-        match self {
-            Step::RemoteSudo { rollback_steps, .. } => rollback_steps.as_ref(),
-            Step::SftpCopy { rollback_steps, .. } => rollback_steps.as_ref(),
-        }
     }
 }
 
@@ -149,7 +53,6 @@ impl DerefMut for Variables {
     }
 }
 
-#[derive(Deserialize, Debug)]
 pub struct RequiredVariables(HashMap<String, String>);
 
 impl RequiredVariables {
@@ -171,132 +74,245 @@ impl DerefMut for RequiredVariables {
     }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct VariablesConfig {
-    pub(crate) required: RequiredVariablesConfig,
-    pub(crate) defined: DefinedVariables,
-}
+pub mod config {
+    use crate::error::ScenarioConfigError;
+    use serde::Deserialize;
+    use std::{
+        collections::HashMap,
+        fs::File,
+        ops::{Deref, DerefMut},
+        path::PathBuf,
+    };
 
-#[derive(Deserialize, Debug)]
-pub struct RequiredVariablesConfig(Vec<String>);
-
-impl Deref for RequiredVariablesConfig {
-    type Target = Vec<String>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
+    #[derive(Deserialize, Debug)]
+    pub struct ScenarioConfig {
+        pub(crate) variables: VariablesConfig,
+        pub(crate) steps: Vec<StepConfig>,
     }
-}
 
-impl DerefMut for RequiredVariablesConfig {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+    impl TryFrom<PathBuf> for ScenarioConfig {
+        type Error = ScenarioConfigError;
+
+        fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
+            let config_file: File = File::open(value)
+                .map_err(ScenarioConfigError::CannotOpenFile)?;
+            let config = serde_json::from_reader(config_file)
+                .map_err(ScenarioConfigError::CannotReadJson)?;
+            Ok(config)
+        }
     }
-}
 
-#[derive(Deserialize, Debug)]
-pub struct DefinedVariables(HashMap<String, String>);
-
-impl Deref for DefinedVariables {
-    type Target = HashMap<String, String>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
+    #[derive(Deserialize, Debug)]
+    pub struct VariablesConfig {
+        pub(crate) required: RequiredVariablesConfig,
+        pub(crate) defined: DefinedVariablesConfig,
     }
-}
 
-impl DerefMut for DefinedVariables {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+    #[derive(Deserialize, Debug)]
+    pub struct RequiredVariablesConfig(Vec<String>);
+
+    impl Deref for RequiredVariablesConfig {
+        type Target = Vec<String>;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
     }
-}
 
-pub struct ExecutionLifecycle {
-    pub before: fn(step: &Scenario),
-    pub step: StepLifecycle,
-}
+    impl DerefMut for RequiredVariablesConfig {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
+    }
 
-impl Default for ExecutionLifecycle {
-    fn default() -> Self {
-        ExecutionLifecycle {
-            before: |_| {},
-            step: Default::default(),
+    #[derive(Deserialize, Debug)]
+    pub struct DefinedVariablesConfig(HashMap<String, String>);
+
+    impl Deref for DefinedVariablesConfig {
+        type Target = HashMap<String, String>;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    impl DerefMut for DefinedVariablesConfig {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
+    }
+    #[derive(Deserialize, Debug)]
+    pub struct RemoteSudoConfig {
+        pub(crate) command: String,
+    }
+
+    impl RemoteSudoConfig {
+        pub fn command(&self) -> &str {
+            &self.command
+        }
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct SftpCopyConfig {
+        pub(crate) source_path: String,
+        pub(crate) destination_path: String,
+    }
+
+    impl SftpCopyConfig {
+        pub fn source_path(&self) -> &str {
+            &self.source_path
+        }
+
+        pub fn destination_path(&self) -> &str {
+            &self.destination_path
+        }
+    }
+
+    #[derive(Deserialize, Debug)]
+    #[serde(tag = "type")]
+    pub enum StepConfig {
+        RemoteSudo {
+            description: String,
+            error_message: String,
+            rollback_steps: Option<Vec<StepConfig>>,
+            #[serde(flatten)]
+            remote_sudo: RemoteSudoConfig,
+        },
+        SftpCopy {
+            description: String,
+            error_message: String,
+            rollback_steps: Option<Vec<StepConfig>>,
+            #[serde(flatten)]
+            sftp_copy: SftpCopyConfig,
+        },
+    }
+
+    impl StepConfig {
+        pub fn description(&self) -> &str {
+            match self {
+                StepConfig::RemoteSudo { description, .. } => description,
+                StepConfig::SftpCopy { description, .. } => description,
+            }
+        }
+
+        pub fn error_message(&self) -> &str {
+            match self {
+                StepConfig::RemoteSudo { error_message, .. } => error_message,
+                StepConfig::SftpCopy { error_message, .. } => error_message,
+            }
+        }
+
+        pub fn rollback_steps(&self) -> Option<&Vec<StepConfig>> {
+            match self {
+                StepConfig::RemoteSudo { rollback_steps, .. } => rollback_steps.as_ref(),
+                StepConfig::SftpCopy { rollback_steps, .. } => rollback_steps.as_ref(),
+            }
         }
     }
 }
 
-pub struct StepLifecycle {
-    pub before: fn(index: usize, step: &Step, steps: &Vec<Step>),
-    pub remote_sudo: RemoteSudoLifecycle,
-    pub sftp_copy: SftpCopyLifecycle,
-    pub rollback: RollbackLifecycle,
-}
+pub mod lifecycles {
+    use crate::data::{
+        config::{
+            RemoteSudoConfig,
+            SftpCopyConfig,
+            StepConfig,
+        },
+        Scenario,
+    };
+    use indicatif::ProgressBar;
+    use std::{
+        fs::File,
+        io::{Read, Write},
+    };
 
-impl Default for StepLifecycle {
-    fn default() -> Self {
-        StepLifecycle {
-            before: |_, _, _| {},
-            remote_sudo: Default::default(),
-            sftp_copy: Default::default(),
-            rollback: Default::default(),
+    pub struct ExecutionLifecycle {
+        pub before: fn(step: &Scenario),
+        pub step: StepLifecycle,
+    }
+
+    impl Default for ExecutionLifecycle {
+        fn default() -> Self {
+            ExecutionLifecycle {
+                before: |_| {},
+                step: Default::default(),
+            }
         }
     }
-}
 
-pub struct RollbackLifecycle {
-    pub before: fn(step: &Step),
-    pub step: RollbackStepLifecycle,
-}
+    pub struct StepLifecycle {
+        pub before: fn(index: usize, step: &StepConfig, steps: &Vec<StepConfig>),
+        pub remote_sudo: RemoteSudoLifecycle,
+        pub sftp_copy: SftpCopyLifecycle,
+        pub rollback: RollbackLifecycle,
+    }
 
-impl Default for RollbackLifecycle {
-    fn default() -> Self {
-        RollbackLifecycle {
-            before: |_| {},
-            step: Default::default(),
+    impl Default for StepLifecycle {
+        fn default() -> Self {
+            StepLifecycle {
+                before: |_, _, _| {},
+                remote_sudo: Default::default(),
+                sftp_copy: Default::default(),
+                rollback: Default::default(),
+            }
         }
     }
-}
 
-pub struct RollbackStepLifecycle {
-    pub before: fn(index: usize, rollback_step: &Step, rollback_steps: &Vec<Step>),
-    pub remote_sudo: RemoteSudoLifecycle,
-    pub sftp_copy: SftpCopyLifecycle,
-}
+    pub struct RollbackLifecycle {
+        pub before: fn(step: &StepConfig),
+        pub step: RollbackStepLifecycle,
+    }
 
-impl Default for RollbackStepLifecycle {
-    fn default() -> Self {
-        RollbackStepLifecycle {
-            before: |_, _, _| {},
-            remote_sudo: Default::default(),
-            sftp_copy: Default::default(),
+    impl Default for RollbackLifecycle {
+        fn default() -> Self {
+            RollbackLifecycle {
+                before: |_| {},
+                step: Default::default(),
+            }
         }
     }
-}
 
-pub struct RemoteSudoLifecycle {
-    pub before: fn(remote_sudo: &RemoteSudo),
-    pub channel_established: fn(channel_reader: &mut dyn Read),
-}
+    pub struct RollbackStepLifecycle {
+        pub before: fn(index: usize, rollback_step: &StepConfig, rollback_steps: &Vec<StepConfig>),
+        pub remote_sudo: RemoteSudoLifecycle,
+        pub sftp_copy: SftpCopyLifecycle,
+    }
 
-impl Default for RemoteSudoLifecycle {
-    fn default() -> Self {
-        RemoteSudoLifecycle {
-            before: |_| {},
-            channel_established: |_| {},
+    impl Default for RollbackStepLifecycle {
+        fn default() -> Self {
+            RollbackStepLifecycle {
+                before: |_, _, _| {},
+                remote_sudo: Default::default(),
+                sftp_copy: Default::default(),
+            }
         }
     }
-}
 
-pub struct SftpCopyLifecycle {
-    pub before: fn(sftp_copy: &SftpCopy),
-    pub files_ready: fn(source_file: &File, destination_writer: &mut dyn Write, pb: &ProgressBar),
-    pub after: fn(),
-}
+    pub struct RemoteSudoLifecycle {
+        pub before: fn(remote_sudo: &RemoteSudoConfig),
+        pub channel_established: fn(channel_reader: &mut dyn Read),
+    }
 
-impl Default for SftpCopyLifecycle {
-    fn default() -> Self {
-        SftpCopyLifecycle {
-            before: |_| {},
-            files_ready: |_, _, _| {},
-            after: || {},
+    impl Default for RemoteSudoLifecycle {
+        fn default() -> Self {
+            RemoteSudoLifecycle {
+                before: |_| {},
+                channel_established: |_| {},
+            }
+        }
+    }
+
+    pub struct SftpCopyLifecycle {
+        pub before: fn(sftp_copy: &SftpCopyConfig),
+        pub files_ready: fn(source_file: &File, destination_writer: &mut dyn Write, pb: &ProgressBar),
+        pub after: fn(),
+    }
+
+    impl Default for SftpCopyLifecycle {
+        fn default() -> Self {
+            SftpCopyLifecycle {
+                before: |_| {},
+                files_ready: |_, _, _| {},
+                after: || {},
+            }
         }
     }
 }

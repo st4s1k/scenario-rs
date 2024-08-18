@@ -1,21 +1,25 @@
 use chrono::Local;
 use clap::Parser;
 use colored::Colorize;
-use deploy_rs_core::{
-    data::Credentials,
-    data::ExecutionLifecycle,
-    data::RemoteSudo,
-    data::RemoteSudoLifecycle,
-    data::RequiredVariables,
-    data::RollbackLifecycle,
-    data::RollbackStepLifecycle,
-    data::Scenario,
-    data::ScenarioConfig,
-    data::Server,
-    data::SftpCopy,
-    data::SftpCopyLifecycle,
-    data::Step,
-    data::StepLifecycle,
+use deploy_rs_core::data::{
+    config::{
+        RemoteSudoConfig,
+        ScenarioConfig,
+        SftpCopyConfig,
+        StepConfig,
+    },
+    lifecycles::{
+        ExecutionLifecycle,
+        RemoteSudoLifecycle,
+        RollbackLifecycle,
+        RollbackStepLifecycle,
+        SftpCopyLifecycle,
+        StepLifecycle,
+    },
+    Credentials,
+    RequiredVariables,
+    Scenario,
+    Server,
 };
 use indicatif::{
     ProgressBar,
@@ -154,7 +158,7 @@ fn execution_lifecycle() -> ExecutionLifecycle {
 fn step_lifecycle() -> StepLifecycle {
     let mut lifecycle = StepLifecycle::default();
     lifecycle.before =
-        |index: usize, step: &Step, steps: &Vec<Step>| {
+        |index: usize, step: &StepConfig, steps: &Vec<StepConfig>| {
             let step_number: usize = index + 1;
             let description = step.description();
             let total_steps: usize = (&steps).len();
@@ -169,7 +173,7 @@ fn step_lifecycle() -> StepLifecycle {
 
 fn remote_sudo_lifecycle() -> RemoteSudoLifecycle {
     let mut lifecycle = RemoteSudoLifecycle::default();
-    lifecycle.before = |remote_sudo: &RemoteSudo| {
+    lifecycle.before = |remote_sudo: &RemoteSudoConfig| {
         info!("{}", "Executing:".yellow());
         info!("{}", &remote_sudo.command().bold());
     };
@@ -193,7 +197,7 @@ fn remote_sudo_lifecycle() -> RemoteSudoLifecycle {
 
 fn sftp_copy_lifecycle() -> SftpCopyLifecycle {
     let mut lifecycle = SftpCopyLifecycle::default();
-    lifecycle.before = |sftp_copy: &SftpCopy| {
+    lifecycle.before = |sftp_copy: &SftpCopyConfig| {
         info!("{}", "Source:".yellow());
         info!("{}", &sftp_copy.source_path().bold());
         info!("{}", "Destination:".yellow());
@@ -219,7 +223,7 @@ fn sftp_copy_lifecycle() -> SftpCopyLifecycle {
 fn rollback_lifecycle() -> RollbackLifecycle {
     let mut lifecycle = RollbackLifecycle::default();
     lifecycle.before =
-        |step: &Step| {
+        |step: &StepConfig| {
             if step.rollback_steps().is_none() {
                 info!("{}", SEPARATOR);
                 info!("[{}] No rollback actions found", "rollback".red());
@@ -232,7 +236,7 @@ fn rollback_lifecycle() -> RollbackLifecycle {
 fn rollback_step_lifecycle() -> RollbackStepLifecycle {
     let mut lifecycle = RollbackStepLifecycle::default();
     lifecycle.before =
-        |index: usize, rollback_step: &Step, rollback_steps: &Vec<Step>| {
+        |index: usize, rollback_step: &StepConfig, rollback_steps: &Vec<StepConfig>| {
             let step_number = index + 1;
             let total_rollback_steps = rollback_steps.len();
             let description = rollback_step.description();

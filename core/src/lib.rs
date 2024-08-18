@@ -1,19 +1,23 @@
 use crate::{
     data::{
+        config::{
+            RemoteSudoConfig,
+            RequiredVariablesConfig,
+            ScenarioConfig,
+            SftpCopyConfig,
+            StepConfig,
+        },
+        lifecycles::{
+            ExecutionLifecycle,
+            RemoteSudoLifecycle,
+            RollbackLifecycle,
+            SftpCopyLifecycle,
+            StepLifecycle,
+        },
         Credentials,
-        ExecutionLifecycle,
-        RemoteSudo,
-        RemoteSudoLifecycle,
         RequiredVariables,
-        RequiredVariablesConfig,
-        RollbackLifecycle,
         Scenario,
-        ScenarioConfig,
         Server,
-        SftpCopy,
-        SftpCopyLifecycle,
-        Step,
-        StepLifecycle,
         Variables,
     },
     error::{
@@ -122,23 +126,23 @@ impl Scenario {
     fn execute_step(
         &self,
         session: &Session,
-        step: &Step,
+        step_config: &StepConfig,
         lifecycle: &mut StepLifecycle,
     ) -> Result<(), ScenarioError> {
-        let error_message = step.error_message().to_string();
+        let error_message = step_config.error_message().to_string();
         let credentials = &self.credentials;
 
-        let step_result = match step {
-            Step::RemoteSudo { remote_sudo, .. } =>
+        let step_result = match step_config {
+            StepConfig::RemoteSudo { remote_sudo, .. } =>
                 remote_sudo.execute(credentials, session, &mut lifecycle.remote_sudo)
                     .map_err(|error| ScenarioError::CannotExecuteRemoteSudoCommand(error, error_message)),
-            Step::SftpCopy { sftp_copy, .. } =>
+            StepConfig::SftpCopy { sftp_copy, .. } =>
                 sftp_copy.execute(session, &mut lifecycle.sftp_copy)
                     .map_err(|error| ScenarioError::CannotExecuteSftpCopyCommand(error, error_message))
         };
 
         if let Err(error) = step_result {
-            step.rollback(&credentials, session, &mut lifecycle.rollback)
+            step_config.rollback(&credentials, session, &mut lifecycle.rollback)
                 .map_err(ScenarioError::CannotRollbackStep)?;
             return Err(error);
         };
@@ -147,7 +151,7 @@ impl Scenario {
     }
 }
 
-impl Step {
+impl StepConfig {
     fn rollback(
         &self,
         credentials: &Credentials,
@@ -159,10 +163,10 @@ impl Step {
             for (index, rollback_step) in rollback_steps.iter().enumerate() {
                 (lifecycle.step.before)(index, rollback_step, rollback_steps);
                 match rollback_step {
-                    Step::RemoteSudo { remote_sudo, .. } =>
+                    StepConfig::RemoteSudo { remote_sudo, .. } =>
                         remote_sudo.execute(&credentials, &session, &mut lifecycle.step.remote_sudo)
                             .map_err(StepError::CannotRollbackRemoteSudo)?,
-                    Step::SftpCopy { sftp_copy, .. } =>
+                    StepConfig::SftpCopy { sftp_copy, .. } =>
                         sftp_copy.execute(&session, &mut lifecycle.step.sftp_copy)
                             .map_err(StepError::CannotRollbackSftpCopy)?
                 }
@@ -173,17 +177,17 @@ impl Step {
 
     fn resolve_placeholders(&mut self, variables: &Variables) -> Result<(), StepError> {
         match self {
-            Step::RemoteSudo { remote_sudo, .. } =>
+            StepConfig::RemoteSudo { remote_sudo, .. } =>
                 remote_sudo.resolve_placeholders(variables)
                     .map_err(StepError::CannotResolveRemoteSudoPlaceholders),
-            Step::SftpCopy { sftp_copy, .. } =>
+            StepConfig::SftpCopy { sftp_copy, .. } =>
                 sftp_copy.resolve_placeholders(variables)
                     .map_err(StepError::CannotResolveSftpCopyPlaceholders)
         }
     }
 }
 
-impl RemoteSudo {
+impl RemoteSudoConfig {
     fn execute(
         &self,
         credentials: &Credentials,
@@ -218,7 +222,7 @@ impl RemoteSudo {
     }
 }
 
-impl SftpCopy {
+impl SftpCopyConfig {
     fn execute(
         &self,
         session: &Session,
