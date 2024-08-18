@@ -292,7 +292,7 @@ impl Variables {
             .map(|(key, _)| key.to_owned())
             .collect::<Vec<String>>();
 
-        if unresolved_keys.is_empty() {
+        if !unresolved_keys.is_empty() {
             return Err(PlaceholderResolutionError::UnresolvedValues(unresolved_keys));
         }
 
