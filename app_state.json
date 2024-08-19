@@ -1,0 +1,10 @@
+{
+  "service_name": "my-service",
+  "username": "my-username",
+  "password": "my-password",
+  "host": "localhost",
+  "port": "22",
+  "config_path": "\\\\?\\C:\\Users\\Stanislav\\RustroverProjects\\deploy-rs\\example-scenario.json",
+  "jar_path": "\\\\?\\C:\\Users\\Stanislav\\RustroverProjects\\deploy-rs\\example-scenario.json",
+  "output_log": "------------------------------------------------------------\n[1/6] Copying new deploy file to server\nSource:\n\\\\?\\C:\\Users\\Stanislav\\RustroverProjects\\deploy-rs\\example-scenario.json\nDestination:\n/home/my-username/example-scenario.json\n------------------------------------------------------------\n[2/6] Stopping the service on remote server\nExecuting:\n/usr/local/bin/my-service.sh stop\n------------------------------------------------------------\n[3/6] Creating backup of current deployment\nExecuting:\ncp -a /usr/local/my-service/my-service.jar /u01/backup/my-service/my-service-2024-08-18T230717+03:00.jar\n------------------------------------------------------------\n[4/6] Removing current deployment\nExecuting:\nrm /usr/local/my-service/my-service.jar -f\n------------------------------------------------------------\n[5/6] Deploying the new file\nExecuting:\nmv /home/my-username/example-scenario.json /usr/local/my-service/my-service.jar\n------------------------------------------------------------\n[6/6] Starting the service on remote server\nExecuting:\n/usr/local/bin/my-service.sh start\n------------------------------------------------------------\n------------------------------------------------------------\nDeployment completed successfully!\n------------------------------------------------------------\n"
+}
