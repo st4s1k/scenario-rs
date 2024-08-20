@@ -87,7 +87,8 @@ pub mod config {
     #[derive(Deserialize, Debug)]
     pub struct ScenarioConfig {
         pub(crate) variables: VariablesConfig,
-        pub(crate) tasks: Vec<TaskConfig>,
+        pub(crate) steps: StepsConfig,
+        pub(crate) tasks: TasksConfig,
     }
 
     impl TryFrom<PathBuf> for ScenarioConfig {
@@ -139,11 +140,11 @@ pub mod config {
             &mut self.0
         }
     }
+
     #[derive(Deserialize, Debug)]
     pub struct RemoteSudoConfig {
         pub(crate) command: String,
     }
-
     impl RemoteSudoConfig {
         pub fn command(&self) -> &str {
             &self.command
@@ -167,19 +168,61 @@ pub mod config {
     }
 
     #[derive(Deserialize, Debug)]
+    pub struct StepsConfig(Vec<StepConfig>);
+
+    impl Deref for StepsConfig {
+        type Target = Vec<StepConfig>;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    impl DerefMut for StepsConfig {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct StepConfig {
+        pub(crate) task: String,
+        pub(crate) rollback_steps: Option<Vec<String>>,
+    }
+
+    impl StepConfig {
+        pub fn rollback_steps(&self) -> Option<&Vec<String>> {
+            self.rollback_steps.as_ref()
+        }
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct TasksConfig(HashMap<String, TaskConfig>);
+
+    impl Deref for TasksConfig {
+        type Target = HashMap<String, TaskConfig>;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    impl DerefMut for TasksConfig {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
+    }
+
+    #[derive(Deserialize, Debug)]
     #[serde(tag = "type")]
     pub enum TaskConfig {
         RemoteSudo {
             description: String,
             error_message: String,
-            rollback_tasks: Option<Vec<TaskConfig>>,
             #[serde(flatten)]
             remote_sudo: RemoteSudoConfig,
         },
         SftpCopy {
             description: String,
             error_message: String,
-            rollback_tasks: Option<Vec<TaskConfig>>,
             #[serde(flatten)]
             sftp_copy: SftpCopyConfig,
         },
@@ -199,17 +242,11 @@ pub mod config {
                 TaskConfig::SftpCopy { error_message, .. } => error_message,
             }
         }
-
-        pub fn rollback_tasks(&self) -> Option<&Vec<TaskConfig>> {
-            match self {
-                TaskConfig::RemoteSudo { rollback_tasks, .. } => rollback_tasks.as_ref(),
-                TaskConfig::SftpCopy { rollback_tasks, .. } => rollback_tasks.as_ref(),
-            }
-        }
     }
 }
 
 pub mod lifecycles {
+    use crate::data::config::StepConfig;
     use crate::data::{
         config::{
             RemoteSudoConfig,
@@ -239,7 +276,7 @@ pub mod lifecycles {
     }
 
     pub struct TaskLifecycle {
-        pub before: fn(index: usize, task: &TaskConfig, tasks: &Vec<TaskConfig>),
+        pub before: fn(index: usize, task: &TaskConfig, tasks: Vec<&TaskConfig>),
         pub remote_sudo: RemoteSudoLifecycle,
         pub sftp_copy: SftpCopyLifecycle,
         pub rollback: RollbackLifecycle,
@@ -257,7 +294,7 @@ pub mod lifecycles {
     }
 
     pub struct RollbackLifecycle {
-        pub before: fn(task: &TaskConfig),
+        pub before: fn(step: &StepConfig),
         pub task: RollbackTaskLifecycle,
     }
 
@@ -271,7 +308,7 @@ pub mod lifecycles {
     }
 
     pub struct RollbackTaskLifecycle {
-        pub before: fn(index: usize, rollback_task: &TaskConfig, rollback_tasks: &Vec<TaskConfig>),
+        pub before: fn(index: usize, rollback_task: &TaskConfig, rollback_tasks: &Vec<String>),
         pub remote_sudo: RemoteSudoLifecycle,
         pub sftp_copy: SftpCopyLifecycle,
     }

@@ -1,3 +1,4 @@
+use crate::data::config::StepConfig;
 use crate::{
     data::{
         config::{
@@ -76,7 +77,7 @@ impl Scenario {
         let variables = &mut self.variables;
         variables.resolve_placeholders()
             .map_err(ScenarioError::CannotResolveVariablesPlaceholders)?;
-        for task in &mut self.config.tasks {
+        for task in self.config.tasks.values_mut() {
             task.resolve_placeholders(&variables)
                 .map_err(ScenarioError::CannotResolveTaskPlaceholders)?;
         }
@@ -95,10 +96,13 @@ impl Scenario {
 
         (lifecycle.before)(&self);
 
+        let steps = &self.config.steps;
         let tasks = &self.config.tasks;
-        for (index, task) in tasks.iter().enumerate() {
-            (lifecycle.task.before)(index, task, &tasks);
-            self.execute_task(&session, task, &mut lifecycle.task)?;
+        for (index, step) in steps.iter().enumerate() {
+            let task = tasks.get(&step.task).unwrap(); // TODO: Error handling
+            let tasks_vec = tasks.values().into_iter().collect::<Vec<&TaskConfig>>();
+            (lifecycle.task.before)(index, task, tasks_vec);
+            self.execute_step(&session, step, &mut lifecycle.task)?;
         }
 
         Ok(())
@@ -123,12 +127,14 @@ impl Scenario {
         Ok(session)
     }
 
-    fn execute_task(
+    fn execute_step(
         &self,
         session: &Session,
-        task_config: &TaskConfig,
+        step_config: &StepConfig,
         lifecycle: &mut TaskLifecycle,
     ) -> Result<(), ScenarioError> {
+        let tasks = &self.config.tasks;
+        let task_config = tasks.get(&step_config.task).unwrap(); // TODO: Error handling
         let error_message = task_config.error_message().to_string();
         let credentials = &self.credentials;
 
@@ -142,7 +148,7 @@ impl Scenario {
         };
 
         if let Err(error) = task_result {
-            task_config.rollback(&credentials, session, &mut lifecycle.rollback)
+            step_config.rollback(&tasks, &credentials, session, &mut lifecycle.rollback)
                 .map_err(ScenarioError::CannotRollbackTask)?;
             return Err(error);
         };
@@ -151,17 +157,19 @@ impl Scenario {
     }
 }
 
-impl TaskConfig {
+impl StepConfig {
     fn rollback(
         &self,
+        tasks: &HashMap<String, TaskConfig>,
         credentials: &Credentials,
         session: &Session,
         lifecycle: &mut RollbackLifecycle,
     ) -> Result<(), TaskError> {
         (lifecycle.before)(&self);
-        if let Some(rollback_tasks) = self.rollback_tasks() {
-            for (index, rollback_task) in rollback_tasks.iter().enumerate() {
-                (lifecycle.task.before)(index, rollback_task, rollback_tasks);
+        if let Some(rollback_steps) = &self.rollback_steps {
+            for (index, rollback_step) in rollback_steps.iter().enumerate() {
+                let rollback_task = tasks.get(rollback_step).unwrap(); // TODO: Error handling
+                (lifecycle.task.before)(index, rollback_task, rollback_steps);
                 match rollback_task {
                     TaskConfig::RemoteSudo { remote_sudo, .. } =>
                         remote_sudo.execute(&credentials, &session, &mut lifecycle.task.remote_sudo)
@@ -174,7 +182,9 @@ impl TaskConfig {
         }
         Ok(())
     }
+}
 
+impl TaskConfig {
     fn resolve_placeholders(&mut self, variables: &Variables) -> Result<(), TaskError> {
         match self {
             TaskConfig::RemoteSudo { remote_sudo, .. } =>

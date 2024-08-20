@@ -1,6 +1,7 @@
 use chrono::Local;
 use clap::Parser;
 use colored::Colorize;
+use deploy_rs_core::data::config::StepConfig;
 use deploy_rs_core::data::{
     config::{
         RemoteSudoConfig,
@@ -158,7 +159,7 @@ fn execution_lifecycle() -> ExecutionLifecycle {
 fn task_lifecycle() -> TaskLifecycle {
     let mut lifecycle = TaskLifecycle::default();
     lifecycle.before =
-        |index: usize, task: &TaskConfig, tasks: &Vec<TaskConfig>| {
+        |index: usize, task: &TaskConfig, tasks: Vec<&TaskConfig>| {
             let task_number: usize = index + 1;
             let description = task.description();
             let total_tasks: usize = (&tasks).len();
@@ -223,8 +224,8 @@ fn sftp_copy_lifecycle() -> SftpCopyLifecycle {
 fn rollback_lifecycle() -> RollbackLifecycle {
     let mut lifecycle = RollbackLifecycle::default();
     lifecycle.before =
-        |task: &TaskConfig| {
-            if task.rollback_tasks().is_none() {
+        |step: &StepConfig| {
+            if step.rollback_steps().is_none() {
                 info!("{}", SEPARATOR);
                 info!("[{}] No rollback actions found", "rollback".red());
             }
@@ -236,9 +237,9 @@ fn rollback_lifecycle() -> RollbackLifecycle {
 fn rollback_task_lifecycle() -> RollbackTaskLifecycle {
     let mut lifecycle = RollbackTaskLifecycle::default();
     lifecycle.before =
-        |index: usize, rollback_task: &TaskConfig, rollback_tasks: &Vec<TaskConfig>| {
+        |index: usize, rollback_task: &TaskConfig, rollback_steps: &Vec<String>| {
             let task_number = index + 1;
-            let total_rollback_tasks = rollback_tasks.len();
+            let total_rollback_tasks = rollback_steps.len();
             let description = rollback_task.description();
             info!("{}", SEPARATOR);
             info!("{}", format ! ("[{}] [{task_number}/{total_rollback_tasks}] {}", "rollback".red(), description).purple());
