@@ -14,8 +14,8 @@ pub enum ScenarioError {
     RequiredVariablesValidationFailed(#[source] RequiredVariablesError),
     #[error("Cannot resolve placeholders in variables")]
     CannotResolveVariablesPlaceholders(#[source] PlaceholderResolutionError),
-    #[error("Cannot resolve placeholders in step")]
-    CannotResolveStepPlaceholders(#[source] StepError),
+    #[error("Cannot resolve placeholders in task")]
+    CannotResolveTaskPlaceholders(#[source] TaskError),
     #[error("Cannot connect to remote server")]
     CannotConnectToRemoteServer(#[source] std::io::Error),
     #[error("Cannot create a new session")]
@@ -28,12 +28,12 @@ pub enum ScenarioError {
     CannotExecuteRemoteSudoCommand(#[source] RemoteSudoError, String),
     #[error("Cannot execute SftpCopy command: {1}")]
     CannotExecuteSftpCopyCommand(#[source] SftpCopyError, String),
-    #[error("Cannot rollback step")]
-    CannotRollbackStep(#[source] StepError),
+    #[error("Cannot rollback task")]
+    CannotRollbackTask(#[source] TaskError),
 }
 
 #[derive(Error, Debug)]
-pub enum StepError {
+pub enum TaskError {
     #[error("Cannot resolve placeholders in RemoteSudo")]
     CannotRollbackRemoteSudo(#[source] RemoteSudoError),
     #[error("Cannot resolve placeholders in SftpCopy")]

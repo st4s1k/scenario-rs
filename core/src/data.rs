@@ -87,7 +87,7 @@ pub mod config {
     #[derive(Deserialize, Debug)]
     pub struct ScenarioConfig {
         pub(crate) variables: VariablesConfig,
-        pub(crate) steps: Vec<StepConfig>,
+        pub(crate) tasks: Vec<TaskConfig>,
     }
 
     impl TryFrom<PathBuf> for ScenarioConfig {
@@ -168,42 +168,42 @@ pub mod config {
 
     #[derive(Deserialize, Debug)]
     #[serde(tag = "type")]
-    pub enum StepConfig {
+    pub enum TaskConfig {
         RemoteSudo {
             description: String,
             error_message: String,
-            rollback_steps: Option<Vec<StepConfig>>,
+            rollback_tasks: Option<Vec<TaskConfig>>,
             #[serde(flatten)]
             remote_sudo: RemoteSudoConfig,
         },
         SftpCopy {
             description: String,
             error_message: String,
-            rollback_steps: Option<Vec<StepConfig>>,
+            rollback_tasks: Option<Vec<TaskConfig>>,
             #[serde(flatten)]
             sftp_copy: SftpCopyConfig,
         },
     }
 
-    impl StepConfig {
+    impl TaskConfig {
         pub fn description(&self) -> &str {
             match self {
-                StepConfig::RemoteSudo { description, .. } => description,
-                StepConfig::SftpCopy { description, .. } => description,
+                TaskConfig::RemoteSudo { description, .. } => description,
+                TaskConfig::SftpCopy { description, .. } => description,
             }
         }
 
         pub fn error_message(&self) -> &str {
             match self {
-                StepConfig::RemoteSudo { error_message, .. } => error_message,
-                StepConfig::SftpCopy { error_message, .. } => error_message,
+                TaskConfig::RemoteSudo { error_message, .. } => error_message,
+                TaskConfig::SftpCopy { error_message, .. } => error_message,
             }
         }
 
-        pub fn rollback_steps(&self) -> Option<&Vec<StepConfig>> {
+        pub fn rollback_tasks(&self) -> Option<&Vec<TaskConfig>> {
             match self {
-                StepConfig::RemoteSudo { rollback_steps, .. } => rollback_steps.as_ref(),
-                StepConfig::SftpCopy { rollback_steps, .. } => rollback_steps.as_ref(),
+                TaskConfig::RemoteSudo { rollback_tasks, .. } => rollback_tasks.as_ref(),
+                TaskConfig::SftpCopy { rollback_tasks, .. } => rollback_tasks.as_ref(),
             }
         }
     }
@@ -214,7 +214,7 @@ pub mod lifecycles {
         config::{
             RemoteSudoConfig,
             SftpCopyConfig,
-            StepConfig,
+            TaskConfig,
         },
         Scenario,
     };
@@ -225,29 +225,29 @@ pub mod lifecycles {
     };
 
     pub struct ExecutionLifecycle {
-        pub before: fn(step: &Scenario),
-        pub step: StepLifecycle,
+        pub before: fn(task: &Scenario),
+        pub task: TaskLifecycle,
     }
 
     impl Default for ExecutionLifecycle {
         fn default() -> Self {
             ExecutionLifecycle {
                 before: |_| {},
-                step: Default::default(),
+                task: Default::default(),
             }
         }
     }
 
-    pub struct StepLifecycle {
-        pub before: fn(index: usize, step: &StepConfig, steps: &Vec<StepConfig>),
+    pub struct TaskLifecycle {
+        pub before: fn(index: usize, task: &TaskConfig, tasks: &Vec<TaskConfig>),
         pub remote_sudo: RemoteSudoLifecycle,
         pub sftp_copy: SftpCopyLifecycle,
         pub rollback: RollbackLifecycle,
     }
 
-    impl Default for StepLifecycle {
+    impl Default for TaskLifecycle {
         fn default() -> Self {
-            StepLifecycle {
+            TaskLifecycle {
                 before: |_, _, _| {},
                 remote_sudo: Default::default(),
                 sftp_copy: Default::default(),
@@ -257,28 +257,28 @@ pub mod lifecycles {
     }
 
     pub struct RollbackLifecycle {
-        pub before: fn(step: &StepConfig),
-        pub step: RollbackStepLifecycle,
+        pub before: fn(task: &TaskConfig),
+        pub task: RollbackTaskLifecycle,
     }
 
     impl Default for RollbackLifecycle {
         fn default() -> Self {
             RollbackLifecycle {
                 before: |_| {},
-                step: Default::default(),
+                task: Default::default(),
             }
         }
     }
 
-    pub struct RollbackStepLifecycle {
-        pub before: fn(index: usize, rollback_step: &StepConfig, rollback_steps: &Vec<StepConfig>),
+    pub struct RollbackTaskLifecycle {
+        pub before: fn(index: usize, rollback_task: &TaskConfig, rollback_tasks: &Vec<TaskConfig>),
         pub remote_sudo: RemoteSudoLifecycle,
         pub sftp_copy: SftpCopyLifecycle,
     }
 
-    impl Default for RollbackStepLifecycle {
+    impl Default for RollbackTaskLifecycle {
         fn default() -> Self {
-            RollbackStepLifecycle {
+            RollbackTaskLifecycle {
                 before: |_, _, _| {},
                 remote_sudo: Default::default(),
                 sftp_copy: Default::default(),

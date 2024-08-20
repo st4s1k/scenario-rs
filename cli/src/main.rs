@@ -6,15 +6,15 @@ use deploy_rs_core::data::{
         RemoteSudoConfig,
         ScenarioConfig,
         SftpCopyConfig,
-        StepConfig,
+        TaskConfig,
     },
     lifecycles::{
         ExecutionLifecycle,
         RemoteSudoLifecycle,
         RollbackLifecycle,
-        RollbackStepLifecycle,
+        RollbackTaskLifecycle,
         SftpCopyLifecycle,
-        StepLifecycle,
+        TaskLifecycle,
     },
     Credentials,
     RequiredVariables,
@@ -151,19 +151,19 @@ fn main() -> ExitCode {
 
 fn execution_lifecycle() -> ExecutionLifecycle {
     let mut lifecycle = ExecutionLifecycle::default();
-    lifecycle.step = step_lifecycle();
+    lifecycle.task = task_lifecycle();
     lifecycle
 }
 
-fn step_lifecycle() -> StepLifecycle {
-    let mut lifecycle = StepLifecycle::default();
+fn task_lifecycle() -> TaskLifecycle {
+    let mut lifecycle = TaskLifecycle::default();
     lifecycle.before =
-        |index: usize, step: &StepConfig, steps: &Vec<StepConfig>| {
-            let step_number: usize = index + 1;
-            let description = step.description();
-            let total_steps: usize = (&steps).len();
+        |index: usize, task: &TaskConfig, tasks: &Vec<TaskConfig>| {
+            let task_number: usize = index + 1;
+            let description = task.description();
+            let total_tasks: usize = (&tasks).len();
             info!("{}", SEPARATOR);
-            info!("{}", format!("[{step_number}/{total_steps}] {description}").purple());
+            info!("{}", format!("[{task_number}/{total_tasks}] {description}").purple());
         };
     lifecycle.remote_sudo = remote_sudo_lifecycle();
     lifecycle.sftp_copy = sftp_copy_lifecycle();
@@ -223,25 +223,25 @@ fn sftp_copy_lifecycle() -> SftpCopyLifecycle {
 fn rollback_lifecycle() -> RollbackLifecycle {
     let mut lifecycle = RollbackLifecycle::default();
     lifecycle.before =
-        |step: &StepConfig| {
-            if step.rollback_steps().is_none() {
+        |task: &TaskConfig| {
+            if task.rollback_tasks().is_none() {
                 info!("{}", SEPARATOR);
                 info!("[{}] No rollback actions found", "rollback".red());
             }
         };
-    lifecycle.step = rollback_step_lifecycle();
+    lifecycle.task = rollback_task_lifecycle();
     lifecycle
 }
 
-fn rollback_step_lifecycle() -> RollbackStepLifecycle {
-    let mut lifecycle = RollbackStepLifecycle::default();
+fn rollback_task_lifecycle() -> RollbackTaskLifecycle {
+    let mut lifecycle = RollbackTaskLifecycle::default();
     lifecycle.before =
-        |index: usize, rollback_step: &StepConfig, rollback_steps: &Vec<StepConfig>| {
-            let step_number = index + 1;
-            let total_rollback_steps = rollback_steps.len();
-            let description = rollback_step.description();
+        |index: usize, rollback_task: &TaskConfig, rollback_tasks: &Vec<TaskConfig>| {
+            let task_number = index + 1;
+            let total_rollback_tasks = rollback_tasks.len();
+            let description = rollback_task.description();
             info!("{}", SEPARATOR);
-            info!("{}", format ! ("[{}] [{step_number}/{total_rollback_steps}] {}", "rollback".red(), description).purple());
+            info!("{}", format ! ("[{}] [{task_number}/{total_rollback_tasks}] {}", "rollback".red(), description).purple());
         };
     lifecycle
 }

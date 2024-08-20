@@ -5,14 +5,14 @@ use crate::{
             RequiredVariablesConfig,
             ScenarioConfig,
             SftpCopyConfig,
-            StepConfig,
+            TaskConfig,
         },
         lifecycles::{
             ExecutionLifecycle,
             RemoteSudoLifecycle,
             RollbackLifecycle,
             SftpCopyLifecycle,
-            StepLifecycle,
+            TaskLifecycle,
         },
         Credentials,
         RequiredVariables,
@@ -26,7 +26,7 @@ use crate::{
         RequiredVariablesError,
         ScenarioError,
         SftpCopyError,
-        StepError,
+        TaskError,
     },
 };
 use indicatif::ProgressBar;
@@ -76,9 +76,9 @@ impl Scenario {
         let variables = &mut self.variables;
         variables.resolve_placeholders()
             .map_err(ScenarioError::CannotResolveVariablesPlaceholders)?;
-        for step in &mut self.config.steps {
-            step.resolve_placeholders(&variables)
-                .map_err(ScenarioError::CannotResolveStepPlaceholders)?;
+        for task in &mut self.config.tasks {
+            task.resolve_placeholders(&variables)
+                .map_err(ScenarioError::CannotResolveTaskPlaceholders)?;
         }
         Ok(())
     }
@@ -95,10 +95,10 @@ impl Scenario {
 
         (lifecycle.before)(&self);
 
-        let steps = &self.config.steps;
-        for (index, step) in steps.iter().enumerate() {
-            (lifecycle.step.before)(index, step, &steps);
-            self.execute_step(&session, step, &mut lifecycle.step)?;
+        let tasks = &self.config.tasks;
+        for (index, task) in tasks.iter().enumerate() {
+            (lifecycle.task.before)(index, task, &tasks);
+            self.execute_task(&session, task, &mut lifecycle.task)?;
         }
 
         Ok(())
@@ -123,27 +123,27 @@ impl Scenario {
         Ok(session)
     }
 
-    fn execute_step(
+    fn execute_task(
         &self,
         session: &Session,
-        step_config: &StepConfig,
-        lifecycle: &mut StepLifecycle,
+        task_config: &TaskConfig,
+        lifecycle: &mut TaskLifecycle,
     ) -> Result<(), ScenarioError> {
-        let error_message = step_config.error_message().to_string();
+        let error_message = task_config.error_message().to_string();
         let credentials = &self.credentials;
 
-        let step_result = match step_config {
-            StepConfig::RemoteSudo { remote_sudo, .. } =>
+        let task_result = match task_config {
+            TaskConfig::RemoteSudo { remote_sudo, .. } =>
                 remote_sudo.execute(credentials, session, &mut lifecycle.remote_sudo)
                     .map_err(|error| ScenarioError::CannotExecuteRemoteSudoCommand(error, error_message)),
-            StepConfig::SftpCopy { sftp_copy, .. } =>
+            TaskConfig::SftpCopy { sftp_copy, .. } =>
                 sftp_copy.execute(session, &mut lifecycle.sftp_copy)
                     .map_err(|error| ScenarioError::CannotExecuteSftpCopyCommand(error, error_message))
         };
 
-        if let Err(error) = step_result {
-            step_config.rollback(&credentials, session, &mut lifecycle.rollback)
-                .map_err(ScenarioError::CannotRollbackStep)?;
+        if let Err(error) = task_result {
+            task_config.rollback(&credentials, session, &mut lifecycle.rollback)
+                .map_err(ScenarioError::CannotRollbackTask)?;
             return Err(error);
         };
 
@@ -151,38 +151,38 @@ impl Scenario {
     }
 }
 
-impl StepConfig {
+impl TaskConfig {
     fn rollback(
         &self,
         credentials: &Credentials,
         session: &Session,
         lifecycle: &mut RollbackLifecycle,
-    ) -> Result<(), StepError> {
+    ) -> Result<(), TaskError> {
         (lifecycle.before)(&self);
-        if let Some(rollback_steps) = self.rollback_steps() {
-            for (index, rollback_step) in rollback_steps.iter().enumerate() {
-                (lifecycle.step.before)(index, rollback_step, rollback_steps);
-                match rollback_step {
-                    StepConfig::RemoteSudo { remote_sudo, .. } =>
-                        remote_sudo.execute(&credentials, &session, &mut lifecycle.step.remote_sudo)
-                            .map_err(StepError::CannotRollbackRemoteSudo)?,
-                    StepConfig::SftpCopy { sftp_copy, .. } =>
-                        sftp_copy.execute(&session, &mut lifecycle.step.sftp_copy)
-                            .map_err(StepError::CannotRollbackSftpCopy)?
+        if let Some(rollback_tasks) = self.rollback_tasks() {
+            for (index, rollback_task) in rollback_tasks.iter().enumerate() {
+                (lifecycle.task.before)(index, rollback_task, rollback_tasks);
+                match rollback_task {
+                    TaskConfig::RemoteSudo { remote_sudo, .. } =>
+                        remote_sudo.execute(&credentials, &session, &mut lifecycle.task.remote_sudo)
+                            .map_err(TaskError::CannotRollbackRemoteSudo)?,
+                    TaskConfig::SftpCopy { sftp_copy, .. } =>
+                        sftp_copy.execute(&session, &mut lifecycle.task.sftp_copy)
+                            .map_err(TaskError::CannotRollbackSftpCopy)?
                 }
             }
         }
         Ok(())
     }
 
-    fn resolve_placeholders(&mut self, variables: &Variables) -> Result<(), StepError> {
+    fn resolve_placeholders(&mut self, variables: &Variables) -> Result<(), TaskError> {
         match self {
-            StepConfig::RemoteSudo { remote_sudo, .. } =>
+            TaskConfig::RemoteSudo { remote_sudo, .. } =>
                 remote_sudo.resolve_placeholders(variables)
-                    .map_err(StepError::CannotResolveRemoteSudoPlaceholders),
-            StepConfig::SftpCopy { sftp_copy, .. } =>
+                    .map_err(TaskError::CannotResolveRemoteSudoPlaceholders),
+            TaskConfig::SftpCopy { sftp_copy, .. } =>
                 sftp_copy.resolve_placeholders(variables)
-                    .map_err(StepError::CannotResolveSftpCopyPlaceholders)
+                    .map_err(TaskError::CannotResolveSftpCopyPlaceholders)
         }
     }
 }
