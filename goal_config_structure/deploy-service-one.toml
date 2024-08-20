@@ -1,0 +1,14 @@
+import = "./deploy-scenario.toml"
+
+[variables]
+required = [
+    { name = "username", type = "String" },
+    { name = "timestamp", type = "DateTime", format = "%Y-%m-%dT%H%M%S%:z" }
+]
+
+[variables.defined]
+service_name = "service-one"
+remote_service_script_path = "/usr/local/bin/{service_name}.sh"
+remote_deploy_path = "/usr/local/{service_name}/{service_name}.jar"
+backup_path = "/usr/local/backup/{service_name}/{service_name}-{timestamp}.jar"
+remote_base_path = "/home/{username}"

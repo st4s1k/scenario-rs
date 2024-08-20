@@ -1,0 +1,75 @@
+[scenario]
+steps = [
+    { task = "copy_jar_to_server" },
+    { task = "stop_service", rollback = [
+        "start_service"
+    ] },
+    { task = "create_backup", rollback = [
+        "start_service"
+    ] },
+    { task = "remove_current_deploy", rollback = [
+        "restore_backup",
+        "start_service"
+    ] },
+    { task = "deploy_new_file", rollback = [
+        "restore_backup",
+        "start_service"
+    ] },
+    { task = "start_service", rollback = [
+        "restore_backup",
+        "start_service"
+    ] }
+]
+
+[variables]
+required = [
+    { name = "local_jar_path", type = "String" },
+    { name = "remote_base_path", type = "String" },
+    { name = "local_jar_basename", type = "String" },
+    { name = "remote_service_script_path", type = "String" },
+    { name = "remote_deploy_path", type = "String" },
+    { name = "backup_path", type = "String" }
+]
+
+[tasks.copy_jar_to_server]
+type = "SftpCopy"
+description = "Copying new deploy file to server"
+source_path = "{local_jar_path}"
+destination_path = "{remote_base_path}/{local_jar_basename}"
+error_message = "Failed to copy new deploy file to server."
+
+[tasks.stop_service]
+type = "RemoteSudo"
+description = "Stopping the service on remote server"
+command = "{remote_service_script_path} stop"
+error_message = "Failed to stop the service on the remote server."
+
+[tasks.create_backup]
+type = "RemoteSudo"
+description = "Creating backup of current deployment"
+command = "cp -a {remote_deploy_path} {backup_path}"
+error_message = "Failed to create backup of the current deployment."
+
+[tasks.remove_current_deploy]
+type = "RemoteSudo"
+description = "Removing current deployment"
+command = "rm {remote_deploy_path}"
+error_message = "Failed to remove the current deployment."
+
+[tasks.deploy_new_file]
+type = "RemoteSudo"
+description = "Deploying the new file"
+command = "mv {remote_base_path}/{local_jar_basename} {remote_deploy_path}"
+error_message = "Failed to deploy the new file."
+
+[tasks.start_service]
+type = "RemoteSudo"
+description = "Starting the service on remote server"
+command = "{remote_service_script_path} start"
+error_message = "Failed to start the service on the remote server."
+
+[tasks.restore_backup]
+type = "RemoteSudo"
+description = "Restoring backup of current deployment"
+command = "cp -a {backup_path} {remote_deploy_path}"
+error_message = "Failed to restore backup of the current deployment."
