@@ -109,6 +109,34 @@ pub mod config {
     }
 
     #[derive(Deserialize, Debug)]
+    pub struct StepsConfig(Vec<StepConfig>);
+
+    impl Deref for StepsConfig {
+        type Target = Vec<StepConfig>;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    impl DerefMut for StepsConfig {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct StepConfig {
+        pub(crate) task: String,
+        pub(crate) rollback_steps: Option<Vec<String>>,
+    }
+
+    impl StepConfig {
+        pub fn rollback_steps(&self) -> Option<&Vec<String>> {
+            self.rollback_steps.as_ref()
+        }
+    }
+
+    #[derive(Deserialize, Debug)]
     pub struct VariablesConfig {
         pub(crate) required: RequiredVariablesConfig,
         pub(crate) defined: DefinedVariablesConfig,
@@ -143,60 +171,6 @@ pub mod config {
     impl DerefMut for DefinedVariablesConfig {
         fn deref_mut(&mut self) -> &mut Self::Target {
             &mut self.0
-        }
-    }
-
-    #[derive(Deserialize, Debug)]
-    pub struct RemoteSudoConfig {
-        pub(crate) command: String,
-    }
-    impl RemoteSudoConfig {
-        pub fn command(&self) -> &str {
-            &self.command
-        }
-    }
-
-    #[derive(Deserialize, Debug)]
-    pub struct SftpCopyConfig {
-        pub(crate) source_path: String,
-        pub(crate) destination_path: String,
-    }
-
-    impl SftpCopyConfig {
-        pub fn source_path(&self) -> &str {
-            &self.source_path
-        }
-
-        pub fn destination_path(&self) -> &str {
-            &self.destination_path
-        }
-    }
-
-    #[derive(Deserialize, Debug)]
-    pub struct StepsConfig(Vec<StepConfig>);
-
-    impl Deref for StepsConfig {
-        type Target = Vec<StepConfig>;
-        fn deref(&self) -> &Self::Target {
-            &self.0
-        }
-    }
-
-    impl DerefMut for StepsConfig {
-        fn deref_mut(&mut self) -> &mut Self::Target {
-            &mut self.0
-        }
-    }
-
-    #[derive(Deserialize, Debug)]
-    pub struct StepConfig {
-        pub(crate) task: String,
-        pub(crate) rollback_steps: Option<Vec<String>>,
-    }
-
-    impl StepConfig {
-        pub fn rollback_steps(&self) -> Option<&Vec<String>> {
-            self.rollback_steps.as_ref()
         }
     }
 
@@ -246,6 +220,32 @@ pub mod config {
                 TaskConfig::RemoteSudo { error_message, .. } => error_message,
                 TaskConfig::SftpCopy { error_message, .. } => error_message,
             }
+        }
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct RemoteSudoConfig {
+        pub(crate) command: String,
+    }
+    impl RemoteSudoConfig {
+        pub fn command(&self) -> &str {
+            &self.command
+        }
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct SftpCopyConfig {
+        pub(crate) source_path: String,
+        pub(crate) destination_path: String,
+    }
+
+    impl SftpCopyConfig {
+        pub fn source_path(&self) -> &str {
+            &self.source_path
+        }
+
+        pub fn destination_path(&self) -> &str {
+            &self.destination_path
         }
     }
 }
