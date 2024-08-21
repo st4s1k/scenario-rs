@@ -1,4 +1,4 @@
-[scenario]
+[execute]
 steps = [
     { task = "copy_jar_to_server" },
     { task = "stop_service", rollback = [

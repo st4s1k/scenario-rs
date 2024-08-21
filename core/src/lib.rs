@@ -96,7 +96,7 @@ impl Scenario {
 
         (lifecycle.before)(&self);
 
-        let steps = &self.config.steps;
+        let steps = &self.config.execute.steps;
         let tasks = &self.config.tasks;
         for (index, step) in steps.iter().enumerate() {
             let task = tasks.get(&step.task).unwrap(); // TODO: Error handling

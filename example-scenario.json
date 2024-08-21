@@ -1,4 +1,44 @@
 {
+  "execute": {
+    "steps": [
+      {
+        "task": "copy_jar_to_server"
+      },
+      {
+        "task": "stop_service",
+        "rollback": [
+          "start_service"
+        ]
+      },
+      {
+        "task": "create_backup",
+        "rollback": [
+          "start_service"
+        ]
+      },
+      {
+        "task": "remove_current_deploy",
+        "rollback": [
+          "restore_backup",
+          "start_service"
+        ]
+      },
+      {
+        "task": "deploy_new_file",
+        "rollback": [
+          "restore_backup",
+          "start_service"
+        ]
+      },
+      {
+        "task": "start_service",
+        "rollback": [
+          "restore_backup",
+          "start_service"
+        ]
+      }
+    ]
+  },
   "variables": {
     "required": [
       "service_name",
@@ -14,44 +54,6 @@
       "remote_base_path": "/home/{username}"
     }
   },
-  "steps": [
-    {
-      "task": "copy_jar_to_server"
-    },
-    {
-      "task": "stop_service",
-      "rollback":  [
-        "start_service"
-      ]
-    },
-    {
-      "task": "create_backup",
-      "rollback":  [
-        "start_service"
-      ]
-    },
-    {
-      "task": "remove_current_deploy",
-      "rollback":  [
-        "restore_backup",
-        "start_service"
-      ]
-    },
-    {
-      "task": "deploy_new_file",
-      "rollback":  [
-        "restore_backup",
-        "start_service"
-      ]
-    },
-    {
-      "task": "start_service",
-      "rollback":  [
-        "restore_backup",
-        "start_service"
-      ]
-    }
-  ],
   "tasks": {
     "copy_jar_to_server": {
       "type": "SftpCopy",

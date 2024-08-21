@@ -86,8 +86,8 @@ pub mod config {
 
     #[derive(Deserialize, Debug)]
     pub struct ScenarioConfig {
+        pub(crate) execute: ExecuteConfig,
         pub(crate) variables: VariablesConfig,
-        pub(crate) steps: StepsConfig,
         pub(crate) tasks: TasksConfig,
     }
 
@@ -101,6 +101,11 @@ pub mod config {
                 .map_err(ScenarioConfigError::CannotReadJson)?;
             Ok(config)
         }
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct ExecuteConfig {
+        pub(crate) steps: StepsConfig,
     }
 
     #[derive(Deserialize, Debug)]
