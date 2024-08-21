@@ -2,9 +2,11 @@ import = "./deploy-scenario.toml"
 
 [variables]
 required = [
-    { name = "username", type = "String" },
-    { name = "timestamp", type = "DateTime", format = "%Y-%m-%dT%H%M%S%:z" }
+    "username"
 ]
+
+[variables.special]
+timestamp = "%Y-%m-%dT%H%M%S%:z"
 
 [variables.defined]
 service_name = "service-one"

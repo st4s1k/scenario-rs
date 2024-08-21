@@ -1,4 +1,3 @@
-use crate::data::config::StepConfig;
 use crate::{
     data::{
         config::{
@@ -6,6 +5,7 @@ use crate::{
             RequiredVariablesConfig,
             ScenarioConfig,
             SftpCopyConfig,
+            StepConfig,
             TaskConfig,
         },
         lifecycles::{
@@ -58,6 +58,7 @@ impl Scenario {
 
         let mut variables_map = HashMap::<String, String>::new();
         variables_map.extend(required_variables.clone());
+        variables_map.extend(config.variables.special.clone());
         variables_map.extend(config.variables.defined.clone());
 
         let variables = Variables(variables_map);

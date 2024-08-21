@@ -23,12 +23,12 @@ steps = [
 
 [variables]
 required = [
-    { name = "local_jar_path", type = "String" },
-    { name = "remote_base_path", type = "String" },
-    { name = "local_jar_basename", type = "String" },
-    { name = "remote_service_script_path", type = "String" },
-    { name = "remote_deploy_path", type = "String" },
-    { name = "backup_path", type = "String" }
+    "local_jar_path",
+    "remote_base_path",
+    "local_jar_basename",
+    "remote_service_script_path",
+    "remote_deploy_path",
+    "backup_path"
 ]
 
 [tasks.copy_jar_to_server]

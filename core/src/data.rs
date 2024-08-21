@@ -76,6 +76,7 @@ impl DerefMut for RequiredVariables {
 
 pub mod config {
     use crate::error::ScenarioConfigError;
+    use chrono::Local;
     use serde::Deserialize;
     use std::{
         collections::HashMap,
@@ -97,9 +98,22 @@ pub mod config {
         fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
             let config_file: File = File::open(value)
                 .map_err(ScenarioConfigError::CannotOpenFile)?;
-            let config = serde_json::from_reader(config_file)
+            let mut config: ScenarioConfig = serde_json::from_reader(config_file)
                 .map_err(ScenarioConfigError::CannotReadJson)?;
+
+            config.resolve_special_variables();
+
             Ok(config)
+        }
+    }
+
+    impl ScenarioConfig {
+        fn resolve_special_variables(&mut self) {
+            let defined_variables = &mut self.variables.special.0;
+            if let Some(timestamp_format) = defined_variables.get("timestamp") {
+                let timestamp: String = Local::now().format(timestamp_format).to_string();
+                defined_variables.insert("timestamp".to_string(), timestamp);
+            }
         }
     }
 
@@ -139,6 +153,7 @@ pub mod config {
     #[derive(Deserialize, Debug)]
     pub struct VariablesConfig {
         pub(crate) required: RequiredVariablesConfig,
+        pub(crate) special: SpecialVariablesConfig,
         pub(crate) defined: DefinedVariablesConfig,
     }
 
@@ -155,6 +170,16 @@ pub mod config {
     impl DerefMut for RequiredVariablesConfig {
         fn deref_mut(&mut self) -> &mut Self::Target {
             &mut self.0
+        }
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct SpecialVariablesConfig(HashMap<String, String>);
+
+    impl Deref for SpecialVariablesConfig {
+        type Target = HashMap<String, String>;
+        fn deref(&self) -> &Self::Target {
+            &self.0
         }
     }
 

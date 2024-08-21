@@ -43,10 +43,12 @@
     "required": [
       "service_name",
       "username",
-      "timestamp",
       "local_jar_path",
       "local_jar_basename"
     ],
+    "special": {
+      "timestamp": "%Y-%m-%dT%H%M%S%:z"
+    },
     "defined": {
       "remote_service_script_path": "/usr/local/bin/{service_name}.sh",
       "remote_deploy_path": "/usr/local/{service_name}/{service_name}.jar",

@@ -1,4 +1,3 @@
-use chrono::Local;
 use clap::Parser;
 use colored::Colorize;
 use deploy_rs_core::data::config::StepConfig;
@@ -83,7 +82,6 @@ fn main() -> ExitCode {
     };
 
     let username: String = credentials.username().to_string();
-    let timestamp: String = Local::now().format("%Y-%m-%dT%H%M%S%:z").to_string();
 
     let local_jar_path: String = match cli.jar.as_path().to_str() {
         Some(local_jar_path) => local_jar_path.to_string(),
@@ -112,7 +110,6 @@ fn main() -> ExitCode {
     let required_variables = RequiredVariables::new([
         ("service_name".to_string(), cli.service_name),
         ("username".to_string(), username),
-        ("timestamp".to_string(), timestamp),
         ("local_jar_path".to_string(), local_jar_path),
         ("local_jar_basename".to_string(), local_jar_basename)
     ]);
