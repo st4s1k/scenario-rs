@@ -1,23 +1,23 @@
 mod ui;
 mod app;
-mod deploy;
+mod scenario;
 mod lifecycle;
 mod shared;
 
 use crate::{
-    app::DeploymentApp,
-    deploy::start_deployment,
+    app::ScenarioApp,
+    scenario::start_scenario,
     ui::MyUi,
 };
 use eframe::egui;
 use egui::Context;
 
-impl eframe::App for DeploymentApp {
+impl eframe::App for ScenarioApp {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         catppuccin_egui::set_theme(&ctx, catppuccin_egui::FRAPPE);
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Deployment Tool");
-            egui::Grid::new("deployment_tool_grid")
+            ui.heading("Scenario Tool");
+            egui::Grid::new("scenario_tool_grid")
                 .spacing([10.0, 8.0])
                 .striped(true)
                 .show(ui, |ui| {
@@ -34,15 +34,15 @@ impl eframe::App for DeploymentApp {
                         "JAR Path:", self.jar_path.as_ref(),
                         "Select Config File", &mut self.jar_file_dialog,
                     );
-                    if ui.button("Deploy").clicked() {
-                        start_deployment(self);
+                    if ui.button("Execute").clicked() {
+                        start_scenario(self);
                     }
                 });
 
             self.handle_incoming_logs(ctx);
 
             ui.separator();
-            ui.text_area("Deployment Log:", &mut self.output_log);
+            ui.text_area("Scenario Log:", &mut self.output_log);
 
             self.update_file_dialogs(ctx);
         });
@@ -56,8 +56,8 @@ impl eframe::App for DeploymentApp {
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions::default();
     eframe::run_native(
-        "Deployment Tool",
+        "Scenario Tool",
         options,
-        Box::new(|cc| Ok(Box::new(DeploymentApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(ScenarioApp::new(cc)))),
     )
 }

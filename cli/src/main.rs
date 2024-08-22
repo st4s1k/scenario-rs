@@ -115,16 +115,16 @@ fn main() -> ExitCode {
         ("local_jar_basename".to_string(), local_jar_basename)
     ]);
 
-    let deploy_scenario: Scenario = match Scenario::new(
+    let scenario: Scenario = match Scenario::new(
         server,
         credentials,
         config,
         required_variables,
     ) {
-        Ok(deploy_scenario) => deploy_scenario,
+        Ok(scenario) => scenario,
         Err(error) => {
             error!("{}", SEPARATOR);
-            error!("Deployment scenario initialization failed: {}", error);
+            error!("Scenario initialization failed: {}", error);
             error!("{}", SEPARATOR);
             return ExitCode::FAILURE;
         }
@@ -132,16 +132,16 @@ fn main() -> ExitCode {
 
     let lifecycle = execution_lifecycle();
 
-    match deploy_scenario.execute_with_lifecycle(lifecycle) {
+    match scenario.execute_with_lifecycle(lifecycle) {
         Ok(_) => {
             info!("{}", SEPARATOR);
-            info!("{}", "Deployment completed successfully!".cyan());
+            info!("{}", "Scenario completed successfully!".cyan());
             info!("{}", SEPARATOR);
             ExitCode::SUCCESS
         }
         Err(error) => {
             error!("{}", SEPARATOR);
-            error!("Deployment execution failed: {}", error);
+            error!("Scenario execution failed: {}", error);
             error!("{}", SEPARATOR);
             ExitCode::FAILURE
         }

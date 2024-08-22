@@ -4,12 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "deploy-rs"
+name = "scenario-rs-cli"
 path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.5.15", features = ["derive"] }
-scenario-rs = { package = "scenario-rs", path = "../scenario-rs" }
+scenario-rs = { package = "core", path = "../core" }
 colored = "2.1.0"
 chrono = "0.4.38"
 tracing = "0.1.40"

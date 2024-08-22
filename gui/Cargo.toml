@@ -4,13 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "deploy-rs-gui"
+name = "scenario-rs-gui"
 path = "src/main.rs"
 
 [dependencies]
 egui = "0.28.1"
 eframe = "0.28.1"
-scenario-rs = { package = "scenario-rs", path = "../scenario-rs" }
+scenario-rs = { package = "core", path = "../core" }
 colored = "2.0.4"
 chrono = "0.4.38"
 serde = { version = "1.0", features = ["derive"] }

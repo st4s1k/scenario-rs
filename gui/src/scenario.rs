@@ -1,5 +1,5 @@
 use crate::{
-    app::DeploymentApp,
+    app::ScenarioApp,
     lifecycle::{execution_lifecycle, LifecycleHandler},
     shared::SEPARATOR,
 };
@@ -16,12 +16,12 @@ use scenario_rs::{
 };
 use std::{sync::mpsc, thread};
 
-pub fn start_deployment(app: &mut DeploymentApp) {
-    if !app.is_deploying {
-        app.is_deploying = true;
+pub fn start_scenario(app: &mut ScenarioApp) {
+    if !app.is_executing {
+        app.is_executing = true;
         let (tx, rx) = mpsc::channel();
 
-        let app_state = DeploymentApp {
+        let app_state = ScenarioApp {
             service_name: app.service_name.clone(),
             username: app.username.clone(),
             password: app.password.clone(),
@@ -30,34 +30,34 @@ pub fn start_deployment(app: &mut DeploymentApp) {
             config_path: app.config_path.clone(),
             jar_path: app.jar_path.clone(),
             output_log: app.output_log.clone(),
-            is_deploying: false,
+            is_executing: false,
             config_file_dialog: FileDialog::new(),
             jar_file_dialog: FileDialog::new(),
             receiver: None,
         };
 
         thread::spawn(move || {
-            run_deployment(app_state, tx.clone());
-            let _ = tx.send("DEPLOYMENT_FINISHED".to_string());
+            run_scenario(app_state, tx.clone());
+            let _ = tx.send("SCENARIO_FINISHED".to_string());
         });
 
         app.receiver = Some(rx);
     }
 }
 
-fn run_deployment(app_state: DeploymentApp, tx: mpsc::Sender<String>) {
+fn run_scenario(app_state: ScenarioApp, tx: mpsc::Sender<String>) {
     LifecycleHandler::try_initialize(tx.clone());
 
-    if let Err(e) = deploy(app_state, &tx) {
+    if let Err(e) = execute_scenario(app_state, &tx) {
         let mut log_message = String::new();
         log_message.push_str(&format!("{SEPARATOR}\n"));
-        log_message.push_str(&format!("Deployment failed: {}\n", e));
+        log_message.push_str(&format!("Scenario failed: {}\n", e));
         log_message.push_str(&format!("{SEPARATOR}\n"));
         let _ = tx.send(log_message);
     }
 }
 
-fn deploy(app_state: DeploymentApp, tx: &mpsc::Sender<String>) -> Result<(), String> {
+fn execute_scenario(app_state: ScenarioApp, tx: &mpsc::Sender<String>) -> Result<(), String> {
     let mut log_message = String::new();
 
     log_message.push_str(&format!("{SEPARATOR}\n"));
@@ -80,15 +80,15 @@ fn deploy(app_state: DeploymentApp, tx: &mpsc::Sender<String>) -> Result<(), Str
         ("local_jar_basename".to_string(), local_jar_basename.clone()),
     ]);
 
-    let deploy_scenario = Scenario::new(server, credentials, config, required_variables)
+    let scenario = Scenario::new(server, credentials, config, required_variables)
         .map_err(|e| e.to_string())?;
 
     let lifecycle = execution_lifecycle();
-    deploy_scenario.execute_with_lifecycle(lifecycle)
+    scenario.execute_with_lifecycle(lifecycle)
         .map_err(|e| e.to_string())?;
 
     log_message.push_str(&format!("{}\n", SEPARATOR));
-    log_message.push_str(&format!("{}\n", "Deployment completed successfully!".cyan()));
+    log_message.push_str(&format!("{}\n", "Scenario completed successfully!".cyan()));
     log_message.push_str(&format!("{}\n", SEPARATOR));
     let _ = tx.send(log_message);
 

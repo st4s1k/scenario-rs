@@ -7,7 +7,7 @@ use std::{
 };
 
 #[derive(Serialize, Deserialize, Default)]
-pub struct DeploymentApp {
+pub struct ScenarioApp {
     pub service_name: String,
     pub username: String,
     pub password: String,
@@ -18,7 +18,7 @@ pub struct DeploymentApp {
     pub output_log: String,
 
     #[serde(skip)]
-    pub is_deploying: bool,
+    pub is_executing: bool,
 
     #[serde(skip)]
     pub config_file_dialog: FileDialog,
@@ -30,7 +30,7 @@ pub struct DeploymentApp {
     pub receiver: Option<mpsc::Receiver<String>>,
 }
 
-impl Clone for DeploymentApp {
+impl Clone for ScenarioApp {
     fn clone(&self) -> Self {
         Self {
             service_name: self.service_name.clone(),
@@ -41,7 +41,7 @@ impl Clone for DeploymentApp {
             config_path: self.config_path.clone(),
             jar_path: self.jar_path.clone(),
             output_log: self.output_log.clone(),
-            is_deploying: self.is_deploying,
+            is_executing: self.is_executing,
             config_file_dialog: FileDialog::new(),
             jar_file_dialog: FileDialog::new(),
             receiver: None,
@@ -49,11 +49,11 @@ impl Clone for DeploymentApp {
     }
 }
 
-impl DeploymentApp {
-    const APP_STATE_FILE: &'static str = "deploy-rs-state.json";
+impl ScenarioApp {
+    const APP_STATE_FILE: &'static str = "scenario-rs-state.json";
 
     pub fn new(_cc: &eframe::CreationContext) -> Self {
-        DeploymentApp::load()
+        ScenarioApp::load()
     }
 
     pub fn load() -> Self {
@@ -62,7 +62,7 @@ impl DeploymentApp {
                 return app_state;
             }
         }
-        DeploymentApp::default()
+        ScenarioApp::default()
     }
 
     pub fn save_state(&self) {
@@ -74,8 +74,8 @@ impl DeploymentApp {
     pub fn handle_incoming_logs(&mut self, ctx: &Context) {
         if let Some(ref rx) = self.receiver {
             while let Ok(msg) = rx.try_recv() {
-                if msg == "DEPLOYMENT_FINISHED" {
-                    self.is_deploying = false;
+                if msg == "SCENARIO_FINISHED" {
+                    self.is_executing = false;
                 } else {
                     self.output_log.push_str(&msg);
                 }
