@@ -16,10 +16,7 @@ use lifecycle::{
 use server::Server;
 use ssh2::Session;
 use std::net::TcpStream;
-use variables::{
-    required::RequiredVariables,
-    Variables,
-};
+use variables::Variables;
 
 pub mod credentials;
 pub mod errors;
@@ -35,6 +32,7 @@ pub mod steps;
 pub mod task;
 pub mod tasks;
 
+#[derive(Debug)]
 pub struct Scenario {
     pub(crate) server: Server,
     pub(crate) credentials: Credentials,
@@ -43,18 +41,23 @@ pub struct Scenario {
 }
 
 impl Scenario {
-    pub fn new(
-        server: Server,
-        credentials: Credentials,
-        config: ScenarioConfig,
-        required_variables: RequiredVariables,
-    ) -> Result<Scenario, ScenarioError> {
-        let execute = Execute::from(&config.execute);
-        let variables = Variables::try_from((&required_variables, &config.variables))
+    pub fn new(config: ScenarioConfig) -> Result<Scenario, ScenarioError> {
+        let mut variables = Variables::try_from(&config.variables)
             .map_err(ScenarioError::CannotCreateVariablesFromConfig)?;
-        let tasks = Tasks::try_from((&config.tasks, &variables))
-            .map_err(ScenarioError::CannotCreateTasksFromConfig)?;
-        Ok(Scenario { server, credentials, execute, tasks })
+        let server = Server::from(&config.server);
+        let credentials = Credentials::from(&config.credentials);
+        variables.insert("username".to_string(), credentials.username.clone());
+        let execute = Execute::from(&config.execute);
+        let tasks = Tasks::from(&config.tasks);
+        let mut scenario = Scenario { server, credentials, execute, tasks };
+        scenario.resolve_placeholders(&variables)?;
+        Ok(scenario)
+    }
+
+    fn resolve_placeholders(&mut self, variables: &Variables) -> Result<(), ScenarioError> {
+        self.tasks.resolve_placeholders(variables)
+            .map_err(ScenarioError::CannotResolvePlaceholdersInTasks)?;
+        Ok(())
     }
 
     pub fn execute(&self) -> Result<(), ScenarioError> {
@@ -80,8 +83,9 @@ impl Scenario {
     }
 
     pub fn new_session(&self) -> Result<Session, ScenarioError> {
-        let remote_address = format!("{}:{}", &self.server.host, &self.server.port);
-        let tcp = TcpStream::connect(&remote_address)
+        let host = &self.server.host;
+        let port: &str = &self.server.port;
+        let tcp = TcpStream::connect(&format!("{host}:{port}"))
             .map_err(ScenarioError::CannotConnectToRemoteServer)?;
 
         let mut session = Session::new()
@@ -91,9 +95,13 @@ impl Scenario {
             .map_err(ScenarioError::CannotInitiateTheSshHandshake)?;
 
         let username = &self.credentials.username;
-        let password = &self.credentials.password;
-        session.userauth_password(username, password)
-            .map_err(ScenarioError::CannotAuthenticateWithPassword)?;
+
+        match &self.credentials.password {
+            Some(pwd) => session.userauth_password(username, pwd)
+                .map_err(ScenarioError::CannotAuthenticateWithPassword)?,
+            None => session.userauth_agent(username)
+                .map_err(ScenarioError::CannotAuthenticateWithAgent)?
+        }
 
         Ok(session)
     }
@@ -107,11 +115,10 @@ impl Scenario {
         // TODO: Error handling - Step must be a valid task
         let task = &self.tasks.get(&step.task).unwrap();
         let error_message = task.error_message().to_string();
-        let credentials = &self.credentials;
 
         let task_result = match task {
             Task::RemoteSudo { remote_sudo, .. } =>
-                remote_sudo.execute(credentials, session, &mut lifecycle.remote_sudo)
+                remote_sudo.execute(session, &mut lifecycle.remote_sudo)
                     .map_err(|error| ScenarioError::CannotExecuteRemoteSudoCommand(error, error_message)),
             Task::SftpCopy { sftp_copy, .. } =>
                 sftp_copy.execute(session, &mut lifecycle.sftp_copy)
@@ -119,7 +126,7 @@ impl Scenario {
         };
 
         if let Err(error) = task_result {
-            step.rollback(&self.tasks, &credentials, session, &mut lifecycle.rollback)
+            step.rollback(&self.tasks, session, &mut lifecycle.rollback)
                 .map_err(ScenarioError::CannotRollbackTask)?;
             return Err(error);
         };

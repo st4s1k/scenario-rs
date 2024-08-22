@@ -4,6 +4,7 @@ use crate::{
 };
 use std::ops::{Deref, DerefMut};
 
+#[derive(Debug)]
 pub struct Steps(Vec<Step>);
 
 impl Deref for Steps {

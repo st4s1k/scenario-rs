@@ -1,14 +1,9 @@
-use std::path::PathBuf;
 use egui::Ui;
 use egui_file_dialog::FileDialog;
+use std::path::PathBuf;
 
 pub trait MyUi {
     fn labeled_field(
-        &mut self,
-        service_name_label: &str,
-        service_name_value: &mut String,
-    );
-    fn password_field(
         &mut self,
         service_name_label: &str,
         service_name_value: &mut String,
@@ -35,16 +30,6 @@ impl MyUi for Ui {
     ) {
         self.label(service_name_label);
         self.text_edit_singleline(service_name_value);
-        self.end_row();
-    }
-
-    fn password_field(
-        &mut self,
-        service_name_label: &str,
-        service_name_value: &mut String,
-    ) {
-        self.label(service_name_label);
-        self.add(egui::TextEdit::singleline(service_name_value).password(true));
         self.end_row();
     }
 

@@ -14,21 +14,18 @@ use std::{
     path::Path,
 };
 
+#[derive(Debug)]
 pub struct SftpCopy {
     pub(crate) source_path: String,
     pub(crate) destination_path: String,
 }
 
-impl TryFrom<(&SftpCopyConfig, &Variables)> for SftpCopy {
-    type Error = SftpCopyError;
-
-    fn try_from((config, variables): (&SftpCopyConfig, &Variables)) -> Result<Self, Self::Error> {
-        let source_path = variables.resolve_placeholders(&config.source_path)
-            .map_err(SftpCopyError::CannotResolveSourcePathPlaceholders)?;
-        let destination_path = variables.resolve_placeholders(&config.destination_path)
-            .map_err(SftpCopyError::CannotResolveDestinationPathPlaceholders)?;
-
-        Ok(SftpCopy { source_path, destination_path })
+impl From<&SftpCopyConfig> for SftpCopy {
+    fn from(config: &SftpCopyConfig) -> Self {
+        SftpCopy {
+            source_path: config.source_path.clone(),
+            destination_path: config.destination_path.clone(),
+        }
     }
 }
 
@@ -39,6 +36,17 @@ impl SftpCopy {
 
     pub fn destination_path(&self) -> &str {
         &self.destination_path
+    }
+
+    pub(crate) fn resolve_placeholders(
+        &mut self,
+        variables: &Variables,
+    ) -> Result<(), SftpCopyError> {
+        self.source_path = variables.resolve_placeholders(&self.source_path)
+            .map_err(SftpCopyError::CannotResolveSourcePathPlaceholders)?;
+        self.destination_path = variables.resolve_placeholders(&self.destination_path)
+            .map_err(SftpCopyError::CannotResolveDestinationPathPlaceholders)?;
+        Ok(())
     }
 
     pub(crate) fn execute(

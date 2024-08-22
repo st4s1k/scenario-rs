@@ -1,7 +1,6 @@
 use crate::{
     config::RemoteSudoConfig,
     scenario::{
-        credentials::Credentials,
         errors::RemoteSudoError,
         lifecycle::RemoteSudoLifecycle,
         variables::Variables,
@@ -9,18 +8,14 @@ use crate::{
 };
 use ssh2::{Channel, Session};
 
+#[derive(Debug)]
 pub struct RemoteSudo {
     pub(crate) command: String,
 }
 
-impl TryFrom<(&RemoteSudoConfig, &Variables)> for RemoteSudo {
-    type Error = RemoteSudoError;
-
-    fn try_from((config, variables): (&RemoteSudoConfig, &Variables)) -> Result<Self, Self::Error> {
-        let command = variables.resolve_placeholders(&config.command)
-            .map_err(RemoteSudoError::CannotResolveCommandPlaceholders)?;
-
-        Ok(RemoteSudo { command })
+impl From<&RemoteSudoConfig> for RemoteSudo {
+    fn from(config: &RemoteSudoConfig) -> Self {
+        RemoteSudo { command: config.command.clone() }
     }
 }
 
@@ -29,9 +24,17 @@ impl RemoteSudo {
         &self.command
     }
 
+    pub(crate) fn resolve_placeholders(
+        &mut self,
+        variables: &Variables,
+    ) -> Result<(), RemoteSudoError> {
+        self.command = variables.resolve_placeholders(&self.command)
+            .map_err(RemoteSudoError::CannotResolveCommandPlaceholders)?;
+        Ok(())
+    }
+
     pub(crate) fn execute(
         &self,
-        credentials: &Credentials,
         session: &Session,
         lifecycle: &mut RemoteSudoLifecycle,
     ) -> Result<(), RemoteSudoError> {
@@ -39,9 +42,8 @@ impl RemoteSudo {
 
         let mut channel: Channel = session.channel_session()
             .map_err(RemoteSudoError::CannotEstablishSessionChannel)?;
-        let password = &credentials.password;
         let command = &self.command;
-        channel.exec(&format!("echo {password} | sudo -S {command}"))
+        channel.exec(&format!("{command}"))
             .map_err(RemoteSudoError::CannotExecuteRemoteCommand)?;
 
         (lifecycle.channel_established)(&mut channel);

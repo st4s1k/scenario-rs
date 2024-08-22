@@ -8,6 +8,7 @@ use crate::{
     },
 };
 
+#[derive(Debug)]
 pub enum Task {
     RemoteSudo {
         description: String,
@@ -21,11 +22,9 @@ pub enum Task {
     },
 }
 
-impl TryFrom<(&TaskConfig, &Variables)> for Task {
-    type Error = TaskError;
-
-    fn try_from((task_config, variables): (&TaskConfig, &Variables)) -> Result<Self, Self::Error> {
-        let task = match task_config {
+impl From<&TaskConfig> for Task {
+    fn from(task_config: &TaskConfig) -> Self {
+        match task_config {
             TaskConfig::RemoteSudo {
                 description,
                 error_message,
@@ -33,8 +32,7 @@ impl TryFrom<(&TaskConfig, &Variables)> for Task {
             } => Task::RemoteSudo {
                 description: description.clone(),
                 error_message: error_message.clone(),
-                remote_sudo: RemoteSudo::try_from((config, variables))
-                    .map_err(TaskError::CannotCreateRemoteSudoTaskFromConfig)?,
+                remote_sudo: RemoteSudo::from(config),
             },
             TaskConfig::SftpCopy {
                 description,
@@ -43,12 +41,9 @@ impl TryFrom<(&TaskConfig, &Variables)> for Task {
             } => Task::SftpCopy {
                 description: description.clone(),
                 error_message: error_message.clone(),
-                sftp_copy: SftpCopy::try_from((config, variables))
-                    .map_err(TaskError::CannotCreateSftpCopyTaskFromConfig)?,
+                sftp_copy: SftpCopy::from(config),
             },
-        };
-
-        Ok(task)
+        }
     }
 }
 
@@ -64,6 +59,20 @@ impl Task {
         match self {
             Task::RemoteSudo { error_message, .. } => error_message,
             Task::SftpCopy { error_message, .. } => error_message,
+        }
+    }
+
+    pub(crate) fn resolve_placeholders(
+        &mut self,
+        variables: &Variables,
+    ) -> Result<(), TaskError> {
+        match self {
+            Task::RemoteSudo { remote_sudo, .. } =>
+                remote_sudo.resolve_placeholders(variables)
+                    .map_err(TaskError::CannotResolveRemoteSudoPlaceholders),
+            Task::SftpCopy { sftp_copy, .. } =>
+                sftp_copy.resolve_placeholders(variables)
+                    .map_err(TaskError::CannotResolveSftpCopyPlaceholders),
         }
     }
 }

@@ -3,6 +3,7 @@ use crate::{
     scenario::steps::Steps,
 };
 
+#[derive(Debug)]
 pub struct Execute {
     pub(crate) steps: Steps,
 }

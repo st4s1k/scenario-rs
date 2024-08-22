@@ -7,11 +7,13 @@ use std::{
     path::PathBuf,
 };
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct ScenarioConfig {
-    pub(crate) execute: ExecuteConfig,
-    pub(crate) variables: VariablesConfig,
-    pub(crate) tasks: TasksConfig,
+    pub credentials: CredentialsConfig,
+    pub server: ServerConfig,
+    pub execute: ExecuteConfig,
+    pub variables: VariablesConfig,
+    pub tasks: TasksConfig,
 }
 
 impl TryFrom<PathBuf> for ScenarioConfig {
@@ -22,16 +24,46 @@ impl TryFrom<PathBuf> for ScenarioConfig {
             .map_err(ScenarioConfigError::CannotOpenFile)?;
         let config: ScenarioConfig = serde_json::from_reader(config_file)
             .map_err(ScenarioConfigError::CannotReadJson)?;
-        Ok(config)
+        config.validate_required_variables()
     }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct ExecuteConfig {
-    pub(crate) steps: StepsConfig,
+impl ScenarioConfig {
+    fn validate_required_variables(
+        self,
+    ) -> Result<Self, ScenarioConfigError> {
+        let unresolved_variables =
+            self.variables.required.iter()
+                .filter(|(name, _)| !self.variables.defined.contains_key(*name))
+                .map(|(name, _)| name.to_string())
+                .collect::<Vec<String>>();
+
+        if !unresolved_variables.is_empty() {
+            return Err(ScenarioConfigError::UndefinedRequiredVariablesDetected(self, unresolved_variables));
+        }
+
+        Ok(self)
+    }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Debug)]
+pub struct CredentialsConfig {
+    pub username: String,
+    pub password: Option<String>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct ServerConfig {
+    pub host: String,
+    pub port: Option<String>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct ExecuteConfig {
+    pub steps: StepsConfig,
+}
+
+#[derive(Deserialize, Clone, Debug)]
 pub struct StepsConfig(Vec<StepConfig>);
 
 impl Deref for StepsConfig {
@@ -47,24 +79,24 @@ impl DerefMut for StepsConfig {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct StepConfig {
-    pub(crate) task: String,
-    pub(crate) rollback_steps: Option<Vec<String>>,
+    pub task: String,
+    pub rollback_steps: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct VariablesConfig {
-    pub(crate) required: RequiredVariablesConfig,
-    pub(crate) special: SpecialVariablesConfig,
-    pub(crate) defined: DefinedVariablesConfig,
+    pub required: RequiredVariablesConfig,
+    pub special: SpecialVariablesConfig,
+    pub defined: DefinedVariablesConfig,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct RequiredVariablesConfig(Vec<String>);
+#[derive(Deserialize, Clone, Debug)]
+pub struct RequiredVariablesConfig(HashMap</* name */ String, /* label */ String>);
 
 impl Deref for RequiredVariablesConfig {
-    type Target = Vec<String>;
+    type Target = HashMap<String, String>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -76,7 +108,7 @@ impl DerefMut for RequiredVariablesConfig {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct SpecialVariablesConfig(HashMap<String, String>);
 
 impl Deref for SpecialVariablesConfig {
@@ -92,7 +124,7 @@ impl DerefMut for SpecialVariablesConfig {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct DefinedVariablesConfig(HashMap<String, String>);
 
 impl Deref for DefinedVariablesConfig {
@@ -108,7 +140,7 @@ impl DerefMut for DefinedVariablesConfig {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct TasksConfig(HashMap<String, TaskConfig>);
 
 impl Deref for TasksConfig {
@@ -124,7 +156,7 @@ impl DerefMut for TasksConfig {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 #[serde(tag = "type")]
 pub enum TaskConfig {
     RemoteSudo {
@@ -141,13 +173,13 @@ pub enum TaskConfig {
     },
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct RemoteSudoConfig {
-    pub(crate) command: String,
+    pub command: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct SftpCopyConfig {
-    pub(crate) source_path: String,
-    pub(crate) destination_path: String,
+    pub source_path: String,
+    pub destination_path: String,
 }

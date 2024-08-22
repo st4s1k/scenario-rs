@@ -1,17 +1,15 @@
 use crate::{
     config::StepConfig,
     scenario::{
-        credentials::Credentials,
         errors::TaskError,
         lifecycle::RollbackLifecycle,
         task::Task,
     },
 };
-use serde::Deserialize;
 use ssh2::Session;
 use std::collections::HashMap;
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug)]
 pub struct Step {
     pub(crate) task: String,
     pub(crate) rollback_steps: Option<Vec<String>>,
@@ -34,7 +32,6 @@ impl Step {
     pub(crate) fn rollback(
         &self,
         tasks: &HashMap<String, Task>,
-        credentials: &Credentials,
         session: &Session,
         lifecycle: &mut RollbackLifecycle,
     ) -> Result<(), TaskError> {
@@ -46,7 +43,7 @@ impl Step {
                 (lifecycle.step.before)(index, rollback_task, rollback_steps);
                 match rollback_task {
                     Task::RemoteSudo { remote_sudo, .. } =>
-                        remote_sudo.execute(&credentials, &session, &mut lifecycle.step.remote_sudo)
+                        remote_sudo.execute(&session, &mut lifecycle.step.remote_sudo)
                             .map_err(TaskError::CannotRollbackRemoteSudo)?,
                     Task::SftpCopy { sftp_copy, .. } =>
                         sftp_copy.execute(&session, &mut lifecycle.step.sftp_copy)

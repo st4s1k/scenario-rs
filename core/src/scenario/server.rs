@@ -1,13 +1,18 @@
+use crate::config::ServerConfig;
+
+#[derive(Debug)]
 pub struct Server {
     pub(crate) host: String,
     pub(crate) port: String,
 }
 
-impl Server {
-    pub fn new(host: &str, port: &str) -> Server {
+impl From<&ServerConfig> for Server {
+    fn from(server_config: &ServerConfig) -> Self {
         Server {
-            host: host.to_string(),
-            port: port.to_string(),
+            host: server_config.host.clone(),
+            port: server_config.port.as_ref()
+                .map(String::clone)
+                .unwrap_or("22".to_string()),
         }
     }
 }

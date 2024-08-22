@@ -1,16 +1,15 @@
+use crate::scenario::errors::TasksError;
+use crate::scenario::variables::Variables;
 use crate::{
     config::TasksConfig,
-    scenario::{
-        errors::TasksError,
-        task::Task,
-        variables::Variables,
-    },
+    scenario::task::Task,
 };
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
 };
 
+#[derive(Debug)]
 pub struct Tasks(HashMap<String, Task>);
 
 impl Deref for Tasks {
@@ -26,17 +25,31 @@ impl DerefMut for Tasks {
     }
 }
 
-impl TryFrom<(&TasksConfig, &Variables)> for Tasks {
-    type Error = TasksError;
-    fn try_from((config, variables): (&TasksConfig, &Variables)) -> Result<Self, Self::Error> {
+impl From<&TasksConfig> for Tasks {
+    fn from(config: &TasksConfig) -> Self {
         let mut tasks = HashMap::<String, Task>::new();
 
         for (id, task_config) in config.deref() {
-            let task = Task::try_from((task_config, variables))
-                .map_err(TasksError::CannotCreateTaskFromConfig)?;
+            let task = Task::from(task_config);
             tasks.insert(id.clone(), task);
         }
 
-        Ok(Tasks(tasks))
+        Tasks(tasks)
     }
-} 
+}
+
+impl Tasks {
+    pub(crate) fn resolve_placeholders(&mut self, variables: &Variables) -> Result<(), TasksError> {
+        let unresolved_tasks = self.deref_mut().iter_mut()
+            .map(|(id, task)| (id, task.resolve_placeholders(variables)))
+            .filter(|(_, result)| result.is_err())
+            .map(|(id, _)| id.to_string())
+            .collect::<Vec<String>>();
+
+        if !unresolved_tasks.is_empty() {
+            return Err(TasksError::CannotResolvePlaceholdersInTasks(unresolved_tasks));
+        }
+
+        Ok(())
+    }
+}

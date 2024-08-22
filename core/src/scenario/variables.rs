@@ -1,9 +1,10 @@
+mod required;
+
 use crate::{
     config::{SpecialVariablesConfig, VariablesConfig},
     scenario::{
         errors::{PlaceholderResolutionError, VariablesError},
         utils::HasPlaceholders,
-        variables::required::RequiredVariables,
     },
 };
 use chrono::Local;
@@ -11,8 +12,6 @@ use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
 };
-
-pub mod required;
 
 pub struct Variables(HashMap<String, String>);
 
@@ -29,17 +28,12 @@ impl DerefMut for Variables {
     }
 }
 
-impl TryFrom<(&RequiredVariables, &VariablesConfig)> for Variables {
+impl TryFrom<&VariablesConfig> for Variables {
     type Error = VariablesError;
 
-    fn try_from((required_variables, config): (&RequiredVariables, &VariablesConfig)) -> Result<Self, Self::Error> {
-        required_variables
-            .validate(&config.required)
-            .map_err(VariablesError::RequiredVariablesValidationFailed)?;
-
+    fn try_from(config: &VariablesConfig) -> Result<Self, Self::Error> {
         let mut variables_map = HashMap::<String, String>::new();
-        variables_map.extend(required_variables.deref().clone());
-        variables_map.extend(config.defined.clone());
+        variables_map.extend(config.defined.deref().clone());
 
         let mut variables = Variables(variables_map);
 

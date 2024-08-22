@@ -6,11 +6,10 @@ use indicatif::{
     ProgressState,
     ProgressStyle,
 };
-use scenario_rs::scenario::steps::Steps;
 use scenario_rs::{
     config::ScenarioConfig,
     scenario::{
-        credentials::Credentials,
+        errors::ScenarioConfigError,
         lifecycle::{
             ExecutionLifecycle,
             RemoteSudoLifecycle,
@@ -20,113 +19,50 @@ use scenario_rs::{
             TaskLifecycle,
         },
         remote_sudo::RemoteSudo,
-        server::Server,
         sftp_copy::SftpCopy,
         step::Step,
+        steps::Steps,
         task::Task,
-        variables::required::RequiredVariables,
         Scenario,
     },
 };
-use std::{
-    fs::File,
-    io::Read,
-    path::PathBuf,
-    process::ExitCode,
-};
+use std::{fs::File, io::Read, path::PathBuf, process};
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::FmtSubscriber;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Cli {
-    #[arg(short, long)]
-    service_name: String,
-
-    #[arg(short, long)]
-    username: String,
-
-    #[arg(short, long)]
-    password: String,
-
-    #[arg(long, default_value = "localhost")]
-    host: String,
-
-    #[arg(long, default_value = "22")]
-    port: String,
-
     #[arg(short, long, value_name = "JSON_FILE")]
     config_path: PathBuf,
-
-    #[arg(long, value_name = "FILE")]
-    jar: PathBuf,
-
 }
 
 const SEPARATOR: &'static str = "------------------------------------------------------------";
 
-fn main() -> ExitCode {
+fn main() {
     let _tracing_guard = FmtSubscriber::builder().compact().without_time().init();
 
     let cli: Cli = Cli::parse();
 
-    let server = Server::new(&cli.host, &cli.port);
-    let credentials = Credentials::new(cli.username, cli.password);
-    let config = match ScenarioConfig::try_from(cli.config_path) {
-        Ok(config) => config,
-        Err(error) => {
-            error!("{}", SEPARATOR);
-            error!("{}", error);
-            error!("{}", SEPARATOR);
-            return ExitCode::FAILURE;
-        }
-    };
+    let config = ScenarioConfig::try_from(cli.config_path)
+        .map_err(|error| handle_required_variables_error(error))
+        .unwrap_or_else(|result| match result {
+            Ok(config) => config,
+            Err(error) => {
+                error!("{}", SEPARATOR);
+                error!("{}", error);
+                error!("{}", SEPARATOR);
+                process::exit(1);
+            }
+        });
 
-    let username: String = credentials.username().to_string();
-
-    let local_jar_path: String = match cli.jar.as_path().to_str() {
-        Some(local_jar_path) => local_jar_path.to_string(),
-        None => {
-            let jar_path = cli.jar.to_str().unwrap_or("<not_a_valid_string>");
-            error!("{}", SEPARATOR);
-            error!("The JAR file path should be valid UTF-8: {}", jar_path);
-            error!("{}", SEPARATOR);
-            return ExitCode::FAILURE;
-        }
-    };
-
-    let local_jar_basename: String = match cli.jar.as_path().file_name()
-        .and_then(|file_name| file_name.to_str())
-        .map(|file_name| file_name.to_string()) {
-        Some(local_jar_basename) => local_jar_basename,
-        None => {
-            let jar_path = cli.jar.to_str().unwrap_or("<not_a_valid_string>");
-            error!("{}", SEPARATOR);
-            error!("The JAR file path is not a file: {}", jar_path);
-            error!("{}", SEPARATOR);
-            return ExitCode::FAILURE;
-        }
-    };
-
-    let required_variables = RequiredVariables::new([
-        ("service_name".to_string(), cli.service_name),
-        ("username".to_string(), username),
-        ("local_jar_path".to_string(), local_jar_path),
-        ("local_jar_basename".to_string(), local_jar_basename)
-    ]);
-
-    let scenario: Scenario = match Scenario::new(
-        server,
-        credentials,
-        config,
-        required_variables,
-    ) {
+    let scenario: Scenario = match Scenario::new(config) {
         Ok(scenario) => scenario,
         Err(error) => {
             error!("{}", SEPARATOR);
             error!("Scenario initialization failed: {}", error);
             error!("{}", SEPARATOR);
-            return ExitCode::FAILURE;
+            process::exit(1);
         }
     };
 
@@ -137,15 +73,57 @@ fn main() -> ExitCode {
             info!("{}", SEPARATOR);
             info!("{}", "Scenario completed successfully!".cyan());
             info!("{}", SEPARATOR);
-            ExitCode::SUCCESS
         }
         Err(error) => {
             error!("{}", SEPARATOR);
             error!("Scenario execution failed: {}", error);
             error!("{}", SEPARATOR);
-            ExitCode::FAILURE
+            process::exit(1);
         }
     }
+}
+
+fn handle_required_variables_error(
+    error: ScenarioConfigError
+) -> Result<ScenarioConfig, ScenarioConfigError> {
+    if let ScenarioConfigError::UndefinedRequiredVariablesDetected(
+        mut scenario_config,
+        required_variables
+    ) = error {
+        for variable in required_variables {
+            // TODO: Find a way to indicate that the variable is a path
+            // let local_jar_path: String = match cli.jar.as_path().to_str() {
+            //     Some(local_jar_path) => local_jar_path.to_string(),
+            //     None => {
+            //         let jar_path = cli.jar.to_str().unwrap_or("<not_a_valid_string>");
+            //         error!("{}", SEPARATOR);
+            //         error!("The JAR file path should be valid UTF-8: {}", jar_path);
+            //         error!("{}", SEPARATOR);
+            //         process::exit(1);
+            //     }
+            // };
+            // 
+            // let local_jar_basename: String = match cli.jar.as_path().file_name()
+            //     .and_then(|file_name| file_name.to_str())
+            //     .map(|file_name| file_name.to_string()) {
+            //     Some(local_jar_basename) => local_jar_basename,
+            //     None => {
+            //         let jar_path = cli.jar.to_str().unwrap_or("<not_a_valid_string>");
+            //         error!("{}", SEPARATOR);
+            //         error!("The JAR file path is not a file: {}", jar_path);
+            //         error!("{}", SEPARATOR);
+            //         process::exit(1);
+            //     }
+            // };
+
+            // TODO: If just a regular string, prompt the user for the value
+            scenario_config.variables.defined
+                .insert(variable, "<path> or <plain_str>".to_string());
+        }
+        return Ok(scenario_config);
+    };
+
+    Err(error)
 }
 
 fn execution_lifecycle() -> ExecutionLifecycle {
