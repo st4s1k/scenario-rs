@@ -1,20 +1,20 @@
 use crate::{
     app::DeploymentApp,
-    lifecycle::execution_lifecycle,
-    lifecycle::LifecycleHandler,
+    lifecycle::{execution_lifecycle, LifecycleHandler},
     shared::SEPARATOR,
 };
 use colored::Colorize;
-use deploy_rs_core::data::{
-    config::ScenarioConfig,
-    Credentials,
-    RequiredVariables,
-    Scenario,
-    Server,
-};
 use egui_file_dialog::FileDialog;
-use std::sync::mpsc;
-use std::thread;
+use scenario_rs::{
+    config::ScenarioConfig,
+    scenario::{
+        credentials::Credentials,
+        server::Server,
+        variables::required::RequiredVariables,
+        Scenario,
+    },
+};
+use std::{sync::mpsc, thread};
 
 pub fn start_deployment(app: &mut DeploymentApp) {
     if !app.is_deploying {

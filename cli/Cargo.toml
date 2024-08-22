@@ -9,7 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.5.15", features = ["derive"] }
-deploy-rs-core = { package = "core", path = "../core" }
+scenario-rs = { package = "scenario-rs", path = "../scenario-rs" }
 colored = "2.1.0"
 chrono = "0.4.38"
 tracing = "0.1.40"

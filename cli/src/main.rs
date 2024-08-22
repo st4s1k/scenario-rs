@@ -1,31 +1,32 @@
 use clap::Parser;
 use colored::Colorize;
-use deploy_rs_core::data::config::StepConfig;
-use deploy_rs_core::data::{
-    config::{
-        RemoteSudoConfig,
-        ScenarioConfig,
-        SftpCopyConfig,
-        TaskConfig,
-    },
-    lifecycles::{
-        ExecutionLifecycle,
-        RemoteSudoLifecycle,
-        RollbackLifecycle,
-        RollbackTaskLifecycle,
-        SftpCopyLifecycle,
-        TaskLifecycle,
-    },
-    Credentials,
-    RequiredVariables,
-    Scenario,
-    Server,
-};
 use indicatif::{
     ProgressBar,
     ProgressDrawTarget,
     ProgressState,
     ProgressStyle,
+};
+use scenario_rs::scenario::steps::Steps;
+use scenario_rs::{
+    config::ScenarioConfig,
+    scenario::{
+        credentials::Credentials,
+        lifecycle::{
+            ExecutionLifecycle,
+            RemoteSudoLifecycle,
+            RollbackLifecycle,
+            RollbackStepLifecycle,
+            SftpCopyLifecycle,
+            TaskLifecycle,
+        },
+        remote_sudo::RemoteSudo,
+        server::Server,
+        sftp_copy::SftpCopy,
+        step::Step,
+        task::Task,
+        variables::required::RequiredVariables,
+        Scenario,
+    },
 };
 use std::{
     fs::File,
@@ -156,12 +157,12 @@ fn execution_lifecycle() -> ExecutionLifecycle {
 fn task_lifecycle() -> TaskLifecycle {
     let mut lifecycle = TaskLifecycle::default();
     lifecycle.before =
-        |index: usize, task: &TaskConfig, tasks: Vec<&TaskConfig>| {
+        |index: usize, task: &Task, steps: &Steps| {
             let task_number: usize = index + 1;
             let description = task.description();
-            let total_tasks: usize = (&tasks).len();
+            let total_steps: usize = steps.len();
             info!("{}", SEPARATOR);
-            info!("{}", format!("[{task_number}/{total_tasks}] {description}").purple());
+            info!("{}", format!("[{task_number}/{total_steps}] {description}").purple());
         };
     lifecycle.remote_sudo = remote_sudo_lifecycle();
     lifecycle.sftp_copy = sftp_copy_lifecycle();
@@ -171,7 +172,7 @@ fn task_lifecycle() -> TaskLifecycle {
 
 fn remote_sudo_lifecycle() -> RemoteSudoLifecycle {
     let mut lifecycle = RemoteSudoLifecycle::default();
-    lifecycle.before = |remote_sudo: &RemoteSudoConfig| {
+    lifecycle.before = |remote_sudo: &RemoteSudo| {
         info!("{}", "Executing:".yellow());
         info!("{}", &remote_sudo.command().bold());
     };
@@ -195,7 +196,7 @@ fn remote_sudo_lifecycle() -> RemoteSudoLifecycle {
 
 fn sftp_copy_lifecycle() -> SftpCopyLifecycle {
     let mut lifecycle = SftpCopyLifecycle::default();
-    lifecycle.before = |sftp_copy: &SftpCopyConfig| {
+    lifecycle.before = |sftp_copy: &SftpCopy| {
         info!("{}", "Source:".yellow());
         info!("{}", &sftp_copy.source_path().bold());
         info!("{}", "Destination:".yellow());
@@ -221,25 +222,25 @@ fn sftp_copy_lifecycle() -> SftpCopyLifecycle {
 fn rollback_lifecycle() -> RollbackLifecycle {
     let mut lifecycle = RollbackLifecycle::default();
     lifecycle.before =
-        |step: &StepConfig| {
+        |step: &Step| {
             if step.rollback_steps().is_none() {
                 info!("{}", SEPARATOR);
                 info!("[{}] No rollback actions found", "rollback".red());
             }
         };
-    lifecycle.task = rollback_task_lifecycle();
+    lifecycle.step = rollback_step_lifecycle();
     lifecycle
 }
 
-fn rollback_task_lifecycle() -> RollbackTaskLifecycle {
-    let mut lifecycle = RollbackTaskLifecycle::default();
+fn rollback_step_lifecycle() -> RollbackStepLifecycle {
+    let mut lifecycle = RollbackStepLifecycle::default();
     lifecycle.before =
-        |index: usize, rollback_task: &TaskConfig, rollback_steps: &Vec<String>| {
+        |index: usize, rollback_task: &Task, rollback_steps: &Vec<String>| {
             let task_number = index + 1;
-            let total_rollback_tasks = rollback_steps.len();
+            let total_rollback_steps = rollback_steps.len();
             let description = rollback_task.description();
             info!("{}", SEPARATOR);
-            info!("{}", format ! ("[{}] [{task_number}/{total_rollback_tasks}] {}", "rollback".red(), description).purple());
+            info!("{}", format ! ("[{}] [{task_number}/{total_rollback_steps}] {}", "rollback".red(), description).purple());
         };
     lifecycle
 }

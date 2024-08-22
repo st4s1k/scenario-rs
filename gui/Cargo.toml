@@ -10,7 +10,7 @@ path = "src/main.rs"
 [dependencies]
 egui = "0.28.1"
 eframe = "0.28.1"
-deploy-rs-core = { package = "core", path = "../core" }
+scenario-rs = { package = "scenario-rs", path = "../scenario-rs" }
 colored = "2.0.4"
 chrono = "0.4.38"
 serde = { version = "1.0", features = ["derive"] }

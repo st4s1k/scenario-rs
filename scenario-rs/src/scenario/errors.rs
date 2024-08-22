@@ -10,12 +10,10 @@ pub enum ScenarioConfigError {
 
 #[derive(Error, Debug)]
 pub enum ScenarioError {
-    #[error("Validation failed for required variables")]
-    RequiredVariablesValidationFailed(#[source] RequiredVariablesError),
-    #[error("Cannot resolve placeholders in variables")]
-    CannotResolveVariablesPlaceholders(#[source] PlaceholderResolutionError),
-    #[error("Cannot resolve placeholders in task")]
-    CannotResolveTaskPlaceholders(#[source] TaskError),
+    #[error("Cannot create Variables from config")]
+    CannotCreateVariablesFromConfig(#[source] VariablesError),
+    #[error("Cannot create Tasks from config")]
+    CannotCreateTasksFromConfig(#[source] TasksError),
     #[error("Cannot connect to remote server")]
     CannotConnectToRemoteServer(#[source] std::io::Error),
     #[error("Cannot create a new session")]
@@ -33,15 +31,21 @@ pub enum ScenarioError {
 }
 
 #[derive(Error, Debug)]
+pub enum TasksError {
+    #[error("Cannot create task from config")]
+    CannotCreateTaskFromConfig(#[source] TaskError)
+}
+
+#[derive(Error, Debug)]
 pub enum TaskError {
     #[error("Cannot resolve placeholders in RemoteSudo")]
     CannotRollbackRemoteSudo(#[source] RemoteSudoError),
     #[error("Cannot resolve placeholders in SftpCopy")]
     CannotRollbackSftpCopy(#[source] SftpCopyError),
-    #[error("Cannot resolve placeholders in RemoteSudo")]
-    CannotResolveRemoteSudoPlaceholders(#[source] RemoteSudoError),
-    #[error("Cannot resolve placeholders in SftpCopy")]
-    CannotResolveSftpCopyPlaceholders(#[source] SftpCopyError),
+    #[error("Cannot create RemoteSudo task from config")]
+    CannotCreateRemoteSudoTaskFromConfig(#[source] RemoteSudoError),
+    #[error("Cannot create SftpCopy task from config")]
+    CannotCreateSftpCopyTaskFromConfig(#[source] SftpCopyError),
 }
 
 #[derive(Error, Debug)]
@@ -74,6 +78,14 @@ pub enum SftpCopyError {
     CannotResolveSourcePathPlaceholders(#[source] PlaceholderResolutionError),
     #[error("Cannot resolve placeholders in destination file")]
     CannotResolveDestinationPathPlaceholders(#[source] PlaceholderResolutionError),
+}
+
+#[derive(Error, Debug)]
+pub enum VariablesError {
+    #[error("Validation failed for required variables")]
+    RequiredVariablesValidationFailed(#[source] RequiredVariablesError),
+    #[error("Cannot resolve placeholders in variables")]
+    CannotResolveVariablesPlaceholders(#[source] PlaceholderResolutionError),
 }
 
 #[derive(Error, Debug)]
