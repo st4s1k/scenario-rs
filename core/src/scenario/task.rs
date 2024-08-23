@@ -8,7 +8,7 @@ use crate::{
     },
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Task {
     RemoteSudo {
         description: String,

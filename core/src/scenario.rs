@@ -2,17 +2,12 @@ use crate::{
     config::ScenarioConfig,
     scenario::{
         execute::Execute,
-        step::Step,
-        task::Task,
         tasks::Tasks,
     },
 };
 use credentials::Credentials;
 use errors::ScenarioError;
-use lifecycle::{
-    ExecutionLifecycle,
-    TaskLifecycle,
-};
+use lifecycle::ExecutionLifecycle;
 use server::Server;
 use ssh2::Session;
 use std::net::TcpStream;
@@ -31,6 +26,7 @@ pub mod step;
 pub mod steps;
 pub mod task;
 pub mod tasks;
+pub mod rollback;
 
 #[derive(Debug)]
 pub struct Scenario {
@@ -47,8 +43,9 @@ impl Scenario {
         let server = Server::from(&config.server);
         let credentials = Credentials::from(&config.credentials);
         variables.insert("username".to_string(), credentials.username.clone());
-        let execute = Execute::from(&config.execute);
         let tasks = Tasks::from(&config.tasks);
+        let execute = Execute::try_from((&tasks, &config.execute))
+            .map_err(ScenarioError::CannotCreateExecuteFromConfig)?;
         let mut scenario = Scenario { server, credentials, execute, tasks };
         scenario.resolve_placeholders(&variables)?;
         Ok(scenario)
@@ -68,16 +65,12 @@ impl Scenario {
         &self,
         mut lifecycle: ExecutionLifecycle,
     ) -> Result<(), ScenarioError> {
-        let session: Session = self.new_session()?;
-
         (lifecycle.before)(&self);
 
-        for (index, step) in self.execute.steps.iter().enumerate() {
-            // TODO: Error handling - Step must be a valid task
-            let task = self.tasks.get(&step.task).unwrap();
-            (lifecycle.task.before)(index, task, &self.execute.steps);
-            self.execute_step(&session, step, &mut lifecycle.task)?;
-        }
+        let session: Session = self.new_session()?;
+
+        self.execute.steps.execute(&session, &mut lifecycle.steps)
+            .map_err(ScenarioError::CannotExecuteSteps)?;
 
         Ok(())
     }
@@ -104,33 +97,5 @@ impl Scenario {
         }
 
         Ok(session)
-    }
-
-    fn execute_step(
-        &self,
-        session: &Session,
-        step: &Step,
-        lifecycle: &mut TaskLifecycle,
-    ) -> Result<(), ScenarioError> {
-        // TODO: Error handling - Step must be a valid task
-        let task = &self.tasks.get(&step.task).unwrap();
-        let error_message = task.error_message().to_string();
-
-        let task_result = match task {
-            Task::RemoteSudo { remote_sudo, .. } =>
-                remote_sudo.execute(session, &mut lifecycle.remote_sudo)
-                    .map_err(|error| ScenarioError::CannotExecuteRemoteSudoCommand(error, error_message)),
-            Task::SftpCopy { sftp_copy, .. } =>
-                sftp_copy.execute(session, &mut lifecycle.sftp_copy)
-                    .map_err(|error| ScenarioError::CannotExecuteSftpCopyCommand(error, error_message))
-        };
-
-        if let Err(error) = task_result {
-            step.rollback(&self.tasks, session, &mut lifecycle.rollback)
-                .map_err(ScenarioError::CannotRollbackTask)?;
-            return Err(error);
-        };
-
-        Ok(())
     }
 }

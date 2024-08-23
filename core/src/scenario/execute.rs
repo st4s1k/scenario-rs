@@ -1,6 +1,10 @@
 use crate::{
     config::ExecuteConfig,
-    scenario::steps::Steps,
+    scenario::{
+        errors::ExecuteError,
+        steps::Steps,
+        tasks::Tasks,
+    },
 };
 
 #[derive(Debug)]
@@ -8,9 +12,12 @@ pub struct Execute {
     pub(crate) steps: Steps,
 }
 
-impl From<&ExecuteConfig> for Execute {
-    fn from(config: &ExecuteConfig) -> Self {
-        let steps = Steps::from(&config.steps);
-        Execute { steps }
+impl TryFrom<(&Tasks, &ExecuteConfig)> for Execute {
+    type Error = ExecuteError;
+
+    fn try_from((tasks, config): (&Tasks, &ExecuteConfig)) -> Result<Self, Self::Error> {
+        let steps = Steps::try_from((tasks, &config.steps))
+            .map_err(ExecuteError::CannotCreateStepsFromConfig)?;
+        Ok(Execute { steps })
     }
 }

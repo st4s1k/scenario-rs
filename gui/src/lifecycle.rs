@@ -1,6 +1,5 @@
 use crate::shared::SEPARATOR;
 use colored::Colorize;
-use scenario_rs::scenario::steps::Steps;
 use scenario_rs::scenario::{
     lifecycle::{
         ExecutionLifecycle,
@@ -8,12 +7,12 @@ use scenario_rs::scenario::{
         RollbackLifecycle,
         RollbackStepLifecycle,
         SftpCopyLifecycle,
-        TaskLifecycle,
+        StepsLifecycle,
     },
     remote_sudo::RemoteSudo,
+    rollback::RollbackSteps,
     sftp_copy::SftpCopy,
-    step::Step,
-    task::Task,
+    task::Task
 };
 use std::{
     io::Read,
@@ -73,16 +72,15 @@ impl LifecycleHandler {
         let _ = self.tx.send(log_message);
     }
 
-    pub fn log_rollback_before(&self, step: &Step) {
-        if step.rollback_steps().is_none() {
+    pub fn log_rollback_before(&self, rollback_steps: &RollbackSteps) {
+        if rollback_steps.is_empty() {
             let log_message = format!("{}\n[{}] No rollback actions found\n", SEPARATOR, "rollback".red());
             let _ = self.tx.send(log_message);
         }
     }
 
-    pub fn log_rollback_step_before(&self, index: usize, rollback_task: &Task, rollback_steps: &Vec<String>) {
+    pub fn log_rollback_step_before(&self, index: usize, rollback_task: &Task, total_rollback_steps: usize) {
         let task_number = index + 1;
-        let total_rollback_steps = rollback_steps.len();
         let description = rollback_task.description();
         let log_message = format!("{}\n[{}] [{}/{}] {}\n", SEPARATOR, "rollback".red(), task_number, total_rollback_steps, description.purple());
         let _ = self.tx.send(log_message);
@@ -91,13 +89,13 @@ impl LifecycleHandler {
 
 pub fn execution_lifecycle() -> ExecutionLifecycle {
     let mut lifecycle = ExecutionLifecycle::default();
-    lifecycle.task = task_lifecycle();
+    lifecycle.steps = steps_lifecycle();
     lifecycle
 }
 
-fn task_lifecycle() -> TaskLifecycle {
-    let mut lifecycle = TaskLifecycle::default();
-    lifecycle.before = log_task_before;
+fn steps_lifecycle() -> StepsLifecycle {
+    let mut lifecycle = StepsLifecycle::default();
+    lifecycle.before = log_step_before;
     lifecycle.remote_sudo = remote_sudo_lifecycle();
     lifecycle.sftp_copy = sftp_copy_lifecycle();
     lifecycle.rollback = rollback_lifecycle();
@@ -130,11 +128,10 @@ fn rollback_step_lifecycle() -> RollbackStepLifecycle {
     lifecycle
 }
 
-pub fn log_task_before(index: usize, task: &Task, steps: &Steps) {
+pub fn log_step_before(index: usize, task: &Task, total_steps: usize) {
     if let Some(logger) = LIFECYCLE_HANDLER.get() {
         let task_number: usize = index + 1;
         let description = task.description();
-        let total_steps: usize = steps.len();
         let log_message = format!(
             "{}\n{}\n",
             SEPARATOR,
@@ -162,14 +159,14 @@ pub fn log_sftp_copy_before(sftp_copy: &SftpCopy) {
     }
 }
 
-pub fn log_rollback_before(step: &Step) {
+pub fn log_rollback_before(rollback_steps: &RollbackSteps) {
     if let Some(logger) = LIFECYCLE_HANDLER.get() {
-        logger.log_rollback_before(step);
+        logger.log_rollback_before(rollback_steps);
     }
 }
 
-pub fn log_rollback_step_before(index: usize, rollback_task: &Task, rollback_steps: &Vec<String>) {
+pub fn log_rollback_step_before(index: usize, rollback_task: &Task, total_rollback_steps: usize) {
     if let Some(logger) = LIFECYCLE_HANDLER.get() {
-        logger.log_rollback_step_before(index, rollback_task, rollback_steps);
+        logger.log_rollback_step_before(index, rollback_task, total_rollback_steps);
     }
 }

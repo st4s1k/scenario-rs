@@ -1,8 +1,7 @@
-use crate::scenario::steps::Steps;
 use crate::scenario::{
     remote_sudo::RemoteSudo,
+    rollback::RollbackSteps,
     sftp_copy::SftpCopy,
-    step::Step,
     task::Task,
     Scenario,
 };
@@ -14,28 +13,28 @@ use std::{
 
 pub struct ExecutionLifecycle {
     pub before: fn(scenario: &Scenario),
-    pub task: TaskLifecycle,
+    pub steps: StepsLifecycle,
 }
 
 impl Default for ExecutionLifecycle {
     fn default() -> Self {
         ExecutionLifecycle {
             before: |_| {},
-            task: Default::default(),
+            steps: Default::default(),
         }
     }
 }
 
-pub struct TaskLifecycle {
-    pub before: fn(index: usize, task: &Task, tasks: &Steps),
+pub struct StepsLifecycle {
+    pub before: fn(index: usize, task: &Task, total_steps: usize),
     pub remote_sudo: RemoteSudoLifecycle,
     pub sftp_copy: SftpCopyLifecycle,
     pub rollback: RollbackLifecycle,
 }
 
-impl Default for TaskLifecycle {
+impl Default for StepsLifecycle {
     fn default() -> Self {
-        TaskLifecycle {
+        StepsLifecycle {
             before: |_, _, _| {},
             remote_sudo: Default::default(),
             sftp_copy: Default::default(),
@@ -45,7 +44,7 @@ impl Default for TaskLifecycle {
 }
 
 pub struct RollbackLifecycle {
-    pub before: fn(step: &Step),
+    pub before: fn(rollback_steps: &RollbackSteps),
     pub step: RollbackStepLifecycle,
 }
 
@@ -59,7 +58,7 @@ impl Default for RollbackLifecycle {
 }
 
 pub struct RollbackStepLifecycle {
-    pub before: fn(index: usize, rollback_task: &Task, rollback_tasks: &Vec<String>),
+    pub before: fn(index: usize, rollback_task: &Task, total_rollback_steps: usize),
     pub remote_sudo: RemoteSudoLifecycle,
     pub sftp_copy: SftpCopyLifecycle,
 }

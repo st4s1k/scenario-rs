@@ -14,7 +14,7 @@ use std::{
     path::Path,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SftpCopy {
     pub(crate) source_path: String,
     pub(crate) destination_path: String,

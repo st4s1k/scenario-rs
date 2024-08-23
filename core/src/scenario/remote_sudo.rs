@@ -8,7 +8,7 @@ use crate::{
 };
 use ssh2::{Channel, Session};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RemoteSudo {
     pub(crate) command: String,
 }

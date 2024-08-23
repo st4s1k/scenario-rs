@@ -15,6 +15,8 @@ pub enum ScenarioConfigError {
 pub enum ScenarioError {
     #[error("Cannot create Variables from config: {0}")]
     CannotCreateVariablesFromConfig(#[source] VariablesError),
+    #[error("Cannot create Execute from config: {0}")]
+    CannotCreateExecuteFromConfig(#[source] ExecuteError),
     #[error("Cannot resolve placeholders in tasks: {0}")]
     CannotResolvePlaceholdersInTasks(#[source] TasksError),
     #[error("Cannot connect to remote server: {0}")]
@@ -27,12 +29,46 @@ pub enum ScenarioError {
     CannotAuthenticateWithPassword(#[source] ssh2::Error),
     #[error("Cannot authenticate with ssh-agent: {0}")]
     CannotAuthenticateWithAgent(#[source] ssh2::Error),
+    #[error("Cannot execute steps: {0}")]
+    CannotExecuteSteps(#[source] StepsError),
+}
+
+#[derive(Error, Debug)]
+pub enum ExecuteError {
+    #[error("Cannot create Steps from config: {0}")]
+    CannotCreateStepsFromConfig(StepsError),
+}
+
+#[derive(Error, Debug)]
+pub enum StepsError {
+    #[error("Cannot create Step from config: {0}")]
+    CannotCreateStepFromConfig(StepError),
     #[error("Cannot execute RemoteSudo command: {1}: {0}")]
     CannotExecuteRemoteSudoCommand(#[source] RemoteSudoError, String),
     #[error("Cannot execute SftpCopy command: {1}: {0}")]
     CannotExecuteSftpCopyCommand(#[source] SftpCopyError, String),
-    #[error("Cannot rollback task: {0}")]
-    CannotRollbackTask(#[source] TaskError),
+    #[error("Cannot rollback step: {0}")]
+    CannotRollbackStep(#[source] StepError),
+}
+
+#[derive(Error, Debug)]
+pub enum StepError {
+    #[error("Cannot create RollbackSteps from config: {0}")]
+    CannotCreateRollbackStepsFromConfig(#[source] RollbackError),
+    #[error("Cannot create Task from config: {0}")]
+    CannotCreateTaskFromConfig(String),
+    #[error("Cannot execute rollback steps: {0}")]
+    CannotExecuteRollbackSteps(#[source] RollbackError),
+}
+
+#[derive(Error, Debug)]
+pub enum RollbackError {
+    #[error("Rollback step must be a valid task id: {0}")]
+    InvalidRollbackStep(String),
+    #[error("Cannot rollback RemoteSudo task: {0}")]
+    CannotRollbackRemoteSudo(#[source] RemoteSudoError),
+    #[error("Cannot rollback SftpCopy task: {0}")]
+    CannotRollbackSftpCopy(#[source] SftpCopyError),
 }
 
 #[derive(Error, Debug)]
@@ -47,10 +83,6 @@ pub enum TaskError {
     CannotResolveRemoteSudoPlaceholders(#[source] RemoteSudoError),
     #[error("Cannot resolve placeholders in SftpCopy: {0}")]
     CannotResolveSftpCopyPlaceholders(#[source] SftpCopyError),
-    #[error("Cannot rollback RemoteSudo task: {0}")]
-    CannotRollbackRemoteSudo(#[source] RemoteSudoError),
-    #[error("Cannot rollback SftpCopy task: {0}")]
-    CannotRollbackSftpCopy(#[source] SftpCopyError),
     #[error("Cannot create RemoteSudo task from config: {0}")]
     CannotCreateRemoteSudoTaskFromConfig(#[source] RemoteSudoError),
     #[error("Cannot create SftpCopy task from config: {0}")]
