@@ -6,6 +6,11 @@ pub trait MyUi {
     fn labeled_field(
         &mut self,
         service_name_label: &str,
+        service_name_value: &String,
+    );
+    fn mutable_labeled_field(
+        &mut self,
+        service_name_label: &str,
         service_name_value: &mut String,
     );
     fn file_selector_field(
@@ -24,6 +29,16 @@ pub trait MyUi {
 
 impl MyUi for Ui {
     fn labeled_field(
+        &mut self,
+        service_name_label: &str,
+        service_name_value: &String,
+    ) {
+        self.label(service_name_label);
+        self.text_edit_singleline(&mut service_name_value.as_str());
+        self.end_row();
+    }
+
+    fn mutable_labeled_field(
         &mut self,
         service_name_label: &str,
         service_name_value: &mut String,

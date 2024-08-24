@@ -1,5 +1,6 @@
 use crate::scenario::errors::ScenarioConfigError;
 use serde::Deserialize;
+use std::collections::BTreeMap;
 use std::{
     collections::HashMap,
     fs::File,
@@ -24,25 +25,7 @@ impl TryFrom<PathBuf> for ScenarioConfig {
             .map_err(ScenarioConfigError::CannotOpenFile)?;
         let config: ScenarioConfig = serde_json::from_reader(config_file)
             .map_err(ScenarioConfigError::CannotReadJson)?;
-        config.validate_required_variables()
-    }
-}
-
-impl ScenarioConfig {
-    fn validate_required_variables(
-        self,
-    ) -> Result<Self, ScenarioConfigError> {
-        let unresolved_variables =
-            self.variables.required.iter()
-                .filter(|(name, _)| !self.variables.defined.contains_key(*name))
-                .map(|(name, _)| name.to_string())
-                .collect::<Vec<String>>();
-
-        if !unresolved_variables.is_empty() {
-            return Err(ScenarioConfigError::UndefinedRequiredVariablesDetected(self, unresolved_variables));
-        }
-
-        Ok(self)
+        Ok(config)
     }
 }
 
@@ -109,10 +92,10 @@ pub struct VariablesConfig {
 }
 
 #[derive(Deserialize, Clone, Debug)]
-pub struct RequiredVariablesConfig(HashMap</* name */ String, /* label */ String>);
+pub struct RequiredVariablesConfig(BTreeMap</* name */ String, /* label */ String>);
 
 impl Deref for RequiredVariablesConfig {
-    type Target = HashMap<String, String>;
+    type Target = BTreeMap<String, String>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }

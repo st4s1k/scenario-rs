@@ -1,5 +1,6 @@
 use crate::scenario::rollback::RollbackSteps;
 use crate::scenario::tasks::Tasks;
+use crate::scenario::variables::Variables;
 use crate::{
     config::StepConfig,
     scenario::{
@@ -44,9 +45,10 @@ impl Step {
     pub(crate) fn rollback(
         &self,
         session: &Session,
+        variables: &Variables,
         lifecycle: &mut StepsLifecycle,
     ) -> Result<(), StepError> {
-        self.rollback_steps.execute(session, &mut lifecycle.rollback)
+        self.rollback_steps.execute(session, variables, &mut lifecycle.rollback)
             .map_err(StepError::CannotExecuteRollbackSteps)
     }
 }

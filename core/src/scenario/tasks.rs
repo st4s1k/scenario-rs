@@ -1,5 +1,3 @@
-use crate::scenario::errors::TasksError;
-use crate::scenario::variables::Variables;
 use crate::{
     config::TasksConfig,
     scenario::task::Task,
@@ -35,21 +33,5 @@ impl From<&TasksConfig> for Tasks {
         }
 
         Tasks(tasks)
-    }
-}
-
-impl Tasks {
-    pub(crate) fn resolve_placeholders(&mut self, variables: &Variables) -> Result<(), TasksError> {
-        let unresolved_tasks = self.deref_mut().iter_mut()
-            .map(|(id, task)| (id, task.resolve_placeholders(variables)))
-            .filter(|(_, result)| result.is_err())
-            .map(|(id, _)| id.to_string())
-            .collect::<Vec<String>>();
-
-        if !unresolved_tasks.is_empty() {
-            return Err(TasksError::CannotResolvePlaceholdersInTasks(unresolved_tasks));
-        }
-
-        Ok(())
     }
 }

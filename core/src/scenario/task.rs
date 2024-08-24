@@ -1,10 +1,9 @@
 use crate::{
     config::TaskConfig,
     scenario::{
-        errors::TaskError,
         remote_sudo::RemoteSudo,
-        sftp_copy::SftpCopy,
-        variables::Variables,
+        sftp_copy::SftpCopy
+        ,
     },
 };
 
@@ -59,20 +58,6 @@ impl Task {
         match self {
             Task::RemoteSudo { error_message, .. } => error_message,
             Task::SftpCopy { error_message, .. } => error_message,
-        }
-    }
-
-    pub(crate) fn resolve_placeholders(
-        &mut self,
-        variables: &Variables,
-    ) -> Result<(), TaskError> {
-        match self {
-            Task::RemoteSudo { remote_sudo, .. } =>
-                remote_sudo.resolve_placeholders(variables)
-                    .map_err(TaskError::CannotResolveRemoteSudoPlaceholders),
-            Task::SftpCopy { sftp_copy, .. } =>
-                sftp_copy.resolve_placeholders(variables)
-                    .map_err(TaskError::CannotResolveSftpCopyPlaceholders),
         }
     }
 }

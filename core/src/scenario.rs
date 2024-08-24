@@ -33,28 +33,31 @@ pub struct Scenario {
     pub(crate) server: Server,
     pub(crate) credentials: Credentials,
     pub(crate) execute: Execute,
-    pub(crate) tasks: Tasks,
+    pub(crate) variables: Variables,
 }
 
 impl Scenario {
-    pub fn new(config: ScenarioConfig) -> Result<Scenario, ScenarioError> {
-        let mut variables = Variables::try_from(&config.variables)
-            .map_err(ScenarioError::CannotCreateVariablesFromConfig)?;
+    pub fn variables(&mut self) -> &mut Variables {
+        &mut self.variables
+    }
+}
+
+impl Scenario {
+    pub fn new(mut config: ScenarioConfig) -> Result<Scenario, ScenarioError> {
         let server = Server::from(&config.server);
         let credentials = Credentials::from(&config.credentials);
-        variables.insert("username".to_string(), credentials.username.clone());
+        config.variables.defined.insert("username".to_string(), credentials.username.clone());
         let tasks = Tasks::from(&config.tasks);
         let execute = Execute::try_from((&tasks, &config.execute))
             .map_err(ScenarioError::CannotCreateExecuteFromConfig)?;
-        let mut scenario = Scenario { server, credentials, execute, tasks };
-        scenario.resolve_placeholders(&variables)?;
+        let variables = Variables::from(&config.variables);
+        let scenario = Scenario {
+            server,
+            credentials,
+            execute,
+            variables,
+        };
         Ok(scenario)
-    }
-
-    fn resolve_placeholders(&mut self, variables: &Variables) -> Result<(), ScenarioError> {
-        self.tasks.resolve_placeholders(variables)
-            .map_err(ScenarioError::CannotResolvePlaceholdersInTasks)?;
-        Ok(())
     }
 
     pub fn execute(&self) -> Result<(), ScenarioError> {
@@ -69,7 +72,7 @@ impl Scenario {
 
         let session: Session = self.new_session()?;
 
-        self.execute.steps.execute(&session, &mut lifecycle.steps)
+        self.execute.steps.execute(&session, &self.variables, &mut lifecycle.steps)
             .map_err(ScenarioError::CannotExecuteSteps)?;
 
         Ok(())

@@ -1,5 +1,6 @@
 use crate::config::RollbackStepsConfig;
 use crate::scenario::tasks::Tasks;
+use crate::scenario::variables::Variables;
 use crate::scenario::{
     errors::RollbackError,
     lifecycle::RollbackLifecycle,
@@ -49,6 +50,7 @@ impl RollbackSteps {
     pub(crate) fn execute(
         &self,
         session: &Session,
+        variables: &Variables,
         lifecycle: &mut RollbackLifecycle,
     ) -> Result<(), RollbackError> {
         (lifecycle.before)(&self);
@@ -57,10 +59,10 @@ impl RollbackSteps {
             (lifecycle.step.before)(index, rollback_task, self.len());
             match rollback_task {
                 Task::RemoteSudo { remote_sudo, .. } =>
-                    remote_sudo.execute(&session, &mut lifecycle.step.remote_sudo)
+                    remote_sudo.execute(&session, variables, &mut lifecycle.step.remote_sudo)
                         .map_err(RollbackError::CannotRollbackRemoteSudo)?,
                 Task::SftpCopy { sftp_copy, .. } =>
-                    sftp_copy.execute(&session, &mut lifecycle.step.sftp_copy)
+                    sftp_copy.execute(&session, variables, &mut lifecycle.step.sftp_copy)
                         .map_err(RollbackError::CannotRollbackSftpCopy)?
             }
         }

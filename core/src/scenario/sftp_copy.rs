@@ -38,20 +38,10 @@ impl SftpCopy {
         &self.destination_path
     }
 
-    pub(crate) fn resolve_placeholders(
-        &mut self,
-        variables: &Variables,
-    ) -> Result<(), SftpCopyError> {
-        self.source_path = variables.resolve_placeholders(&self.source_path)
-            .map_err(SftpCopyError::CannotResolveSourcePathPlaceholders)?;
-        self.destination_path = variables.resolve_placeholders(&self.destination_path)
-            .map_err(SftpCopyError::CannotResolveDestinationPathPlaceholders)?;
-        Ok(())
-    }
-
     pub(crate) fn execute(
         &self,
         session: &Session,
+        variables: &Variables,
         lifecycle: &mut SftpCopyLifecycle,
     ) -> Result<(), SftpCopyError> {
         (lifecycle.before)(&self);
@@ -59,9 +49,13 @@ impl SftpCopy {
         let sftp = session.sftp()
             .map_err(SftpCopyError::CannotOpenChannelAndInitializeSftp)?;
 
-        let mut source_file = File::open(&self.source_path)
+        let source_path = variables.resolve_placeholders(&self.source_path)
+            .map_err(SftpCopyError::CannotResolveSourcePathPlaceholders)?;
+        let destination_path = variables.resolve_placeholders(&self.destination_path)
+            .map_err(SftpCopyError::CannotResolveDestinationPathPlaceholders)?;
+        let mut source_file = File::open(source_path)
             .map_err(SftpCopyError::CannotOpenSourceFile)?;
-        let mut destination_file = sftp.create(Path::new(&self.destination_path))
+        let mut destination_file = sftp.create(Path::new(&destination_path))
             .map_err(SftpCopyError::CannotCreateDestinationFile)?;
 
         let pb = ProgressBar::hidden();

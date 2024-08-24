@@ -1,12 +1,12 @@
-use std::{
-    collections::HashMap,
-    ops::{Deref, DerefMut},
-};
+use crate::config::RequiredVariablesConfig;
+use std::ops::{Deref, DerefMut};
 
-pub struct RequiredVariables(HashMap<String, String>);
+#[derive(Debug)]
+pub struct RequiredVariables(Vec<RequiredVariable>);
 
 impl Deref for RequiredVariables {
-    type Target = HashMap<String, String>;
+    type Target = Vec<RequiredVariable>;
+
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -15,5 +15,40 @@ impl Deref for RequiredVariables {
 impl DerefMut for RequiredVariables {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl From<&RequiredVariablesConfig> for RequiredVariables {
+    fn from(config: &RequiredVariablesConfig) -> Self {
+        let mut required_variables = Vec::<RequiredVariable>::new();
+        for (name, label) in config.deref() {
+            required_variables.push(RequiredVariable {
+                name: name.clone(),
+                label: label.clone(),
+                value: String::new(),
+            });
+        }
+        RequiredVariables(required_variables)
+    }
+}
+
+#[derive(Debug)]
+pub struct RequiredVariable {
+    pub(crate) name: String,
+    pub(crate) label: String,
+    pub(crate) value: String,
+}
+
+impl RequiredVariable {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    pub fn value(&mut self) -> &mut String {
+        &mut self.value
     }
 }

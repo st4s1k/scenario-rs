@@ -1,58 +1,61 @@
-mod required;
+pub mod required;
 
 use crate::{
     config::{SpecialVariablesConfig, VariablesConfig},
     scenario::{
-        errors::{PlaceholderResolutionError, VariablesError},
+        errors::PlaceholderResolutionError,
         utils::HasPlaceholders,
+        variables::required::RequiredVariables,
     },
 };
 use chrono::Local;
 use std::{
     collections::HashMap,
-    ops::{Deref, DerefMut},
+    ops::Deref,
 };
 
-pub struct Variables(HashMap<String, String>);
-
-impl Deref for Variables {
-    type Target = HashMap<String, String>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+#[derive(Debug)]
+pub struct Variables {
+    required: RequiredVariables,
+    defined: HashMap<String, String>,
 }
 
-impl DerefMut for Variables {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl TryFrom<&VariablesConfig> for Variables {
-    type Error = VariablesError;
-
-    fn try_from(config: &VariablesConfig) -> Result<Self, Self::Error> {
+impl From<&VariablesConfig> for Variables {
+    fn from(config: &VariablesConfig) -> Self {
         let mut variables_map = HashMap::<String, String>::new();
         variables_map.extend(config.defined.deref().clone());
-
-        let mut variables = Variables(variables_map);
-
+        let mut variables = Variables {
+            required: RequiredVariables::from(&config.required),
+            defined: variables_map,
+        };
         variables._resolve_special_variables(&config.special);
-        variables._resolve_placeholders()
-            .map_err(VariablesError::CannotResolveVariablesPlaceholders)?;
-
-        Ok(variables)
+        variables
     }
 }
 
 impl Variables {
+    pub fn defined(&self) -> Result<HashMap<String, String>, PlaceholderResolutionError> {
+        Ok(self._resolve_placeholders()?)
+    }
+
+    pub fn required(&mut self) -> &mut RequiredVariables {
+        &mut self.required
+    }
+
     pub(crate) fn resolve_placeholders(&self, input: &str) -> Result<String, PlaceholderResolutionError> {
         let mut output = input.to_string();
-        for (key, value) in self.deref() {
+
+        let mut variables = self.defined.iter()
+            .map(|(key, value)| (key.as_str(), value.as_str()))
+            .collect::<HashMap<&str, &str>>();
+        self.required.iter().for_each(|required_variable| {
+            variables.insert(required_variable.name.as_str(), required_variable.value.as_str());
+        });
+        for (key, value) in variables {
             output = output.replace(&format!("{{{key}}}"), value);
         }
         if output.has_placeholders() {
-            return Err(PlaceholderResolutionError::UnresolvedValue(output));
+            return Err(PlaceholderResolutionError::CannotResolvePlaceholders(output));
         }
         Ok(output)
     }
@@ -60,21 +63,27 @@ impl Variables {
     fn _resolve_special_variables(&mut self, config: &SpecialVariablesConfig) {
         if let Some(timestamp_format) = &config.get("timestamp") {
             let timestamp: String = Local::now().format(timestamp_format).to_string();
-            self.insert("timestamp".to_string(), timestamp);
+            self.defined.insert("timestamp".to_string(), timestamp);
         }
     }
 
-    fn _resolve_placeholders(&mut self) -> Result<(), PlaceholderResolutionError> {
+    fn _resolve_placeholders(&self) -> Result<HashMap<String, String>, PlaceholderResolutionError> {
+        let mut resolved_variables = self.defined.clone();
+        self.required.iter().for_each(|required_variable| {
+            resolved_variables.insert(
+                required_variable.name.clone(),
+                required_variable.value.clone(),
+            );
+        });
         let mut iterations = 0;
         let max_iterations = 10;
         while iterations < max_iterations {
             let mut changes = false;
-            for key in self.to_owned().keys().cloned() {
-                let variables = &self;
-                let value = &variables[&key];
+            for key in &resolved_variables.keys().cloned().collect::<Vec<String>>() {
+                let value = &resolved_variables[key];
                 let new_value = self.resolve_placeholders(value)?;
-                if new_value != variables[&key] {
-                    self.insert(key, new_value);
+                if new_value != resolved_variables[key] {
+                    resolved_variables.insert(key.to_string(), new_value);
                     changes = true;
                 }
             }
@@ -84,15 +93,15 @@ impl Variables {
             iterations += 1;
         }
 
-        let unresolved_keys = self.iter()
+        let unresolved_keys = resolved_variables.iter()
             .filter(|(_, value)| value.has_placeholders())
             .map(|(key, _)| key.to_owned())
             .collect::<Vec<String>>();
 
         if !unresolved_keys.is_empty() {
-            return Err(PlaceholderResolutionError::UnresolvedValues(unresolved_keys));
+            return Err(PlaceholderResolutionError::CannotResolveVariablesPlaceholders(unresolved_keys));
         }
 
-        Ok(())
+        Ok(resolved_variables)
     }
 }

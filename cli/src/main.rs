@@ -10,7 +10,6 @@ use scenario_rs::scenario::rollback::RollbackSteps;
 use scenario_rs::{
     config::ScenarioConfig,
     scenario::{
-        errors::ScenarioConfigError,
         lifecycle::{
             ExecutionLifecycle,
             RemoteSudoLifecycle,
@@ -44,15 +43,11 @@ fn main() {
     let cli: Cli = Cli::parse();
 
     let config = ScenarioConfig::try_from(cli.config_path)
-        .map_err(|error| handle_required_variables_error(error))
-        .unwrap_or_else(|result| match result {
-            Ok(config) => config,
-            Err(error) => {
-                error!("{}", SEPARATOR);
-                error!("{}", error);
-                error!("{}", SEPARATOR);
-                process::exit(1);
-            }
+        .unwrap_or_else(|error| {
+            error!("{}", SEPARATOR);
+            error!("{}", error);
+            error!("{}", SEPARATOR);
+            process::exit(1);
         });
 
     let scenario: Scenario = match Scenario::new(config) {
@@ -80,49 +75,6 @@ fn main() {
             process::exit(1);
         }
     }
-}
-
-fn handle_required_variables_error(
-    error: ScenarioConfigError
-) -> Result<ScenarioConfig, ScenarioConfigError> {
-    if let ScenarioConfigError::UndefinedRequiredVariablesDetected(
-        mut scenario_config,
-        required_variables
-    ) = error {
-        for variable in required_variables {
-            // TODO: Find a way to indicate that the variable is a path
-            // let local_jar_path: String = match cli.jar.as_path().to_str() {
-            //     Some(local_jar_path) => local_jar_path.to_string(),
-            //     None => {
-            //         let jar_path = cli.jar.to_str().unwrap_or("<not_a_valid_string>");
-            //         error!("{}", SEPARATOR);
-            //         error!("The JAR file path should be valid UTF-8: {}", jar_path);
-            //         error!("{}", SEPARATOR);
-            //         process::exit(1);
-            //     }
-            // };
-            // 
-            // let local_jar_basename: String = match cli.jar.as_path().file_name()
-            //     .and_then(|file_name| file_name.to_str())
-            //     .map(|file_name| file_name.to_string()) {
-            //     Some(local_jar_basename) => local_jar_basename,
-            //     None => {
-            //         let jar_path = cli.jar.to_str().unwrap_or("<not_a_valid_string>");
-            //         error!("{}", SEPARATOR);
-            //         error!("The JAR file path is not a file: {}", jar_path);
-            //         error!("{}", SEPARATOR);
-            //         process::exit(1);
-            //     }
-            // };
-
-            // TODO: If just a regular string, prompt the user for the value
-            scenario_config.variables.defined
-                .insert(variable, "<path> or <plain_str>".to_string());
-        }
-        return Ok(scenario_config);
-    };
-
-    Err(error)
 }
 
 fn execution_lifecycle() -> ExecutionLifecycle {

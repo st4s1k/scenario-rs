@@ -1,3 +1,4 @@
+use crate::scenario::variables::Variables;
 use crate::{
     config::StepsConfig,
     scenario::{
@@ -43,6 +44,7 @@ impl Steps {
     pub(crate) fn execute(
         &self,
         session: &Session,
+        variables: &Variables,
         mut lifecycle: &mut StepsLifecycle,
     ) -> Result<(), StepsError> {
         for (index, step) in self.iter().enumerate() {
@@ -52,15 +54,15 @@ impl Steps {
 
             let task_result = match task {
                 Task::RemoteSudo { remote_sudo, .. } =>
-                    remote_sudo.execute(session, &mut lifecycle.remote_sudo)
+                    remote_sudo.execute(session, variables, &mut lifecycle.remote_sudo)
                         .map_err(|error| StepsError::CannotExecuteRemoteSudoCommand(error, error_message)),
                 Task::SftpCopy { sftp_copy, .. } =>
-                    sftp_copy.execute(session, &mut lifecycle.sftp_copy)
+                    sftp_copy.execute(session, variables, &mut lifecycle.sftp_copy)
                         .map_err(|error| StepsError::CannotExecuteSftpCopyCommand(error, error_message))
             };
 
             if let Err(error) = task_result {
-                step.rollback(&session, &mut lifecycle)
+                step.rollback(&session, variables, &mut lifecycle)
                     .map_err(StepsError::CannotRollbackStep)?;
                 return Err(error);
             };

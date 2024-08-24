@@ -1,4 +1,3 @@
-use crate::config::ScenarioConfig;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -7,18 +6,12 @@ pub enum ScenarioConfigError {
     CannotOpenFile(#[source] std::io::Error),
     #[error("Cannot read JSON config file: {0}")]
     CannotReadJson(#[source] serde_json::Error),
-    #[error("Undefined required variables detected: {1:?}")]
-    UndefinedRequiredVariablesDetected(ScenarioConfig, Vec<String>),
 }
 
 #[derive(Error, Debug)]
 pub enum ScenarioError {
-    #[error("Cannot create Variables from config: {0}")]
-    CannotCreateVariablesFromConfig(#[source] VariablesError),
     #[error("Cannot create Execute from config: {0}")]
     CannotCreateExecuteFromConfig(#[source] ExecuteError),
-    #[error("Cannot resolve placeholders in tasks: {0}")]
-    CannotResolvePlaceholdersInTasks(#[source] TasksError),
     #[error("Cannot connect to remote server: {0}")]
     CannotConnectToRemoteServer(#[source] std::io::Error),
     #[error("Cannot create a new session: {0}")]
@@ -72,17 +65,7 @@ pub enum RollbackError {
 }
 
 #[derive(Error, Debug)]
-pub enum TasksError {
-    #[error("Cannot resolve placeholders in tasks: {0:?}")]
-    CannotResolvePlaceholdersInTasks(Vec<String>),
-}
-
-#[derive(Error, Debug)]
 pub enum TaskError {
-    #[error("Cannot resolve placeholders in RemoteSudo: {0}")]
-    CannotResolveRemoteSudoPlaceholders(#[source] RemoteSudoError),
-    #[error("Cannot resolve placeholders in SftpCopy: {0}")]
-    CannotResolveSftpCopyPlaceholders(#[source] SftpCopyError),
     #[error("Cannot create RemoteSudo task from config: {0}")]
     CannotCreateRemoteSudoTaskFromConfig(#[source] RemoteSudoError),
     #[error("Cannot create SftpCopy task from config: {0}")]
@@ -122,15 +105,9 @@ pub enum SftpCopyError {
 }
 
 #[derive(Error, Debug)]
-pub enum VariablesError {
-    #[error("Cannot resolve placeholders in variables: {0}")]
-    CannotResolveVariablesPlaceholders(#[source] PlaceholderResolutionError),
-}
-
-#[derive(Error, Debug)]
 pub enum PlaceholderResolutionError {
-    #[error("An unresolved value detected: {0}")]
-    UnresolvedValue(String),
-    #[error("Unresolved values detected: {0:?}")]
-    UnresolvedValues(Vec<String>),
+    #[error("Cannot resolve placeholders in variables: {0:?}")]
+    CannotResolveVariablesPlaceholders(Vec<String>),
+    #[error("Cannot resolve placeholders in: {0}")]
+    CannotResolvePlaceholders(String),
 }

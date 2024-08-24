@@ -24,25 +24,18 @@ impl RemoteSudo {
         &self.command
     }
 
-    pub(crate) fn resolve_placeholders(
-        &mut self,
-        variables: &Variables,
-    ) -> Result<(), RemoteSudoError> {
-        self.command = variables.resolve_placeholders(&self.command)
-            .map_err(RemoteSudoError::CannotResolveCommandPlaceholders)?;
-        Ok(())
-    }
-
     pub(crate) fn execute(
         &self,
         session: &Session,
+        variables: &Variables,
         lifecycle: &mut RemoteSudoLifecycle,
     ) -> Result<(), RemoteSudoError> {
         (lifecycle.before)(&self);
 
         let mut channel: Channel = session.channel_session()
             .map_err(RemoteSudoError::CannotEstablishSessionChannel)?;
-        let command = &self.command;
+        let command = variables.resolve_placeholders(&self.command)
+            .map_err(RemoteSudoError::CannotResolveCommandPlaceholders)?;
         channel.exec(&format!("{command}"))
             .map_err(RemoteSudoError::CannotExecuteRemoteCommand)?;
 
