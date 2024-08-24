@@ -1,3 +1,7 @@
 [workspace]
-members = ["cli", "core", "gui"]
+members = [
+    "cli",
+    "core",
+    "gui-egui"
+]
 resolver = "2"
