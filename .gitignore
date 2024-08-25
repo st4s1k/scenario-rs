@@ -1,3 +1,6 @@
+**/.angular
+**/dist
+**/package-lock.json
 /target
 /.idea
 Cargo.lock

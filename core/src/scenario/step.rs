@@ -27,7 +27,7 @@ impl TryFrom<(&Tasks, &StepConfig)> for Step {
                 .ok_or_else(|| StepError::CannotCreateTaskFromConfig(
                     step_config.task.to_string()
                 ))?,
-            rollback_steps: match step_config.rollback_steps.as_ref() {
+            rollback_steps: match step_config.rollback.as_ref() {
                 Some(config) =>
                     RollbackSteps::try_from((tasks, config))
                         .map_err(StepError::CannotCreateRollbackStepsFromConfig)?,

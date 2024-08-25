@@ -1,0 +1,19 @@
+<div class="container unselectable">
+  <h1>Scenario Execution Tool</h1>
+
+  <div class="row">
+    <!-- File Selector -->
+    <button (click)="selectConfigFile()">Select Config File</button>
+  </div>
+
+  <div class="row">
+    <!-- Execution Button -->
+    <button (click)="executeScenario()">Execute Scenario</button>
+  </div>
+
+  <div class="row">
+    <!-- Scenario Log -->
+    <label for="scenario-log">Scenario Log:</label>
+    <textarea id="scenario-log" rows="10" readonly>{{ outputLog() }}</textarea>
+  </div>
+</div>

@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"editor.semanticTokenColorCustomizations": {
+			"enabled": true
+		}
+	}
+}

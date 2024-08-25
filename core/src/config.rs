@@ -65,7 +65,7 @@ impl DerefMut for StepsConfig {
 #[derive(Deserialize, Clone, Debug)]
 pub struct StepConfig {
     pub task: String,
-    pub rollback_steps: Option<RollbackStepsConfig>,
+    pub rollback: Option<RollbackStepsConfig>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
