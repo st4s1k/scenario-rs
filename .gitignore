@@ -4,4 +4,4 @@
 /target
 /.idea
 Cargo.lock
-scenario-rs-state.json
+**/scenario-app-state.json
