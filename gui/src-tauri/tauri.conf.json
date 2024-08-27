@@ -3,10 +3,10 @@
     "beforeDevCommand": "npm run start",
     "beforeBuildCommand": "npm run build",
     "devPath": "http://localhost:1420",
-    "distDir": "../dist/scenario-rs-gui/browser"
+    "distDir": "../dist/gui/browser"
   },
   "package": {
-    "productName": "scenario-rs-gui",
+    "productName": "scenario-rs",
     "version": "0.1.0"
   },
   "tauri": {
@@ -27,7 +27,7 @@
     },
     "windows": [
       {
-        "title": "scenario-rs-gui",
+        "title": "scenario-rs",
         "width": 800,
         "height": 600
       }
@@ -38,7 +38,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.st4s1k.scenario-rs-gui.app",
+      "identifier": "com.st4s1k.scenario-rs.app",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",

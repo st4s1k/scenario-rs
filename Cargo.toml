@@ -2,6 +2,6 @@
 members = [
     "cli",
     "core",
-    "scenario-rs-gui/src-tauri"
+    "gui/src-tauri"
 ]
 resolver = "2"

@@ -1,4 +1,0 @@
-{
-  "config_path": "C:\\Users\\Stanislav\\RustroverProjects\\scenario-rs\\example-scenario.json",
-  "output_log": "------------------------------------------------------------\nScenario config loaded\n------------------------------------------------------------\n------------------------------------------------------------\nScenario config loaded\n------------------------------------------------------------\n------------------------------------------------------------\nScenario loaded\n------------------------------------------------------------\n------------------------------------------------------------\nScenario failed: Cannot connect to remote server: No connection could be made because the target machine actively refused it. (os error 10061)\n------------------------------------------------------------\n"
-}

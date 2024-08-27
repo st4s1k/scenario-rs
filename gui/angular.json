@@ -6,7 +6,7 @@
     "analytics": false
   },
   "projects": {
-    "scenario-rs-gui": {
+    "gui": {
       "projectType": "application",
       "root": "",
       "sourceRoot": "src",
@@ -15,12 +15,12 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/scenario-rs-gui",
+            "outputPath": "dist/gui",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": ["zone.js"],
             "tsConfig": "tsconfig.app.json",
-            "assets": ["src/assets"],
+            "assets": ["src/assets"]
           },
           "configurations": {
             "production": {
@@ -53,10 +53,10 @@
           },
           "configurations": {
             "production": {
-              "buildTarget": "scenario-rs-gui:build:production"
+              "buildTarget": "gui:build:production"
             },
             "development": {
-              "buildTarget": "scenario-rs-gui:build:development"
+              "buildTarget": "gui:build:development"
             }
           },
           "defaultConfiguration": "development"
