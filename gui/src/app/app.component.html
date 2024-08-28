@@ -1,19 +1,34 @@
-<div class="container unselectable">
-  <h1>Scenario Execution Tool</h1>
+<div class="row">
+  <app-titlebar></app-titlebar>
+</div>
+<div class="row grow">
+  <div class="col grow container unselectable">
 
-  <div class="row">
-    <!-- File Selector -->
-    <button (click)="selectConfigFile()">Select Config File</button>
-  </div>
+    <div class="row">
+      <h1 class="title">scenario-rs</h1>
+    </div>
 
-  <div class="row">
-    <!-- Execution Button -->
-    <button (click)="executeScenario()">Execute Scenario</button>
-  </div>
+    <div class="row">
+      <form id="scenario-config-form" class="col grow" [formGroup]="selectScenarioConfigForm">
+        <label for="scenario-config-path" class="title">Config file:</label>
+        <input id="scenario-config-path" type="text" formControlName="scenarioConfigPath" readonly>
+        <button (click)="selectConfigFile()">Select</button>
+      </form>
+    </div>
 
-  <div class="row">
+    <div class="row justify-content-center">
+      <button (click)="executeScenario()">Execute Scenario</button>
+    </div>
+
+    <div class="row">
+      <label for="execution-log" class="title">Execution log:</label>
+    </div>
+
+    <div class="row grow executionLog">
+      <textarea id="execution-log" class="col grow" readonly>{{ executionLog() }}</textarea>
     <!-- Scenario Log -->
     <label for="scenario-log">Scenario Log:</label>
     <textarea id="scenario-log" rows="10" readonly>{{ outputLog() }}</textarea>
+    </div>
   </div>
 </div>

@@ -1,0 +1,28 @@
+@import '../styles.scss';
+
+:host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.container {
+    gap: 15px;
+    padding: 20px;
+}
+
+.title {
+    color: $primary-color;
+    font-weight: bold;
+}
+
+.executionLog {
+    justify-content: flex-end;
+}
+
+form#scenario-config-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+}

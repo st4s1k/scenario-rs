@@ -1,0 +1,113 @@
+$titlebar-height: 30px;
+$primary-color: rgb(218, 165, 32); // goldenrod
+$primary-color-lighter: color-mix(in srgb, $primary-color 60%, white);
+$text-color: rgb(188, 188, 188);
+$background-color: rgb(30, 30, 30);
+$text-area-background-color: color-mix(in srgb, $background-color 95%, white);
+$button-text-color: $background-color;
+
+html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+
+    body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+
+        font-family: monospace;
+        font-size: 14px;
+        background-color: $background-color;
+        color: $text-color;
+    }
+}
+
+.unselectable {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+h1 {
+    text-align: center;
+    flex-grow: 1;
+    margin: 0;
+}
+
+.text-field {
+    color: $text-color;
+    font-size: 14px;
+    background-color: $text-area-background-color;
+    border-color: $primary-color;
+    border-width: 1px;
+
+    &:focus {
+        outline-color: $primary-color;
+        outline-style: solid;
+    }
+}
+
+input {
+    @extend .text-field;
+
+    height: 26px;
+}
+
+textarea {
+    @extend .text-field;
+
+    padding: 10px;
+    resize: none;
+}
+
+button {
+    width: 150px;
+    height: 30px;
+
+    background-color: $primary-color;
+    color: $button-text-color;
+
+    border-style: none;
+    outline-offset: -3px;
+    outline: 2px solid $background-color;
+
+    font-size: 14px;
+    font-family: monospace;
+    font-weight: bold;
+
+    &:hover {
+        background-color: $primary-color-lighter;
+        outline-offset: -4px;
+        outline: 3px double $background-color;
+    }
+
+    &:active {
+        color: $primary-color;
+        background-color: $background-color;
+        outline-offset: -4px;
+        outline: 1px solid $primary-color;
+        border: 1px solid $primary-color;
+    }
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+}
+
+.col {
+    display: flex;
+    flex-direction: column;
+}
+
+.grow {
+    flex-grow: 1;
+}
+
+.justify-content-center {
+    justify-content: center;
+}

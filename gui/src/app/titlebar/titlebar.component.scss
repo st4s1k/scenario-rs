@@ -1,0 +1,41 @@
+@import '../../styles.scss';
+
+:host {
+    display: block;
+    height: $titlebar-height;
+    width: 100%;
+}
+
+.titlebar {
+    display: flex;
+    justify-content: flex-end;
+    height: $titlebar-height;
+    background: #262626;
+
+    .button {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: $titlebar-height;
+        height: $titlebar-height;
+        background-repeat: no-repeat;
+        background-position: center;
+        transition: background-color 0.2s;
+
+        svg {
+            color: rgb(255, 255, 255, 0.5);
+        }
+
+        &:hover {
+            background-color: rgb(255, 255, 255, 0.1);
+        }
+
+        &#close:hover {
+            background-color: rgb(255, 0, 0, 0.8);
+
+            svg {
+                color: rgb(255, 255, 255, 0.8);
+            }
+        }
+    }
+}
