@@ -126,4 +126,9 @@ impl ScenarioAppState {
         self.output_log.push_str(&message);
         let _ = self.app_handle.emit_all("log-update", ());
     }
+
+    pub fn clear_log(&mut self) {
+        self.output_log.clear();
+        let _ = self.app_handle.emit_all("log-update", ());
+    }
 }

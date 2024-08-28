@@ -16,6 +16,14 @@
     font-weight: bold;
 }
 
+button#clear-log {
+    width: 20px;
+    height: 20px;
+    padding: 0px;
+    position: absolute;
+    outline-style: none;
+}
+
 .executionLog {
     justify-content: flex-end;
 }

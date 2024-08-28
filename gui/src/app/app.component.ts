@@ -46,7 +46,13 @@ export class AppComponent {
         this.executionLog.set(log);
       });
   }
+
+  clearLog(): void {
+    invoke('clear_log')
+      .then(() => {
+        console.log('Log cleared');
       });
+  }
 
   async selectConfigFile(): Promise<void> {
     const selectedFilePath = await dialog.open({

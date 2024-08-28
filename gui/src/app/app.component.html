@@ -26,9 +26,13 @@
 
     <div class="row grow executionLog">
       <textarea id="execution-log" class="col grow" readonly>{{ executionLog() }}</textarea>
-    <!-- Scenario Log -->
-    <label for="scenario-log">Scenario Log:</label>
-    <textarea id="scenario-log" rows="10" readonly>{{ outputLog() }}</textarea>
+
+      <button id="clear-log" (click)="clearLog()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="1.3em" height="1.3em" viewBox="0 0 24 24">
+          <path fill="currentColor"
+            d="M16 2v4h6v2h-2v14H4V8H2V6h6V2zm-2 2h-4v2h4zm0 4H6v12h12V8zm-5 2h2v8H9zm6 0h-2v8h2z" />
+        </svg>
+      </button>
     </div>
   </div>
 </div>

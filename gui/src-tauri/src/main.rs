@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use crate::app::ScenarioAppState;
-use commands::{get_log, execute_scenario, load_config};
+use commands::{clear_log, execute_scenario, get_log, load_config};
 use std::sync::Mutex;
 use tauri::Manager;
 
@@ -20,7 +20,12 @@ fn main() {
             Ok(())
         })
         .on_window_event(on_window_event)
-        .invoke_handler(tauri::generate_handler![get_log, load_config, execute_scenario])
+        .invoke_handler(tauri::generate_handler![
+            get_log,
+            clear_log,
+            load_config,
+            execute_scenario
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

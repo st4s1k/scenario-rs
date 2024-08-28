@@ -8,6 +8,12 @@ pub fn get_log(state: State<'_, Mutex<ScenarioAppState>>) -> String {
     state.output_log.clone()
 }
 
+#[tauri::command]
+pub fn clear_log(state: State<'_, Mutex<ScenarioAppState>>) {
+    let mut state = state.lock().unwrap();
+    state.clear_log();
+}
+
 #[tauri::command(async)]
 pub fn load_config(config_path: &str, state: State<'_, Mutex<ScenarioAppState>>) {
     let mut state = state.lock().unwrap();
