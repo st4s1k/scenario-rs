@@ -15,7 +15,7 @@ export class TitlebarComponent {
   }
 
   maximize(): void {
-    appWindow.maximize();
+    appWindow.toggleMaximize();
   }
 
   close(): void {
