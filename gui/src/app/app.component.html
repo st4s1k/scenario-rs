@@ -8,27 +8,51 @@
       <h1 class="title">scenario-rs</h1>
     </div>
 
+    <div id="scenario-config" class="row justify-content-center">
+      <label class="title">Config file:</label>
+      <input class="grow" [formControl]="scenarioConfigPath">
+      <button (click)="selectConfigFile()">Select</button>
+    </div>
+
+    @if (requiredFields().length > 0) {
     <div class="row">
-      <form id="scenario-config-form" class="col grow" [formGroup]="selectScenarioConfigForm">
-        <label for="scenario-config-path" class="title">Config file:</label>
-        <input id="scenario-config-path" type="text" formControlName="scenarioConfigPath" readonly>
-        <button (click)="selectConfigFile()">Select</button>
+      <label class="title">Required fields:</label>
+    </div>
+
+    <div id="required-fields-values" class="row">
+      <div class="col">
+        @for (requiredField of requiredFields(); track requiredField) {
+        <div class="row">
+          <label class="title">{{requiredField.label}}</label>
+        </div>
+        }
+      </div>
+      <form class="col grow" [formGroup]="requiredFieldsValuesForm">
+        @for (requiredField of requiredFields(); track requiredField) {
+        <div class="row justify-content-center">
+          <input class="grow" formControlName="{{requiredField.name}}">
+          @if (requiredField.type === 'path') {
+          <button (click)="selectRequiredFile(requiredField.name)">Select</button>
+          }
+        </div>
+        }
       </form>
     </div>
+    }
 
     <div class="row justify-content-center">
       <button (click)="executeScenario()">Execute Scenario</button>
     </div>
 
     <div class="row">
-      <label for="execution-log" class="title">Execution log:</label>
+      <label class="title">Execution log:</label>
     </div>
 
     <div class="row grow executionLog">
-      <textarea id="execution-log" class="col grow" readonly>{{ executionLog() }}</textarea>
+      <textarea class="col grow" readonly>{{ executionLog() }}</textarea>
 
       <button id="clear-log" (click)="clearLog()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="1.3em" height="1.3em" viewBox="0 0 24 24">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24">
           <path fill="currentColor"
             d="M16 2v4h6v2h-2v14H4V8H2V6h6V2zm-2 2h-4v2h4zm0 4H6v12h12V8zm-5 2h2v8H9zm6 0h-2v8h2z" />
         </svg>

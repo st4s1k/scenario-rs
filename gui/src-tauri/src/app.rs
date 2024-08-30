@@ -1,13 +1,17 @@
 use crate::{lifecycle::LifecycleHandler, shared::SEPARATOR};
-use scenario_rs::{config::ScenarioConfig, scenario::Scenario};
+use scenario_rs::{
+    config::{RequiredVariablesConfig, ScenarioConfig},
+    scenario::Scenario,
+};
 use serde::{Deserialize, Serialize};
-use std::{ops::Deref, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, ops::Deref, path::PathBuf, str::FromStr};
 use tauri::{AppHandle, Manager};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ScenarioAppStateConfig {
     config_path: String,
     output_log: String,
+    required_variables: HashMap<String, String>,
 }
 
 impl From<&ScenarioAppState> for ScenarioAppStateConfig {
@@ -15,12 +19,14 @@ impl From<&ScenarioAppState> for ScenarioAppStateConfig {
         Self {
             config_path: state.config_path.clone(),
             output_log: state.output_log.clone(),
+            required_variables: state.required_variables.clone(),
         }
     }
 }
 
 pub struct ScenarioAppState {
     pub(crate) config_path: String,
+    pub(crate) required_variables: HashMap<String, String>,
     pub(crate) output_log: String,
     pub(crate) app_handle: AppHandle,
     pub(crate) config: Option<ScenarioConfig>,
@@ -33,6 +39,7 @@ impl ScenarioAppState {
     pub fn new(app: AppHandle) -> Self {
         Self {
             config_path: String::new(),
+            required_variables: HashMap::new(),
             output_log: String::new(),
             app_handle: app,
             config: None,
@@ -63,37 +70,45 @@ impl ScenarioAppState {
         }
     }
 
-    pub fn load_config(&mut self, config_path: &str) {
+    pub fn load_config(&mut self, config_path: &str) -> Option<RequiredVariablesConfig> {
         let Ok(config_path) = PathBuf::from_str(config_path) else {
             self.log_message(format!("{SEPARATOR}\nInvalid config path\n{SEPARATOR}\n"));
-            return;
+            return None;
         };
 
-        match ScenarioConfig::try_from(config_path) {
+        match ScenarioConfig::try_from(config_path.clone()) {
             Ok(config) => {
                 self.log_message(format!(
                     "{SEPARATOR}\nScenario config loaded\n{SEPARATOR}\n"
                 ));
                 let _ = self.app_handle.emit_all("log-update", ());
                 self.config = Some(config);
+                self.config_path = config_path.to_str().unwrap().to_string();
+                return self.config.as_ref().map(|c| c.variables.required.clone());
             }
             Err(e) => {
                 self.log_message(format!(
                     "{SEPARATOR}\nFailed to load scenario config: {e}\n{SEPARATOR}\n"
                 ));
                 let _ = self.app_handle.emit_all("log-update", ());
+                return None;
             }
         }
     }
 
     pub fn execute_scenario(&mut self) {
-        let Some(config) = &self.config else {
+        let Some(config) = &mut self.config else {
             self.log_message(format!(
                 "{SEPARATOR}\nNo scenario config file loaded\n{SEPARATOR}\n"
             ));
             let _ = self.app_handle.emit_all("log-update", ());
             return;
         };
+
+        config
+            .variables
+            .defined
+            .extend(self.required_variables.clone());
 
         let lifecycle_handler = LifecycleHandler::try_initialize(self.app_handle.clone());
 

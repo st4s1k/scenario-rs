@@ -1,8 +1,11 @@
 $titlebar-height: 30px;
+$field-height: 30px;
 $primary-color: rgb(218, 165, 32); // goldenrod
 $primary-color-lighter: color-mix(in srgb, $primary-color 60%, white);
 $text-color: rgb(188, 188, 188);
+$default-font-size: 14px;
 $background-color: rgb(30, 30, 30);
+$background-color-lighter: color-mix(in srgb, $background-color 98%, white);
 $text-area-background-color: color-mix(in srgb, $background-color 95%, white);
 $button-text-color: $background-color;
 
@@ -17,7 +20,7 @@ html {
         height: 100%;
 
         font-family: monospace;
-        font-size: 14px;
+        font-size: $default-font-size;
         background-color: $background-color;
         color: $text-color;
     }
@@ -40,7 +43,7 @@ h1 {
 
 .text-field {
     color: $text-color;
-    font-size: 14px;
+    font-size: $default-font-size;
     background-color: $text-area-background-color;
     border-color: $primary-color;
     border-width: 1px;
@@ -49,11 +52,22 @@ h1 {
         outline-color: $primary-color;
         outline-style: solid;
     }
+
+    &::selection {
+        background-color: $primary-color-lighter;
+        color: $background-color;
+    }
+}
+
+label {
+    font-size: $default-font-size;
+    color: $text-color;
+    display: flex;
+    align-items: center;
 }
 
 input {
     @extend .text-field;
-
     height: 26px;
 }
 
@@ -66,7 +80,7 @@ textarea {
 
 button {
     width: 150px;
-    height: 30px;
+    height: $field-height;
 
     background-color: $primary-color;
     color: $button-text-color;
@@ -75,7 +89,7 @@ button {
     outline-offset: -3px;
     outline: 2px solid $background-color;
 
-    font-size: 14px;
+    font-size: $default-font-size;
     font-family: monospace;
     font-weight: bold;
 

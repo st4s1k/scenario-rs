@@ -16,7 +16,7 @@
     font-weight: bold;
 }
 
-button#clear-log {
+#clear-log {
     width: 20px;
     height: 20px;
     padding: 0px;
@@ -28,9 +28,24 @@ button#clear-log {
     justify-content: flex-end;
 }
 
-form#scenario-config-form {
-    display: flex;
+#scenario-config {
     gap: 10px;
     align-items: center;
-    justify-content: center;
+}
+
+#required-fields-values {
+    align-items: center;
+    border: 1px solid $primary-color;
+    padding: 10px;
+    background-color: $background-color-lighter;
+    gap: 10px;
+
+    .row {
+        height: $field-height;
+        gap: 10px;
+    }
+
+    .col {
+        gap: 10px;
+    }
 }

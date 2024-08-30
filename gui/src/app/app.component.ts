@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import {
-  FormsModule,
-  FormGroup,
   FormControl,
+  FormGroup,
+  FormsModule,
   ReactiveFormsModule
 } from "@angular/forms";
 import { RouterOutlet } from '@angular/router';
@@ -11,6 +11,12 @@ import { dialog } from "@tauri-apps/api"; // Import Tauri's dialog API
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/tauri";
 import { TitlebarComponent } from "./titlebar/titlebar.component";
+
+interface RequiredField {
+  name: string;
+  label: string;
+  type: string;
+}
 
 @Component({
   selector: 'app-root',
@@ -27,14 +33,13 @@ import { TitlebarComponent } from "./titlebar/titlebar.component";
 })
 export class AppComponent {
   executionLog = signal('');
-  selectScenarioConfigForm = new FormGroup({
-    scenarioConfigPath: new FormControl('')
-  });
+  scenarioConfigPath = new FormControl('');
+  requiredFields = signal<RequiredField[]>([]);
+  requiredFieldsValuesForm = new FormGroup({});
 
   unlisten = listen<string>('log-update', () => {
     invoke<string>('get_log')
       .then((log) => {
-        console.log(`output log: ${log}`);
         this.executionLog.set(log);
       });
   });
@@ -42,39 +47,78 @@ export class AppComponent {
   ngOnInit(): void {
     invoke<string>('get_log')
       .then((log) => {
-        console.log(`output log: ${log}`);
         this.executionLog.set(log);
       });
+
+    this.fetchConfigPath()
+      .then(() => {
+        if (this.scenarioConfigPath.value && this.scenarioConfigPath.value.trim() !== '') {
+          this.loadConfigFile();
+        }
+      });
+  }
+
+  async fetchConfigPath(): Promise<void> {
+    return invoke<string>('get_config_path')
+      .then((configPath) => {
+        this.scenarioConfigPath.setValue(configPath);
+      })
   }
 
   clearLog(): void {
     invoke('clear_log')
-      .then(() => {
-        console.log('Log cleared');
-      });
   }
 
-  async selectConfigFile(): Promise<void> {
+  async selectRequiredFile(requiredFieldName: string): Promise<void> {
+    const requiredFieldLabel = this.requiredFields().find((field) => field.name === requiredFieldName)?.label;
     const selectedFilePath = await dialog.open({
       multiple: false,
       filters: [{
-        name: 'Configuration Files',
-        extensions: ['json']
+        name: requiredFieldLabel || '<unknown> File',
+        extensions: ['*']
       }]
     });
 
     if (selectedFilePath && typeof selectedFilePath === 'string') {
-      invoke('load_config', { configPath: selectedFilePath })
-        .then(() => {
-          console.log('Config loaded');
-        });
+      this.requiredFieldsValuesForm.get(requiredFieldName)?.setValue(selectedFilePath);
+    }
+
+    this.executionLog.set(this.executionLog() + `${requiredFieldLabel || '<unknown>'}: ${selectedFilePath}\n`);
+  }
+
+  async selectConfigFile(): Promise<void> {
+    const configPath = await dialog.open({
+      multiple: false,
+      filters: [{
+        name: 'Configuration File',
+        extensions: ['json']
+      }]
+    });
+
+    if (configPath && typeof configPath === 'string') {
+      this.scenarioConfigPath.setValue(configPath);
+      await this.loadConfigFile();
     }
   }
 
-  executeScenario(): void {
-    invoke('execute_scenario')
-      .then(() => {
-        console.log('Scenario started');
+  async loadConfigFile(): Promise<void> {
+    invoke<{ [key: string]: string }>('load_config', { configPath: this.scenarioConfigPath.value })
+      .then((requiredFieldsObject) => {
+        let requiredFields = Object.entries(requiredFieldsObject).map(([key, value]) => ({
+          name: key,
+          label: value,
+          value: '',
+          type: key.startsWith('path:') ? 'path' : 'text'
+        }));
+        this.requiredFields.set(requiredFields);
+        requiredFields.forEach((field) => {
+          this.requiredFieldsValuesForm.addControl(field.name, new FormControl(''));
+        });
       });
+  }
+
+  executeScenario(): void {
+    let requiredVariables = this.requiredFieldsValuesForm.getRawValue();
+    invoke('execute_scenario', { requiredVariables });
   }
 }

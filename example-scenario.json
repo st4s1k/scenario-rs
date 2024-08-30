@@ -61,8 +61,9 @@
       "//                        - a field with this name will not be displayed in UI"
     ],
     "required": {
-      "local_jar_path": "Local JAR Path",
-      "local_jar_basename": "Local JAR Basename"
+      "path:local_jar_path": "Local JAR Path",
+      "some_variable": "Some Variable",
+      "path:some_other_path": "Some Other Path"
     },
     "special": {
       "timestamp": "%Y-%m-%dT%H%M%S%:z"
@@ -81,7 +82,7 @@
       "type": "SftpCopy",
       "description": "Copying new deploy file to server",
       "source_path": "{local_jar_path}",
-      "destination_path": "{remote_base_path}/{local_jar_basename}",
+      "destination_path": "{remote_base_path}/{basename:local_jar_path}",
       "error_message": "Failed to copy new deploy file to server."
     },
     "stop_service": {
@@ -105,7 +106,7 @@
     "deploy_new_file": {
       "type": "RemoteSudo",
       "description": "Deploying the new file",
-      "command": "echo {password} | sudo -S mv {remote_base_path}/{local_jar_basename} {remote_deploy_path}",
+      "command": "echo {password} | sudo -S mv {remote_base_path}/{basename:local_jar_path} {remote_deploy_path}",
       "error_message": "Failed to deploy the new file."
     },
     "start_service": {
