@@ -32,7 +32,7 @@ fn main() {
 }
 
 fn on_window_event(event: tauri::GlobalWindowEvent) {
-    if let tauri::WindowEvent::CloseRequested { .. } = event.event() {
+    if let tauri::WindowEvent::Destroyed { .. } = event.event() {
         let app_handle = event.window().app_handle();
         let state = app_handle.state::<Mutex<ScenarioAppState>>();
         let mut state = state.lock().unwrap();
