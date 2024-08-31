@@ -66,7 +66,6 @@ impl ScenarioAppState {
                 self.log_message(format!(
                     "{SEPARATOR}\nFailed to save state: {error}\n{SEPARATOR}\n"
                 ));
-                let _ = self.app_handle.emit_all("log-update", ());
             }
         }
     }
@@ -82,7 +81,6 @@ impl ScenarioAppState {
                 self.log_message(format!(
                     "{SEPARATOR}\nScenario config loaded\n{SEPARATOR}\n"
                 ));
-                let _ = self.app_handle.emit_all("log-update", ());
                 self.config = Some(config);
                 self.config_path = config_path.to_str().unwrap().to_string();
                 return self.config.as_ref().map(|c| c.variables.required.clone());
@@ -91,7 +89,6 @@ impl ScenarioAppState {
                 self.log_message(format!(
                     "{SEPARATOR}\nFailed to load scenario config: {e}\n{SEPARATOR}\n"
                 ));
-                let _ = self.app_handle.emit_all("log-update", ());
                 return None;
             }
         }
@@ -102,7 +99,6 @@ impl ScenarioAppState {
             self.log_message(format!(
                 "{SEPARATOR}\nNo scenario config file loaded\n{SEPARATOR}\n"
             ));
-            let _ = self.app_handle.emit_all("log-update", ());
             return;
         };
 
