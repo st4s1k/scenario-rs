@@ -2,46 +2,54 @@
   <app-titlebar></app-titlebar>
 </div>
 <div class="row grow">
-  <div class="col grow container unselectable">
+  <div class="col grow container unselectable gap-15">
 
     <div class="row">
       <h1 class="title">scenario-rs</h1>
     </div>
 
-    <div id="scenario-config" class="row justify-content-center">
+    <div id="scenario-config" class="row justify-content-center gap-10">
       <label class="title">Config file:</label>
-      <input class="grow" [formControl]="scenarioConfigPath">
+      <input class="grow" value="{{ scenarioConfigPath() }}">
       <button (click)="selectConfigFile()">Select</button>
     </div>
 
-    @if (requiredFields().length > 0) {
+    @if ((requiredFields | keyvalue).length > 0) {
     <div class="row">
       <label class="title">Required fields:</label>
     </div>
 
-    <div id="required-fields-values" class="row">
-      <div class="col">
-        @for (requiredField of requiredFields(); track requiredField) {
-        <div class="row">
-          <label class="title">{{requiredField.label}}</label>
+    <div id="required-fields-values" class="row gap-10">
+      <div class="col gap-10">
+        @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
+        <div class="row gap-10">
+          <label class="title">{{requiredFields[requiredField.key].label}}</label>
         </div>
         }
       </div>
-      <form class="col grow" [formGroup]="requiredFieldsValuesForm">
-        @for (requiredField of requiredFields(); track requiredField) {
-        <div class="row justify-content-center">
-          <input class="grow" formControlName="{{requiredField.name}}">
-          @if (requiredField.type === 'path') {
-          <button (click)="selectRequiredFile(requiredField.name)">Select</button>
+      <div class="col grow gap-10">
+        @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
+        <div class="row justify-content-center gap-10">
+          <input class="grow" value="{{ requiredField.value.value() }}" />
+          @if (requiredFields[requiredField.key].type === 'path') {
+          <button (click)="selectRequiredFile(requiredField.key)">Select</button>
           }
         </div>
         }
-      </form>
+      </div>
     </div>
     }
 
-    <div class="row justify-content-center">
-      <button (click)="executeScenario()">Execute Scenario</button>
+    <div class="row gap-10">
+      <div class="col grow"></div>
+      <div class="col">
+        <button (click)="executeScenario()">Execute Scenario</button>
+      </div>
+      <div class="col grow justify-content-center">
+      @if (executionLoading()) {
+      <span class="loader"></span>
+      }
+      </div>
     </div>
 
     <div class="row">

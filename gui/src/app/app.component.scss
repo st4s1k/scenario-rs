@@ -7,7 +7,6 @@
 }
 
 .container {
-    gap: 15px;
     padding: 20px;
 }
 
@@ -26,11 +25,10 @@
     svg {
         width: 18px;
         height: 18px;
-}
+    }
 }
 
 #scenario-config {
-    gap: 10px;
     align-items: center;
 }
 
@@ -39,14 +37,43 @@
     border: 1px solid $primary-color;
     padding: 10px;
     background-color: $background-color-lighter;
-    gap: 10px;
 
     .row {
         height: $field-height;
-        gap: 10px;
+    }
+}
+
+.loader {
+    width: 24px;
+    height: 24px;
+    display: inline-block;
+    position: absolute;
+}
+
+.loader::after,
+.loader::before {
+    content: '';
+    width: 24px;
+    height: 24px;
+    border: 2px solid $primary-color-lighter;
+    position: absolute;
+    left: 0;
+    top: 0;
+    box-sizing: border-box;
+    animation: rotation 2s ease-in-out infinite;
+}
+
+.loader::after {
+    border-color: $primary-color;
+    animation-delay: 1s;
+}
+
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
     }
 
-    .col {
-        gap: 10px;
+    100% {
+        transform: rotate(360deg);
     }
 }
