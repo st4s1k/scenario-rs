@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { invoke } from '@tauri-apps/api';
 import { appWindow } from '@tauri-apps/api/window'
 
 @Component({
@@ -9,6 +10,10 @@ import { appWindow } from '@tauri-apps/api/window'
   styleUrl: './titlebar.component.scss'
 })
 export class TitlebarComponent {
+
+  save(): void {
+    invoke('save_state');
+  }
 
   minimize(): void {
     appWindow.minimize();

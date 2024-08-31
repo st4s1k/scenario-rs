@@ -6,6 +6,12 @@ use std::{
 use tauri::State;
 
 #[tauri::command(async)]
+pub fn save_state(state: State<'_, Mutex<ScenarioAppState>>) {
+    let mut state = state.lock().unwrap();
+    state.save_state();
+}
+
+#[tauri::command(async)]
 pub fn get_config_path(state: State<'_, Mutex<ScenarioAppState>>) -> String {
     let state = state.lock().unwrap();
     state.config_path.clone()

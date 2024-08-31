@@ -23,6 +23,8 @@
         transition: background-color 0.2s;
 
         svg {
+            width: 14px;
+            height: 14px;
             color: rgb(255, 255, 255, 0.5);
         }
 
@@ -35,6 +37,17 @@
 
             svg {
                 color: rgb(255, 255, 255, 0.8);
+            }
+        }
+
+        &:active {
+            background-color: rgb(255, 255, 255, 0.2);
+        }
+
+        &#save {
+            svg {
+                width: 20px;
+                height: 20px;
             }
         }
     }
