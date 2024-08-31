@@ -2,7 +2,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use crate::app::ScenarioAppState;
-use commands::{clear_log, execute_scenario, get_config_path, get_log, load_config, save_state};
+use commands::{
+    clear_log, execute_scenario, get_config_path, get_log, get_required_variables, load_config,
+    save_state, update_required_variables,
+};
 use std::sync::Mutex;
 use tauri::Manager;
 
@@ -26,6 +29,8 @@ fn main() {
             get_log,
             clear_log,
             load_config,
+            get_required_variables,
+            update_required_variables,
             execute_scenario
         ])
         .run(tauri::generate_context!())

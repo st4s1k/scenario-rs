@@ -42,15 +42,28 @@ pub fn load_config(
         .unwrap_or(BTreeMap::new())
 }
 
+#[tauri::command]
+pub fn get_required_variables(
+    state: State<'_, Mutex<ScenarioAppState>>,
+) -> HashMap<String, String> {
+    let state = state.lock().unwrap();
+    state.required_variables.clone()
+}
+
 #[tauri::command(async)]
-pub fn execute_scenario(
+pub fn update_required_variables(
     required_variables: HashMap<String, String>,
     state: State<'_, Mutex<ScenarioAppState>>,
 ) {
     let mut state = state.lock().unwrap();
+    state.required_variables = required_variables.clone();
+}
+
+#[tauri::command(async)]
+pub fn execute_scenario(state: State<'_, Mutex<ScenarioAppState>>) {
+    let mut state = state.lock().unwrap();
     if state.is_executing {
         return;
     }
-    state.required_variables = required_variables.clone();
     state.execute_scenario();
 }

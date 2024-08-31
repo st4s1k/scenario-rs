@@ -44,6 +44,12 @@ export class AppComponent {
       });
   });
 
+  constructor() {
+    this.requiredFieldsValuesForm.valueChanges.subscribe(() => {
+      this.updateRequiredVariables();
+    });
+  }
+
   ngOnInit(): void {
     invoke<string>('get_log')
       .then((log) => {
@@ -74,7 +80,7 @@ export class AppComponent {
     const selectedFilePath = await dialog.open({
       multiple: false,
       filters: [{
-        name: requiredFieldLabel || '<unknown> File',
+        name: requiredFieldLabel || '<unknown>',
         extensions: ['*']
       }]
     });
@@ -102,23 +108,28 @@ export class AppComponent {
   }
 
   async loadConfigFile(): Promise<void> {
-    invoke<{ [key: string]: string }>('load_config', { configPath: this.scenarioConfigPath.value })
-      .then((requiredFieldsObject) => {
-        let requiredFields = Object.entries(requiredFieldsObject).map(([key, value]) => ({
+    return invoke<{ [key: string]: string }>('load_config', { configPath: this.scenarioConfigPath.value })
+      .then(async (requiredFieldsMap) => {
+        let savedRequiredVariables = await invoke<{ [key: string]: string }>('get_required_variables');
+        let requiredFields = Object.entries(requiredFieldsMap).map(([key, value]) => ({
           name: key,
           label: value,
-          value: '',
+          value: savedRequiredVariables[key],
           type: key.startsWith('path:') ? 'path' : 'text'
         }));
         this.requiredFields.set(requiredFields);
         requiredFields.forEach((field) => {
-          this.requiredFieldsValuesForm.addControl(field.name, new FormControl(''));
+          this.requiredFieldsValuesForm.addControl(field.name, new FormControl(field.value));
         });
-      });
+      })
+  }
+
+  async updateRequiredVariables(): Promise<void> {
+    let requiredVariables = this.requiredFieldsValuesForm.getRawValue();
+    return invoke('update_required_variables', { requiredVariables })
   }
 
   executeScenario(): void {
-    let requiredVariables = this.requiredFieldsValuesForm.getRawValue();
-    invoke('execute_scenario', { requiredVariables });
+    invoke('execute_scenario');
   }
 }

@@ -53,6 +53,7 @@ impl ScenarioAppState {
                 let config_path = loaded_state.config_path;
                 self.config_path = config_path.clone();
                 self.output_log = loaded_state.output_log;
+                self.required_variables = loaded_state.required_variables;
                 self.load_config(config_path.as_str());
             }
         }
