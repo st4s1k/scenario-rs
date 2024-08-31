@@ -18,10 +18,7 @@
         "task": "copy_jar_to_server"
       },
       {
-        "task": "stop_service",
-        "rollback": [
-          "start_service"
-        ]
+        "task": "stop_service"
       },
       {
         "task": "create_backup",
