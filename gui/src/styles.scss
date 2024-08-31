@@ -69,6 +69,15 @@ label {
 input {
     @extend .text-field;
     height: 26px;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: 1px solid $primary-color;
+    background-color: transparent;
+
+    &:focus {
+        border: none;
+    }
 }
 
 textarea {
