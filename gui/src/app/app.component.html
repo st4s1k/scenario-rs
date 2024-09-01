@@ -29,7 +29,7 @@
       <div class="col grow gap-10">
         @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
         <div class="row justify-content-center gap-10">
-          <input class="grow" type="text" [formControlName]="requiredField.key"/>
+          <input class="grow" type="text" [formControlName]="requiredField.key" />
           @if (requiredField.value.type === 'path') {
           <button (click)="selectRequiredFile(requiredField.key)">Select</button>
           }
@@ -51,18 +51,22 @@
       </div>
     </div>
 
-    <div class="row">
+    <div class="row gap-10 justify-content-space-between">
       <label class="title">Execution log:</label>
+      <button id="clear-log-button" (click)="clearLog()">
+        <svg id="clear-log-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path fill="currentColor"
+            d="M17 4h5v2h-2v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6H2V4h5V2h10zM9 9v8h2V9zm4 0v8h2V9z" />
+        </svg>
+        <svg id="clear-log-button-icon-active" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path fill="currentColor"
+            d="M7 4V2h10v2h5v2h-2v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6H2V4zM6 6v14h12V6zm3 3h2v8H9zm4 0h2v8h-2z" />
+        </svg>
+      </button>
     </div>
 
     <div class="row grow justify-content-end">
       <textarea readonly class="col grow" [formControl]="executionLog"></textarea>
-      <button id="clear-log-button" (click)="clearLog()">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path fill="currentColor"
-            d="M16 2v4h6v2h-2v14H4V8H2V6h6V2zm-2 2h-4v2h4zm0 4H6v12h12V8zm-5 2h2v8H9zm6 0h-2v8h2z" />
-        </svg>
-      </button>
     </div>
   </div>
 </div>

@@ -19,12 +19,24 @@
     width: 20px;
     height: 20px;
     padding: 0px;
-    position: absolute;
     outline-style: none;
 
+    color: $primary-color;
+    background-color: $background-color;
+    border: none;
+
     svg {
-        width: 18px;
-        height: 18px;
+        &#clear-log-button-icon-active {
+            display: none;
+        }
+    }
+
+    &:active svg {
+        display: none;
+
+        &#clear-log-button-icon-active {
+            display: block;
+        }
     }
 }
 
