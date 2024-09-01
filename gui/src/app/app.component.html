@@ -8,9 +8,9 @@
       <h1 class="title">scenario-rs</h1>
     </div>
 
-    <div id="scenario-config" class="row justify-content-center gap-10">
+    <div class="row justify-content-center gap-10">
       <label class="title">Config file:</label>
-      <input class="grow" value="{{ scenarioConfigPath() }}">
+      <input class="grow" type="text" [formControl]="scenarioConfigPath">
       <button (click)="selectConfigFile()">Select</button>
     </div>
 
@@ -18,26 +18,25 @@
     <div class="row">
       <label class="title">Required fields:</label>
     </div>
-
-    <div id="required-fields-values" class="row gap-10">
+    <form id="required-fields-form" class="row gap-10" [formGroup]="requiredFieldsFormGroup">
       <div class="col gap-10">
         @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
         <div class="row gap-10">
-          <label class="title">{{requiredFields[requiredField.key].label}}</label>
+          <label class="title">{{requiredField.value.label}}</label>
         </div>
         }
       </div>
       <div class="col grow gap-10">
         @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
         <div class="row justify-content-center gap-10">
-          <input class="grow" value="{{ requiredField.value.value() }}" />
-          @if (requiredFields[requiredField.key].type === 'path') {
+          <input class="grow" type="text" [formControlName]="requiredField.key"/>
+          @if (requiredField.value.type === 'path') {
           <button (click)="selectRequiredFile(requiredField.key)">Select</button>
           }
         </div>
         }
       </div>
-    </div>
+    </form>
     }
 
     <div class="row gap-10">
@@ -46,9 +45,9 @@
         <button (click)="executeScenario()">Execute Scenario</button>
       </div>
       <div class="col grow justify-content-center">
-      @if (executionLoading()) {
-      <span class="loader"></span>
-      }
+        @if (isExecuting()) {
+        <span class="loader"></span>
+        }
       </div>
     </div>
 
@@ -57,9 +56,8 @@
     </div>
 
     <div class="row grow justify-content-end">
-      <textarea class="col grow" readonly>{{ executionLog() }}</textarea>
-
-      <button id="clear-log" (click)="clearLog()">
+      <textarea readonly class="col grow" [formControl]="executionLog"></textarea>
+      <button id="clear-log-button" (click)="clearLog()">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <path fill="currentColor"
             d="M16 2v4h6v2h-2v14H4V8H2V6h6V2zm-2 2h-4v2h4zm0 4H6v12h12V8zm-5 2h2v8H9zm6 0h-2v8h2z" />

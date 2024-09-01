@@ -15,7 +15,7 @@
     font-weight: bold;
 }
 
-#clear-log {
+#clear-log-button {
     width: 20px;
     height: 20px;
     padding: 0px;
@@ -28,11 +28,7 @@
     }
 }
 
-#scenario-config {
-    align-items: center;
-}
-
-#required-fields-values {
+#required-fields-form {
     align-items: center;
     border: 1px solid $primary-color;
     padding: 10px;

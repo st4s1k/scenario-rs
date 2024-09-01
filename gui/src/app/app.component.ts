@@ -1,16 +1,20 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal, WritableSignal } from '@angular/core';
-import { FormsModule, ReactiveFormsModule } from "@angular/forms";
+import { Component, signal } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule } from "@angular/forms";
 import { RouterOutlet } from '@angular/router';
 import { dialog } from "@tauri-apps/api"; // Import Tauri's dialog API
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/tauri";
 import { TitlebarComponent } from "./titlebar/titlebar.component";
 
+interface RequiredFieldsForm {
+  [key: string]: FormControl<string | null>;
+}
+
 interface RequiredField {
   label: string;
   type: string;
-  value: WritableSignal<string>;
+  value: string;
 }
 
 @Component({
@@ -18,46 +22,47 @@ interface RequiredField {
   standalone: true,
   imports: [
     CommonModule,
-    RouterOutlet,
-    FormsModule,
     ReactiveFormsModule,
+    RouterOutlet,
     TitlebarComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
 export class AppComponent {
-  executionLog = signal('');
-  scenarioConfigPath = signal('');
+  executionLog = new FormControl<string>('');
+  scenarioConfigPath = new FormControl<string>('');
   requiredFields: { [key: string]: RequiredField } = {};
-  executionLoading = signal(false);
+  requiredFieldsFormGroup = new FormGroup<RequiredFieldsForm>({});
+  isExecuting = signal(false);
 
   unlisten = listen('log-update', () => {
-    console.log('Received log update signal');
     invoke<string>('get_log')
       .then((log) => {
-        this.executionLog.set(log);
+        this.executionLog.setValue(log);
       });
   });
 
   ngOnInit(): void {
     invoke<string>('get_log')
-      .then((log) => {
-        this.executionLog.set(log);
-      });
-
+      .then((log) => this.executionLog.setValue(log));
     this.fetchConfigPath()
-      .then(() => {
-        if (this.scenarioConfigPath()) {
-          this.loadConfigFile();
-        }
+      .then(() => this.loadConfigFile());
+    this.requiredFieldsFormGroup.valueChanges
+      .subscribe((partialValue) => {
+        Object.entries(partialValue).forEach(([key, value]) => {
+          if (value) {
+            this.requiredFields[key].value = value;
+          }
+        });
+        this.updateRequiredVariables();
       });
   }
 
   async fetchConfigPath(): Promise<void> {
     return invoke<string>('get_config_path')
       .then((configPath) => {
-        this.scenarioConfigPath.set(configPath);
+        this.scenarioConfigPath.setValue(configPath);
       })
   }
 
@@ -66,7 +71,7 @@ export class AppComponent {
   }
 
   async selectRequiredFile(requiredFieldName: string): Promise<void> {
-    const requiredFieldLabel = this.requiredFields[requiredFieldName]?.label;
+    const requiredFieldLabel = this.requiredFields[requiredFieldName].label;
     const selectedFilePath = await dialog.open({
       multiple: false,
       filters: [{
@@ -76,7 +81,8 @@ export class AppComponent {
     });
 
     if (selectedFilePath && typeof selectedFilePath === 'string') {
-      this.requiredFields[requiredFieldName].value.set(selectedFilePath);
+      this.requiredFields[requiredFieldName].value = selectedFilePath;
+      this.requiredFieldsFormGroup.controls[requiredFieldName].setValue(selectedFilePath);
     }
   }
 
@@ -90,39 +96,42 @@ export class AppComponent {
     });
 
     if (configPath && typeof configPath === 'string') {
-      this.scenarioConfigPath.set(configPath);
+      this.scenarioConfigPath.setValue(configPath);
       await this.loadConfigFile();
     }
   }
 
   async loadConfigFile(): Promise<void> {
-    return invoke<{ [key: string]: string }>('load_config', { configPath: this.scenarioConfigPath() })
-      .then(async (requiredFieldsMap) => {
-        let savedRequiredVariables = await invoke<{ [key: string]: string }>('get_required_variables');
-        Object.entries(requiredFieldsMap).forEach(([key, value]) =>
-          this.requiredFields[key] = {
-            label: value,
-            type: key.startsWith('path:') ? 'path' : 'text',
-            value: signal(savedRequiredVariables[key] || '')
-          });
-        console.log('Required fields', JSON.stringify(this.requiredFields, null, 2));
-      })
+    const configPath = this.scenarioConfigPath.value || '';
+    return invoke<{ [key: string]: string }>('load_config', { configPath })
+      .then((requiredFieldsMap) => invoke<{ [key: string]: string }>('get_required_variables')
+        .then((savedRequiredVariables) =>
+          Object.entries(requiredFieldsMap).forEach(([key, value]) => {
+            this.requiredFields[key] = {
+              label: value,
+              type: key.startsWith('path:') ? 'path' : 'text',
+              value: savedRequiredVariables[key] || ''
+            };
+            console.log('Adding required field', key, this.requiredFields[key]);
+            const formControl = new FormControl(this.requiredFields[key].value);
+            this.requiredFieldsFormGroup.addControl(key, formControl);
+          })
+        )
+      )
   }
 
   async updateRequiredVariables(): Promise<void> {
-    let requiredVariables: { [key: string]: string } = {};
-    Object.entries(this.requiredFields).forEach(([key, field]) => {
-      requiredVariables[key] = field.value();
+    const requiredVariables: { [key: string]: string } = {};
+    Object.entries(this.requiredFields).forEach(([name, requiredField]) => {
+      requiredVariables[name] = requiredField.value;
     });
     console.log('Updating required variables', JSON.stringify(requiredVariables, null, 2));
     return invoke('update_required_variables', { requiredVariables })
   }
 
   executeScenario(): void {
-    this.executionLoading.set(true);
+    this.isExecuting.set(true);
     invoke('execute_scenario')
-      .then(() => {
-        this.executionLoading.set(false);
-      });
+      .then(() => this.isExecuting.set(false));
   }
 }
