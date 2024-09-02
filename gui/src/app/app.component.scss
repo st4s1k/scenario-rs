@@ -13,6 +13,40 @@
 .title {
     color: $primary-color;
     font-weight: bold;
+
+    input[type="checkbox"] {
+        display: none;
+    }
+
+    &:has(input[type="checkbox"]) {
+        &:focus,
+        &:hover {
+            color: $primary-color-lighter;
+        }
+
+        &:before {
+            content: '[-]\00a0';
+        }
+    }
+
+    &:has(input[type="checkbox"]:checked) {
+        &:before {
+            content: '[+]\00a0';
+        }
+    }
+}
+
+.title:has(input[type="checkbox"]:checked) + .expandable {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: all 0.5s cubic-bezier(0, 1, 0, 1);
+}
+
+.title:has(input[type="checkbox"]) + .expandable {
+    max-height: 100%;
+    opacity: 1;
+    transition: all 0.5s ease-in-out;
 }
 
 #clear-log-button {

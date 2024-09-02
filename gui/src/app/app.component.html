@@ -10,33 +10,35 @@
 
     <div class="row justify-content-center gap-10">
       <label class="title">Config file:</label>
-      <input class="grow" type="text" [formControl]="scenarioConfigPath">
+      <input class="text-field grow" type="text" [formControl]="scenarioConfigPath">
       <button (click)="selectConfigFile()">Select</button>
     </div>
 
     @if ((requiredFields | keyvalue).length > 0) {
-    <div class="row">
-      <label class="title">Required fields:</label>
-    </div>
-    <form id="required-fields-form" class="row gap-10" [formGroup]="requiredFieldsFormGroup">
-      <div class="col gap-10">
-        @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
-        <div class="row gap-10">
-          <label class="title">{{requiredField.value.label}}</label>
-        </div>
-        }
-      </div>
-      <div class="col grow gap-10">
-        @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
-        <div class="row justify-content-center gap-10">
-          <input class="grow" type="text" [formControlName]="requiredField.key" />
-          @if (requiredField.value.type === 'path') {
-          <button (click)="selectRequiredFile(requiredField.key)">Select</button>
+    <label class="row title">Required fields:
+      <input type="checkbox" />
+    </label>
+    <div class="expandable">
+      <form id="required-fields-form" class="row gap-10" [formGroup]="requiredFieldsFormGroup">
+        <div class="col gap-10">
+          @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
+          <div class="row gap-10">
+            <label class="title">{{requiredField.value.label}}</label>
+          </div>
           }
         </div>
-        }
-      </div>
-    </form>
+        <div class="col grow gap-10">
+          @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
+          <div class="row justify-content-center gap-10">
+            <input class="text-field grow" type="text" [formControlName]="requiredField.key" />
+            @if (requiredField.value.type === 'path') {
+            <button (click)="selectRequiredFile(requiredField.key)">Select</button>
+            }
+          </div>
+          }
+        </div>
+      </form>
+    </div>
     }
 
     <div class="row gap-10">
@@ -51,8 +53,10 @@
       </div>
     </div>
 
-    <div class="row gap-10 justify-content-space-between">
-      <label class="title">Execution log:</label>
+    <label class="row title">Execution log:
+      <input type="checkbox" />
+    </label>
+    <div class="row grow gap-10 expandable">
       <button id="clear-log-button" (click)="clearLog()">
         <svg id="clear-log-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <path fill="currentColor"
@@ -63,10 +67,9 @@
             d="M7 4V2h10v2h5v2h-2v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6H2V4zM6 6v14h12V6zm3 3h2v8H9zm4 0h2v8h-2z" />
         </svg>
       </button>
-    </div>
-
-    <div class="row grow justify-content-end">
-      <textarea readonly class="col grow" [formControl]="executionLog"></textarea>
+      <div class="col grow">
+        <textarea readonly class="col grow" [formControl]="executionLog"></textarea>
+      </div>
     </div>
   </div>
 </div>

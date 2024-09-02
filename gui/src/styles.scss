@@ -41,7 +41,7 @@ h1 {
     margin: 0;
 }
 
-.text-field {
+.text-area {
     color: $text-color;
     font-size: $default-font-size;
     background-color: $text-area-background-color;
@@ -66,8 +66,8 @@ label {
     align-items: center;
 }
 
-input {
-    @extend .text-field;
+.text-field {
+    @extend .text-area;
     height: 26px;
     border-top: none;
     border-left: none;
@@ -83,11 +83,11 @@ input {
 }
 
 textarea {
-    @extend .text-field;
+    @extend .text-area;
 
     padding: 10px;
     resize: none;
-}
+    }
 
 button {
     width: 150px;

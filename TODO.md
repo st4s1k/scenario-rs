@@ -6,7 +6,6 @@
 
 # gui
 
-- Collapsable sections
 - Implement a custom scrollbar
 - Display all scenario variables
 - Display scenario steps
