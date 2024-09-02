@@ -49,6 +49,10 @@
                 width: 20px;
                 height: 20px;
             }
+
+            .tooltip {
+                transform: translateY($titlebar-height);
+            }
         }
     }
 }
