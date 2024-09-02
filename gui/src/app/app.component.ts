@@ -103,6 +103,9 @@ export class AppComponent {
 
   async loadConfigFile(): Promise<void> {
     const configPath = this.scenarioConfigPath.value || '';
+    if (configPath.trim() === '') {
+      return;
+    }
     return invoke<{ [key: string]: string }>('load_config', { configPath })
       .then((requiredFieldsMap) => invoke<{ [key: string]: string }>('get_required_variables')
         .then((savedRequiredVariables) =>
