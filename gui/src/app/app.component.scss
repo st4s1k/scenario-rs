@@ -19,9 +19,10 @@
     }
 
     &:has(input[type="checkbox"]) {
+
         &:focus,
         &:hover {
-            color: $primary-color-lighter;
+            color: $primary-color-lighter-40;
         }
 
         &:before {
@@ -36,53 +37,55 @@
     }
 }
 
-.title:has(input[type="checkbox"]:checked) + .expandable {
+.title:has(input[type="checkbox"]:checked)+.expandable {
     max-height: 0;
     opacity: 0;
     overflow: hidden;
     transition: all 0.5s cubic-bezier(0, 1, 0, 1);
 }
 
-.title:has(input[type="checkbox"]) + .expandable {
+.title:has(input[type="checkbox"])+.expandable {
     max-height: 100%;
     opacity: 1;
     transition: all 0.5s ease-in-out;
 }
 
 #clear-log-button {
-    width: 15px;
-    height: 15px;
+    width: 22px;
+    height: 22px;
     padding: 0px;
-    outline-style: none;
-
     color: $primary-color;
-    background-color: $background-color;
-    border: none;
+    background-color: $secondary-color;
+    outline-style: none;
+    border: 1px solid transparent;
 
     svg {
-        &#clear-log-button-icon-active {
-            display: none;
-        }
+        display: block;
+        width: 16px;
+        margin: auto;
+        aspect-ratio: 1;
     }
 
-    &:active svg {
-        display: none;
+    &:active {
+        &:hover {
+            border-color: $primary-color;
+        }
 
-        &#clear-log-button-icon-active {
-            display: block;
+        background-color: $secondary-color-darker-75;
+
+        svg {
+            color: $primary-color;
+            scale: 0.95;
         }
     }
 
     &:hover {
-        color: $primary-color-lighter;
-
-        &:active {
-            color: $primary-color;
-        }
+        border-color: $primary-color-lighter-40;
+        color: $primary-color-lighter-40;
     }
 
     .tooltip {
-        transform: translate(10px, -12px);
+        transform: translate(22px, -20px);
     }
 }
 
@@ -90,7 +93,7 @@
     align-items: center;
     border: 1px solid $primary-color;
     padding: 10px;
-    background-color: $background-color-lighter;
+    background-color: $secondary-color-lighter-2;
 
     .row {
         height: $field-height;
@@ -109,7 +112,7 @@
     content: '';
     width: 24px;
     height: 24px;
-    border: 2px solid $primary-color-lighter;
+    border: 2px solid $primary-color-lighter-40;
     position: absolute;
     left: 0;
     top: 0;

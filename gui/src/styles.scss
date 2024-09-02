@@ -1,13 +1,17 @@
 $titlebar-height: 30px;
 $field-height: 30px;
 $primary-color: rgb(218, 165, 32); // goldenrod
-$primary-color-lighter: color-mix(in srgb, $primary-color 60%, white);
-$text-color: rgb(188, 188, 188);
+$primary-color-lighter-40: color-mix(in srgb, $primary-color 60%, white);
 $default-font-size: 14px;
-$background-color: rgb(30, 30, 30);
-$background-color-lighter: color-mix(in srgb, $background-color 98%, white);
-$text-area-background-color: color-mix(in srgb, $background-color 95%, white);
-$button-text-color: $background-color;
+$secondary-color: rgb(30, 30, 30);
+$secondary-color-lighter-2: color-mix(in srgb, $secondary-color 98%, white);
+$secondary-color-lighter-5: color-mix(in srgb, $secondary-color 95%, white);
+$secondary-color-lighter-40: color-mix(in srgb, $secondary-color 60%, white);
+$secondary-color-lighter-60: color-mix(in srgb, $secondary-color 40%, white);
+$secondary-color-lighter-70: color-mix(in srgb, $secondary-color 30%, white);
+$secondary-color-darker-75: color-mix(in srgb, $secondary-color 75%, black);
+$text-color: $secondary-color-lighter-70;
+$button-text-color: $secondary-color;
 
 html {
     margin: 0;
@@ -21,7 +25,7 @@ html {
 
         font-family: monospace;
         font-size: $default-font-size;
-        background-color: $background-color;
+        background-color: $secondary-color;
         color: $text-color;
     }
 }
@@ -44,18 +48,18 @@ h1 {
 .text-area {
     color: $text-color;
     font-size: $default-font-size;
-    background-color: $text-area-background-color;
+    background-color: $secondary-color-lighter-5;
     border-color: $primary-color;
     border-width: 1px;
 
     &:focus {
-        outline-color: $primary-color-lighter;
+        outline-color: $primary-color-lighter-40;
         outline-style: solid;
     }
 
     &::selection {
-        background-color: $primary-color-lighter;
-        color: $background-color;
+        background-color: $primary-color-lighter-40;
+        color: $secondary-color;
     }
 }
 
@@ -98,7 +102,7 @@ button {
 
     border-style: none;
     outline-offset: -3px;
-    outline: 2px solid $background-color;
+    outline: 2px solid $secondary-color;
 
     font-size: $default-font-size;
     font-family: monospace;
@@ -106,14 +110,14 @@ button {
 
     &:focus,
     &:hover {
-        background-color: $primary-color-lighter;
+        background-color: $primary-color-lighter-40;
         outline-offset: -4px;
-        outline: 3px double $background-color;
+        outline: 3px double $secondary-color;
     }
 
     &:active {
         color: $primary-color;
-        background-color: $background-color;
+        background-color: $secondary-color;
         outline-offset: -4px;
         outline: 1px solid $primary-color;
         border: 1px solid $primary-color;
@@ -160,22 +164,33 @@ button {
 
 .tooltip {
     opacity: 0;
+    visibility: hidden;
     width: fit-content;
-    background-color: $background-color-lighter;
-    color: $text-color;
+    background-color: $secondary-color-lighter-2;
+    color: $secondary-color-lighter-40;
     text-align: center;
     padding: 5px;
-    border: 1px solid $primary-color-lighter;
+    border: 1px solid $secondary-color-lighter-40;
     position: absolute;
     z-index: 1;
     font-size: 12px;
     font-weight: normal;
     transition: all 0.2s ease-in-out;
+
+    &::after {
+        content: " ";
+        position: absolute;
+        margin-top: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color:  transparent transparent transparent transparent;
+    }
 }
 
 *:has(>.tooltip) {
     &:hover {
         .tooltip {
+            visibility: visible;
             opacity: 1;
             transition-delay: 0.5s;
         }
