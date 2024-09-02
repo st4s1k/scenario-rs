@@ -19,6 +19,7 @@
     "@angular/platform-browser-dynamic": "18.2.2",
     "@angular/router": "18.2.2",
     "@tauri-apps/api": "1",
+    "ngx-clipboard": "16.0.0",
     "rxjs": "~7.8.1",
     "sass": "1.77.8",
     "tslib": "2.7.0"

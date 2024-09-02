@@ -2,7 +2,7 @@
   <app-titlebar></app-titlebar>
 </div>
 <div class="row grow" appNoRightClick>
-  <div class="col grow container unselectable gap-15">
+  <div class="col grow container unselectable gap-15" #container>
 
     <div class="row">
       <h1 class="title">scenario-rs</h1>
@@ -57,13 +57,27 @@
       <input type="checkbox" />
     </label>
     <div class="row grow gap-5 expandable">
-      <button id="clear-log-button" (click)="clearLog()">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="20 15 40 52">
-          <path fill="currentColor" d="M52 33v29H28V33H52 M57 28H23v39h34V28L57 28z" />
-          <path fill="currentColor" d="M45 20v-3H35v3H20v5h40v-5H45z" />
-        </svg>
-        <span class="tooltip-arrow-left">Clear log</span>
-      </button>
+      <div class="col justify-content-space-between">
+        <div class="col">
+          <button id="copy-log-button" class="log-button" ngxClipboard *ngxClipboardIfSupported
+            cbContent="{{executionLog.value || undefined}}" [container]="container">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+              <g fill="currentColor">
+                <path d="M11 0H0v11h3V9H2V2h7v1h2z" />
+                <path d="M16 5H5v11h11zm-9 9V7h7v7z" />
+              </g>
+            </svg>
+            <span class="tooltip-arrow-left">Copy log</span>
+          </button>
+        </div>
+        <button id="clear-log-button" class="log-button" (click)="clearLog()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="20 15 40 52">
+            <path fill="currentColor" d="M52 33v29H28V33H52 M57 28H23v39h34V28L57 28z" />
+            <path fill="currentColor" d="M45 20v-3H35v3H20v5h40v-5H45z" />
+          </svg>
+          <span class="tooltip-arrow-left">Clear log</span>
+        </button>
+      </div>
       <div class="col grow">
         <textarea readonly class="col grow" [formControl]="executionLog"></textarea>
       </div>

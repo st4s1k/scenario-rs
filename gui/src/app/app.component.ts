@@ -7,6 +7,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/tauri";
 import { NoRightClickDirective } from './no-right-click.directive';
 import { TitlebarComponent } from "./titlebar/titlebar.component";
+import { ClipboardModule } from 'ngx-clipboard';
 
 interface RequiredFieldsForm {
   [key: string]: FormControl<string | null>;
@@ -24,6 +25,7 @@ interface RequiredField {
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    ClipboardModule,
     RouterOutlet,
     TitlebarComponent,
     NoRightClickDirective
