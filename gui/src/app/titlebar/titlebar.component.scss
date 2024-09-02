@@ -52,12 +52,6 @@
 
             .tooltip {
                 transform: translate(-5px, $titlebar-height + 5px);
-
-                &::after {
-                    bottom: 100%;
-                    left: 50%;
-                    border-color: transparent transparent $secondary-color-lighter-40 transparent;
-                }
             }
         }
     }

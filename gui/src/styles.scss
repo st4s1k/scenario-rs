@@ -167,10 +167,10 @@ button {
     visibility: hidden;
     width: fit-content;
     background-color: $secondary-color-lighter-2;
-    color: $secondary-color-lighter-40;
+    color: $secondary-color-lighter-60;
     text-align: center;
     padding: 5px;
-    border: 1px solid $secondary-color-lighter-40;
+    border: 1px solid $primary-color-lighter-40;
     position: absolute;
     z-index: 1;
     font-size: 12px;
@@ -184,6 +184,46 @@ button {
         border-width: 5px;
         border-style: solid;
         border-color:  transparent transparent transparent transparent;
+    }
+}
+
+.tooltip-arrow-bottom {
+    @extend .tooltip;
+
+    &::after {
+        top: 100%;
+        left: 50%;
+        border-color: $primary-color-lighter-40 transparent transparent transparent;
+    }
+}
+
+.tooltip-arrow-left {
+    @extend .tooltip;
+
+    &::after {
+        right: 100%;
+        top: 50%;
+        border-color: transparent $primary-color-lighter-40 transparent transparent;
+    }
+}
+
+.tooltip-arrow-top {
+    @extend .tooltip;
+
+    &::after {
+        bottom: 100%;
+        left: 50%;
+        border-color: transparent transparent $primary-color-lighter-40 transparent;
+    }
+}
+
+.tooltip-arrow-right {
+    @extend .tooltip;
+
+    &::after {
+        left: 100%;
+        top: 50%;
+        border-color: transparent transparent transparent $primary-color-lighter-40;
     }
 }
 
