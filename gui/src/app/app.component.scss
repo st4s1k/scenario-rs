@@ -67,20 +67,19 @@
     }
 
     &:active {
+        background-color: $secondary-color-lighter-5;
+
+        &:focus,
         &:hover {
-            border-color: $primary-color;
+            border: 1px solid $secondary-color-lighter-10;
         }
 
-        background-color: $secondary-color-darker-75;
-
         svg {
-            color: $primary-color;
             scale: 0.95;
         }
     }
 
     &:hover {
-        border-color: $primary-color-lighter-40;
         color: $primary-color-lighter-40;
     }
 

@@ -6,10 +6,10 @@ $default-font-size: 14px;
 $secondary-color: rgb(30, 30, 30);
 $secondary-color-lighter-2: color-mix(in srgb, $secondary-color 98%, white);
 $secondary-color-lighter-5: color-mix(in srgb, $secondary-color 95%, white);
+$secondary-color-lighter-10: color-mix(in srgb, $secondary-color 90%, white);
 $secondary-color-lighter-40: color-mix(in srgb, $secondary-color 60%, white);
 $secondary-color-lighter-60: color-mix(in srgb, $secondary-color 40%, white);
 $secondary-color-lighter-70: color-mix(in srgb, $secondary-color 30%, white);
-$secondary-color-darker-75: color-mix(in srgb, $secondary-color 75%, black);
 $text-color: $secondary-color-lighter-70;
 $button-text-color: $secondary-color;
 
