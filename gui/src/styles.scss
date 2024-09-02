@@ -87,7 +87,7 @@ textarea {
 
     padding: 10px;
     resize: none;
-    }
+}
 
 button {
     width: 150px;
@@ -152,4 +152,39 @@ button {
 
 .gap-10 {
     gap: 10px;
+}
+
+.gap-5 {
+    gap: 5px;
+}
+
+.tooltip {
+    opacity: 0;
+    width: fit-content;
+    background-color: $background-color-lighter;
+    color: $text-color;
+    text-align: center;
+    padding: 5px;
+    border: 1px solid $primary-color-lighter;
+    position: absolute;
+    z-index: 1;
+    font-size: 12px;
+    font-weight: normal;
+    transition: all 0.2s ease-in-out;
+}
+
+*:has(>.tooltip) {
+    &:hover {
+        .tooltip {
+            opacity: 1;
+            transition-delay: 0.5s;
+        }
+
+        &:active {
+            .tooltip {
+                opacity: 0;
+                transition: none;
+            }
+        }
+    }
 }

@@ -50,8 +50,8 @@
 }
 
 #clear-log-button {
-    width: 20px;
-    height: 20px;
+    width: 15px;
+    height: 15px;
     padding: 0px;
     outline-style: none;
 
@@ -71,6 +71,18 @@
         &#clear-log-button-icon-active {
             display: block;
         }
+    }
+
+    &:hover {
+        color: $primary-color-lighter;
+
+        &:active {
+            color: $primary-color;
+        }
+    }
+
+    .tooltip {
+        transform: translate(10px, -12px);
     }
 }
 
