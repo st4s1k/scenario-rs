@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from "@angular/forms";
 import { RouterOutlet } from '@angular/router';
-import { dialog } from "@tauri-apps/api"; // Import Tauri's dialog API
+import { dialog } from "@tauri-apps/api";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/tauri";
 import { TitlebarComponent } from "./titlebar/titlebar.component";
