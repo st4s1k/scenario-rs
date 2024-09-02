@@ -49,12 +49,12 @@ export class AppComponent {
     this.fetchConfigPath()
       .then(() => this.loadConfigFile());
     this.requiredFieldsFormGroup.valueChanges
-      .subscribe((partialValue) => {
-        Object.entries(partialValue).forEach(([key, value]) => {
-          if (value) {
-            this.requiredFields[key].value = value;
+      .subscribe((requiredFieldsPartial) => {
+        for (const name in requiredFieldsPartial) {
+          if (name) {
+            this.requiredFields[name].value = requiredFieldsPartial[name]!;
           }
-        });
+        }
         this.updateRequiredVariables();
       });
   }
@@ -107,27 +107,27 @@ export class AppComponent {
       return;
     }
     return invoke<{ [key: string]: string }>('load_config', { configPath })
-      .then((requiredFieldsMap) => invoke<{ [key: string]: string }>('get_required_variables')
-        .then((savedRequiredVariables) =>
-          Object.entries(requiredFieldsMap).forEach(([key, value]) => {
-            this.requiredFields[key] = {
-              label: value,
-              type: key.startsWith('path:') ? 'path' : 'text',
-              value: savedRequiredVariables[key] || ''
+      .then((requiredFields) => invoke<{ [key: string]: string }>('get_required_variables')
+        .then((savedRequiredVariables) => {
+          for (const name in requiredFields) {
+            this.requiredFields[name] = {
+              label: requiredFields[name],
+              type: name.startsWith('path:') ? 'path' : 'text',
+              value: savedRequiredVariables[name] || ''
             };
-            console.log('Adding required field', key, this.requiredFields[key]);
-            const formControl = new FormControl(this.requiredFields[key].value);
-            this.requiredFieldsFormGroup.addControl(key, formControl);
-          })
-        )
+            console.log('Adding required field', name, this.requiredFields[name]);
+            const formControl = new FormControl(this.requiredFields[name].value);
+            this.requiredFieldsFormGroup.addControl(name, formControl);
+          }
+        })
       )
   }
 
   async updateRequiredVariables(): Promise<void> {
     const requiredVariables: { [key: string]: string } = {};
-    Object.entries(this.requiredFields).forEach(([name, requiredField]) => {
-      requiredVariables[name] = requiredField.value;
-    });
+    for (const name in this.requiredFields) {
+      requiredVariables[name] = this.requiredFields[name].value;
+    }
     console.log('Updating required variables', JSON.stringify(requiredVariables, null, 2));
     return invoke('update_required_variables', { requiredVariables })
   }
