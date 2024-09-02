@@ -5,6 +5,7 @@ import { RouterOutlet } from '@angular/router';
 import { dialog } from "@tauri-apps/api";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/tauri";
+import { NoRightClickDirective } from './no-right-click.directive';
 import { TitlebarComponent } from "./titlebar/titlebar.component";
 
 interface RequiredFieldsForm {
@@ -24,7 +25,8 @@ interface RequiredField {
     CommonModule,
     ReactiveFormsModule,
     RouterOutlet,
-    TitlebarComponent
+    TitlebarComponent,
+    NoRightClickDirective
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
