@@ -24,7 +24,7 @@ Long story short, it's a CI/CD-like app for automation of remote command executi
 <cloned-dir>/scenario-rs/gui/
 ```
 
-### ✨ 🚧 [gui.dev]
+### ✨ [gui.dev] 🚧
 
 ▶️ **run:**
 
@@ -44,7 +44,7 @@ npm run tauri build -- --debug
 <cloned-dir>/scenario-rs/target/debug/scenario-rs.exe
 ```
 
-### ✨ 🎁 [gui.release]
+### ✨ [gui.release] 🎁
 
 🛠️ **build:**
 
@@ -66,7 +66,7 @@ npm run tauri build
 <cloned-dir>/scenario-rs/cli
 ```
 
-### 📟 🚧 [cli.dev]
+### 📟 [cli.dev] 🚧
 
 ▶️ **run:**
 
@@ -92,7 +92,7 @@ or
 <cloned-dir>/scenario-rs/target/debug/scenario-rs-cli.exe -c ./example-scenario.json
 ```
 
-### 📟 🎁 [cli.release]
+### 📟 [cli.release] 🎁
 
 🛠️ **build:**
 
