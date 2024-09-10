@@ -23,9 +23,9 @@ jobs:
         # Additional arguments for the build command
         # args: # optional
         # Path to the root of the project
-        projectPath: ./gui/src-tauri
+        projectPath: gui/src-tauri
         # Path to the tauri.conf.json file if you want a configuration different from the default one
-        configPath: ./gui/src-tauri/tauri.conf.json
+        # configPath: gui/src-tauri/tauri.conf.json
         # The target triple to build against
         # target: # optional
         # Builds with the debug flag
