@@ -9,10 +9,7 @@ use crate::{
     },
 };
 use chrono::Local;
-use std::{
-    collections::HashMap,
-    ops::Deref,
-};
+use std::{ collections::HashMap, ops::Deref, path::PathBuf, str::FromStr };
 
 #[derive(Debug)]
 pub struct Variables {
@@ -24,12 +21,24 @@ impl From<&VariablesConfig> for Variables {
     fn from(config: &VariablesConfig) -> Self {
         let mut variables_map = HashMap::<String, String>::new();
         variables_map.extend(config.defined.deref().clone());
+        for (key, value) in &variables_map.clone() {
+            if key.starts_with("path:") {
+                PathBuf::from_str(value.as_str())
+                    .ok()
+                    .and_then(|path| path.file_name().map(|file_name| file_name.to_owned()))
+                    .and_then(|file_name| file_name.to_str().map(|s| s.to_string()))
+                    .map(|file_name| {
+                        let basename_key = key.replace("path:", "basename:");
+                        variables_map.insert(basename_key, file_name.to_string());
+                    });
+            }
+        }
         let mut variables = Variables {
             required: RequiredVariables::from(&config.required),
             defined: variables_map,
         };
         variables._resolve_special_variables(&config.special);
-        variables
+        dbg!(variables)
     }
 }
 

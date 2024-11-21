@@ -1,6 +1,5 @@
 # core
 - Scenario config merging
-- `path:*` variables should have a computed `basename:*` counterpart if the path is a file
 - Migrate to toml for scenario config
 - Validate path variables and load files
 
