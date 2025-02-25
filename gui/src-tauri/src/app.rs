@@ -4,8 +4,8 @@ use scenario_rs::{
     scenario::Scenario,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, ops::Deref, path::PathBuf, str::FromStr};
-use tauri::{AppHandle, Manager};
+use std::{collections::HashMap, ops::Deref, path::PathBuf};
+use tauri::{AppHandle, Emitter};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ScenarioAppStateConfig {
@@ -71,10 +71,7 @@ impl ScenarioAppState {
     }
 
     pub fn load_config(&mut self, config_path: &str) -> Option<RequiredVariablesConfig> {
-        let Ok(config_path) = PathBuf::from_str(config_path) else {
-            self.log_message(format!("{SEPARATOR}\nInvalid config path\n{SEPARATOR}\n"));
-            return None;
-        };
+        let config_path = PathBuf::from(config_path);
 
         match ScenarioConfig::try_from(config_path.clone()) {
             Ok(config) => {
@@ -136,11 +133,11 @@ impl ScenarioAppState {
 
     fn log_message(&mut self, message: String) {
         self.output_log.push_str(&message);
-        let _ = self.app_handle.emit_all("log-update", ());
+        let _ = self.app_handle.emit("log-update", ());
     }
 
     pub fn clear_log(&mut self) {
         self.output_log.clear();
-        let _ = self.app_handle.emit_all("log-update", ());
+        let _ = self.app_handle.emit("log-update", ());
     }
 }

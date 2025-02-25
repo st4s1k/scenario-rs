@@ -13,7 +13,7 @@ use std::{
     io::Read,
     sync::{Mutex, OnceLock},
 };
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 static LIFECYCLE_HANDLER: OnceLock<LifecycleHandler> = OnceLock::new();
 
@@ -93,7 +93,7 @@ impl LifecycleHandler {
         let state = self.app_handle.state::<Mutex<ScenarioAppState>>();
         let mut state = state.lock().unwrap();
         state.output_log.push_str(&message);
-        let _ = self.app_handle.emit_all("log-update", ());
+        let _ = self.app_handle.emit("log-update", ());
     }
 }
 

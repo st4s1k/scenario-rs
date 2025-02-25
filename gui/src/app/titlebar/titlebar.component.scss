@@ -1,23 +1,23 @@
-@import '../../styles.scss';
+@use '../../styles.scss';
 
 :host {
     display: block;
-    height: $titlebar-height;
+    height: styles.$titlebar-height;
     width: 100%;
 }
 
 .titlebar {
     display: flex;
     justify-content: flex-end;
-    height: $titlebar-height;
-    background: $secondary-color-lighter-5;
+    height: styles.$titlebar-height;
+    background: styles.$secondary-color-lighter-5;
 
     .button {
         display: inline-flex;
         justify-content: center;
         align-items: center;
-        width: $titlebar-height;
-        height: $titlebar-height;
+        width: styles.$titlebar-height;
+        height: styles.$titlebar-height;
         background-repeat: no-repeat;
         background-position: center;
         transition: background-color 0.2s;
@@ -51,7 +51,7 @@
             }
 
             .tooltip {
-                transform: translate(-5px, $titlebar-height + 5px);
+                transform: translate(-5px, styles.$titlebar-height + 5px);
             }
         }
     }

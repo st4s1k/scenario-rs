@@ -16,8 +16,10 @@ mod shared;
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            let mut state = ScenarioAppState::new(app.app_handle());
+            let mut state = ScenarioAppState::new(app.handle().clone());
             state.load_state();
             app.manage(Mutex::new(state));
             Ok(())
@@ -37,9 +39,9 @@ fn main() {
         .expect("error while running tauri application");
 }
 
-fn on_window_event(event: tauri::GlobalWindowEvent) {
-    if let tauri::WindowEvent::Destroyed { .. } = event.event() {
-        let app_handle = event.window().app_handle();
+fn on_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
+    if let tauri::WindowEvent::Destroyed { .. } = event {
+        let app_handle = window.app_handle();
         let state = app_handle.state::<Mutex<ScenarioAppState>>();
         let mut state = state.lock().unwrap();
         state.save_state();

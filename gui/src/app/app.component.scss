@@ -1,4 +1,4 @@
-@import '../styles.scss';
+@use '../styles.scss';
 
 :host {
     display: flex;
@@ -11,7 +11,7 @@
 }
 
 .title {
-    color: $primary-color;
+    color: styles.$primary-color;
     font-weight: bold;
 
     input[type="checkbox"] {
@@ -22,7 +22,7 @@
 
         &:focus,
         &:hover {
-            color: $primary-color-lighter-40;
+            color: styles.$primary-color-lighter-40;
         }
 
         &:before {
@@ -54,8 +54,8 @@ button.log-button {
     width: 22px;
     height: 22px;
     padding: 0px;
-    color: $primary-color;
-    background-color: $secondary-color;
+    color: styles.$primary-color;
+    background-color: styles.$secondary-color;
     outline-style: none;
     border: 1px solid transparent;
 
@@ -67,11 +67,11 @@ button.log-button {
     }
 
     &:active {
-        background-color: $secondary-color-lighter-5;
+        background-color: styles.$secondary-color-lighter-5;
 
         &:focus,
         &:hover {
-            border: 1px solid $secondary-color-lighter-10;
+            border: 1px solid styles.$secondary-color-lighter-10;
         }
 
         svg {
@@ -80,7 +80,7 @@ button.log-button {
     }
 
     &:hover {
-        color: $primary-color-lighter-40;
+        color: styles.$primary-color-lighter-40;
     }
 
     .tooltip {
@@ -90,12 +90,12 @@ button.log-button {
 
 #required-fields-form {
     align-items: center;
-    border: 1px solid $primary-color;
+    border: 1px solid styles.$primary-color;
     padding: 10px;
-    background-color: $secondary-color-lighter-2;
+    background-color: styles.$secondary-color-lighter-2;
 
     .row {
-        height: $field-height;
+        height: styles.$field-height;
     }
 }
 
@@ -111,7 +111,7 @@ button.log-button {
     content: '';
     width: 24px;
     height: 24px;
-    border: 2px solid $primary-color-lighter-40;
+    border: 2px solid styles.$primary-color-lighter-40;
     position: absolute;
     left: 0;
     top: 0;
@@ -120,7 +120,7 @@ button.log-button {
 }
 
 .loader::after {
-    border-color: $primary-color;
+    border-color: styles.$primary-color;
     animation-delay: 1s;
 }
 

@@ -2,12 +2,12 @@ import { CommonModule } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from "@angular/forms";
 import { RouterOutlet } from '@angular/router';
-import { dialog } from "@tauri-apps/api";
 import { listen } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 import { NoRightClickDirective } from './no-right-click.directive';
 import { TitlebarComponent } from "./titlebar/titlebar.component";
 import { ClipboardModule } from 'ngx-clipboard';
+import * as dialog from "@tauri-apps/plugin-dialog"
 
 interface RequiredFieldsForm {
   [key: string]: FormControl<string | null>;
@@ -26,10 +26,9 @@ interface RequiredField {
     CommonModule,
     ReactiveFormsModule,
     ClipboardModule,
-    RouterOutlet,
     TitlebarComponent,
     NoRightClickDirective
-  ],
+],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })

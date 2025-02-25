@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
-import { invoke } from '@tauri-apps/api';
-import { appWindow } from '@tauri-apps/api/window'
+import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
+const appWindow = getCurrentWebviewWindow()
 
 @Component({
   selector: 'app-titlebar',
