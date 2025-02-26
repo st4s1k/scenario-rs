@@ -1,6 +1,5 @@
 # core
 - Scenario config merging
-- Migrate to toml for scenario config
 - Validate path variables and load files
 
 # gui

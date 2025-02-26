@@ -94,7 +94,7 @@ export class AppComponent {
       multiple: false,
       filters: [{
         name: 'Configuration File',
-        extensions: ['json']
+        extensions: ['toml']
       }]
     });
 

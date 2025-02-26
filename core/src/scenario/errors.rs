@@ -4,8 +4,8 @@ use thiserror::Error;
 pub enum ScenarioConfigError {
     #[error("Cannot open config file: {0}")]
     CannotOpenFile(#[source] std::io::Error),
-    #[error("Cannot read JSON config file: {0}")]
-    CannotReadJson(#[source] serde_json::Error),
+    #[error("Cannot read TOML config file: {0}")]
+    CannotReadToml(#[source] toml::de::Error),
 }
 
 #[derive(Error, Debug)]

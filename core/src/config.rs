@@ -3,7 +3,6 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::{
     collections::HashMap,
-    fs::File,
     ops::{Deref, DerefMut},
     path::PathBuf,
 };
@@ -21,10 +20,10 @@ impl TryFrom<PathBuf> for ScenarioConfig {
     type Error = ScenarioConfigError;
 
     fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
-        let config_file: File = File::open(value)
-            .map_err(ScenarioConfigError::CannotOpenFile)?;
-        let config: ScenarioConfig = serde_json::from_reader(config_file)
-            .map_err(ScenarioConfigError::CannotReadJson)?;
+        let config_string =
+            std::fs::read_to_string(value).map_err(ScenarioConfigError::CannotOpenFile)?;
+        let config = toml::from_str::<ScenarioConfig>(&config_string)
+            .map_err(ScenarioConfigError::CannotReadToml)?;
         Ok(config)
     }
 }
