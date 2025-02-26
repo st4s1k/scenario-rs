@@ -10,28 +10,28 @@ password = "my_password"
 host = "localhost"
 port = "22"
 
-# Execute section with steps
-[[execute.steps]]
-task = "copy_jar_to_server"
-
-[[execute.steps]]
-task = "stop_service"
-
-[[execute.steps]]
-task = "create_backup"
-rollback = ["start_service"]
-
-[[execute.steps]]
-task = "remove_current_deploy"
-rollback = ["restore_backup", "start_service"]
-
-[[execute.steps]]
-task = "deploy_new_file"
-rollback = ["restore_backup", "start_service"]
-
-[[execute.steps]]
-task = "start_service"
-rollback = ["restore_backup", "start_service"]
+[execute]
+steps = [
+    { task = "copy_jar_to_server" },
+    { task = "stop_service", rollback = [
+        "start_service"
+    ] },
+    { task = "create_backup", rollback = [
+        "start_service"
+    ] },
+    { task = "remove_current_deploy", rollback = [
+        "restore_backup",
+        "start_service"
+    ] },
+    { task = "deploy_new_file", rollback = [
+        "restore_backup", 
+        "start_service"
+    ] },
+    { task = "start_service", rollback = [
+        "restore_backup",
+        "start_service" 
+    ] }
+]
 
 # Variables section
 [variables]
