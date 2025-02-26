@@ -1,49 +1,22 @@
-[build]
-beforeDevCommand = "npm run start"
-beforeBuildCommand = "npm run build"
-devPath = "http://localhost:1420"
-distDir = "../dist/gui/browser"
-
-[package]
-productName = "scenario-rs"
+product-name = "scenario-rs"
 version = "0.1.0"
+identifier = "com.st4s1k.scenario-rs.app"
 
-[tauri.allowlist]
-all = false
+[build]
+before-dev-command = "npm run start"
+before-build-command = "npm run build"
+dev-url = "http://localhost:1420"
+frontend-dist = "../dist/gui/browser"
 
-[tauri.allowlist.shell]
-all = false
-open = true
-
-[tauri.allowlist.dialog]
-all = true
-ask = true
-confirm = true
-message = true
-open = true
-save = true
-
-[tauri.allowlist.window]
-all = false
-close = true
-hide = true
-show = true
-maximize = true
-minimize = true
-unmaximize = true
-unminimize = true
-startDragging = true
-
-[[tauri.windows]]
+[[app.windows]]
 decorations = false
 title = "scenario-rs"
 width = 800
 height = 600
 
-[tauri.bundle]
+[bundle]
 active = true
 targets = "all"
-identifier = "com.st4s1k.scenario-rs.app"
 icon = [
   "icons/32x32.png",
   "icons/128x128.png",
@@ -51,5 +24,3 @@ icon = [
   "icons/icon.icns",
   "icons/icon.ico"
 ]
-
-custom-protocol = ["tauri/custom-protocol"]
