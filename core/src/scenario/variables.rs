@@ -38,7 +38,7 @@ impl From<&VariablesConfig> for Variables {
             defined: variables_map,
         };
         variables._resolve_special_variables(&config.special);
-        dbg!(variables)
+        variables
     }
 }
 
@@ -47,7 +47,11 @@ impl Variables {
         Ok(self._resolve_placeholders()?)
     }
 
-    pub fn required(&mut self) -> &mut RequiredVariables {
+    pub fn required(&self) -> &RequiredVariables {
+        &self.required
+    }
+
+    pub fn required_mut(&mut self) -> &mut RequiredVariables {
         &mut self.required
     }
 

@@ -10,6 +10,8 @@ pub enum ScenarioConfigError {
 
 #[derive(Error, Debug)]
 pub enum ScenarioError {
+    #[error("Cannot create Scenario from config: {0}")]
+    CannotCreateScenarioFromConfig(#[source] ScenarioConfigError),
     #[error("Cannot create Execute from config: {0}")]
     CannotCreateExecuteFromConfig(#[source] ExecuteError),
     #[error("Cannot connect to remote server: {0}")]

@@ -48,7 +48,11 @@ impl RequiredVariable {
         &self.label
     }
 
-    pub fn value(&mut self) -> &mut String {
-        &mut self.value
+    pub fn value(&self) -> &str {
+        &self.value
+    }
+
+    pub fn set_value(&mut self, value: String) {
+        self.value = value;
     }
 }

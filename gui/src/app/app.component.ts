@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from "@angular/forms";
-import { RouterOutlet } from '@angular/router';
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { NoRightClickDirective } from './no-right-click.directive';
@@ -28,7 +27,7 @@ interface RequiredField {
     ClipboardModule,
     TitlebarComponent,
     NoRightClickDirective
-],
+  ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
@@ -50,7 +49,7 @@ export class AppComponent {
     invoke<string>('get_log')
       .then((log) => this.executionLog.setValue(log));
     this.fetchConfigPath()
-      .then(() => this.loadConfigFile());
+      .then(() => this.getRequiredVariables());
     this.requiredFieldsFormGroup.valueChanges
       .subscribe((requiredFieldsPartial) => {
         for (const name in requiredFieldsPartial) {
@@ -101,6 +100,7 @@ export class AppComponent {
     if (configPath && typeof configPath === 'string') {
       this.scenarioConfigPath.setValue(configPath);
       await this.loadConfigFile();
+      await this.getRequiredVariables();
     }
   }
 
@@ -109,21 +109,23 @@ export class AppComponent {
     if (configPath.trim() === '') {
       return;
     }
-    return invoke<{ [key: string]: string }>('load_config', { configPath })
-      .then((requiredFields) => invoke<{ [key: string]: string }>('get_required_variables')
-        .then((savedRequiredVariables) => {
-          for (const name in requiredFields) {
-            this.requiredFields[name] = {
-              label: requiredFields[name],
-              type: name.startsWith('path:') ? 'path' : 'text',
-              value: savedRequiredVariables[name] || ''
-            };
-            console.log('Adding required field', name, this.requiredFields[name]);
-            const formControl = new FormControl(this.requiredFields[name].value);
-            this.requiredFieldsFormGroup.addControl(name, formControl);
-          }
-        })
-      )
+    await invoke('load_config', { configPath });
+  }
+
+  private async getRequiredVariables(): Promise<void> {
+    return invoke<{ [key: string]: RequiredField }>('get_required_variables')
+      .then((requiredVariables) => {
+        for (const name in requiredVariables) {
+          this.requiredFields[name] = {
+            label: requiredVariables[name].label,
+            type: name.startsWith('path:') ? 'path' : 'text',
+            value: requiredVariables[name].value || ''
+          };
+          console.log('Adding required field', name, this.requiredFields[name]);
+          const formControl = new FormControl(this.requiredFields[name].value);
+          this.requiredFieldsFormGroup.addControl(name, formControl);
+        }
+      });
   }
 
   async updateRequiredVariables(): Promise<void> {

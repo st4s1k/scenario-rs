@@ -1,10 +1,10 @@
 use crate::{lifecycle::LifecycleHandler, shared::SEPARATOR};
-use scenario_rs::{
-    config::{RequiredVariablesConfig, ScenarioConfig},
-    scenario::Scenario,
-};
+use scenario_rs::scenario::{variables::required::RequiredVariable, Scenario};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, ops::Deref, path::PathBuf};
+use std::{
+    collections::{BTreeMap, HashMap},
+    ops::{Deref, DerefMut},
+};
 use tauri::{AppHandle, Emitter};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -19,18 +19,48 @@ impl From<&ScenarioAppState> for ScenarioAppStateConfig {
         Self {
             config_path: state.config_path.clone(),
             output_log: state.output_log.clone(),
-            required_variables: state.required_variables.clone(),
+            required_variables: state.scenario.as_ref().map_or_else(
+                || HashMap::new(),
+                |scenario| {
+                    scenario
+                        .variables()
+                        .required()
+                        .deref()
+                        .iter()
+                        .map(|required_variable| {
+                            (
+                                required_variable.name().to_string(),
+                                required_variable.value().to_string(),
+                            )
+                        })
+                        .collect()
+                },
+            ),
         }
     }
 }
 
 pub struct ScenarioAppState {
     pub(crate) config_path: String,
-    pub(crate) required_variables: HashMap<String, String>,
     pub(crate) output_log: String,
     pub(crate) app_handle: AppHandle,
-    pub(crate) config: Option<ScenarioConfig>,
+    pub(crate) scenario: Option<Scenario>,
     pub(crate) is_executing: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RequiredVariableDTO {
+    label: String,
+    value: String,
+}
+
+impl From<&RequiredVariable> for RequiredVariableDTO {
+    fn from(required_variable: &RequiredVariable) -> Self {
+        Self {
+            label: required_variable.label().to_string(),
+            value: required_variable.value().to_string(),
+        }
+    }
 }
 
 impl ScenarioAppState {
@@ -39,10 +69,9 @@ impl ScenarioAppState {
     pub fn new(app: AppHandle) -> Self {
         Self {
             config_path: String::new(),
-            required_variables: HashMap::new(),
             output_log: String::new(),
             app_handle: app,
-            config: None,
+            scenario: None,
             is_executing: false,
         }
     }
@@ -50,11 +79,23 @@ impl ScenarioAppState {
     pub fn load_state(&mut self) {
         if let Ok(json) = std::fs::read_to_string(Self::STATE_FILE_PATH) {
             if let Ok(loaded_state) = serde_json::from_str::<ScenarioAppStateConfig>(&json) {
-                let config_path = loaded_state.config_path;
-                self.config_path = config_path.clone();
+                self.config_path = loaded_state.config_path.clone();
                 self.output_log = loaded_state.output_log;
-                self.required_variables = loaded_state.required_variables;
-                self.load_config(config_path.as_str());
+                self.load_config(self.config_path.clone().as_str());
+
+                if let Some(scenario) = self.scenario.as_mut() {
+                    scenario
+                        .variables_mut()
+                        .required_mut()
+                        .deref_mut()
+                        .iter_mut()
+                        .for_each(|required_variable| {
+                            loaded_state
+                                .required_variables
+                                .get(required_variable.name())
+                                .map(|value| required_variable.set_value(value.clone()));
+                        });
+                }
             }
         }
     }
@@ -70,56 +111,32 @@ impl ScenarioAppState {
         }
     }
 
-    pub fn load_config(&mut self, config_path: &str) -> Option<RequiredVariablesConfig> {
-        let config_path = PathBuf::from(config_path);
-
-        match ScenarioConfig::try_from(config_path.clone()) {
-            Ok(config) => {
-                self.log_message(format!(
-                    "{SEPARATOR}\nScenario config loaded\n{SEPARATOR}\n"
-                ));
-                self.config = Some(config);
-                self.config_path = config_path.to_str().unwrap().to_string();
-                return self.config.as_ref().map(|c| c.variables.required.clone());
-            }
-            Err(e) => {
-                self.log_message(format!(
-                    "{SEPARATOR}\nFailed to load scenario config: {e}\n{SEPARATOR}\n"
-                ));
-                return None;
-            }
-        }
-    }
-
-    pub fn execute_scenario(&mut self) {
-        let Some(config) = &mut self.config else {
-            self.log_message(format!(
-                "{SEPARATOR}\nNo scenario config file loaded\n{SEPARATOR}\n"
-            ));
-            return;
-        };
-
-        config
-            .variables
-            .defined
-            .extend(self.required_variables.clone());
-
-        let lifecycle_handler = LifecycleHandler::try_initialize(self.app_handle.clone());
-
-        let scenario = match Scenario::new(config.clone()) {
+    pub fn load_config(&mut self, config_path: &str) {
+        match Scenario::try_from(config_path) {
             Ok(scenario) => {
                 self.log_message(format!("{SEPARATOR}\nScenario loaded\n{SEPARATOR}\n"));
-                scenario
+                self.scenario = Some(scenario);
             }
             Err(e) => {
                 self.log_message(format!(
                     "{SEPARATOR}\nFailed to load scenario: {e}\n{SEPARATOR}\n"
                 ));
+            }
+        }
+    }
+
+    pub fn execute_scenario(&mut self) {
+        let lifecycle_handler = LifecycleHandler::try_initialize(self.app_handle.clone());
+
+        self.is_executing = true;
+
+        let scenario = match self.scenario.as_ref() {
+            Some(scenario) => scenario,
+            None => {
+                self.log_message(format!("{SEPARATOR}\nNo scenario loaded\n{SEPARATOR}\n"));
                 return;
             }
         };
-
-        self.is_executing = true;
 
         match scenario.execute_with_lifecycle(lifecycle_handler) {
             Ok(_) => self.log_message(format!(
@@ -129,6 +146,24 @@ impl ScenarioAppState {
         }
 
         self.is_executing = false;
+    }
+
+    pub fn get_required_variables(&self) -> BTreeMap<String, RequiredVariableDTO> {
+        if let Some(scenario) = self.scenario.as_ref() {
+            scenario
+                .variables()
+                .required()
+                .iter()
+                .map(|required_variable| {
+                    (
+                        required_variable.name().to_string(),
+                        RequiredVariableDTO::from(required_variable),
+                    )
+                })
+                .collect()
+        } else {
+            BTreeMap::new()
+        }
     }
 
     fn log_message(&mut self, message: String) {

@@ -1,28 +1,16 @@
 use clap::Parser;
 use colored::Colorize;
-use indicatif::{
-    ProgressBar,
-    ProgressDrawTarget,
-    ProgressState,
-    ProgressStyle,
-};
+use indicatif::{ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
 use scenario_rs::scenario::rollback::RollbackSteps;
-use scenario_rs::{
-    config::ScenarioConfig,
-    scenario::{
-        lifecycle::{
-            ExecutionLifecycle,
-            RemoteSudoLifecycle,
-            RollbackLifecycle,
-            RollbackStepLifecycle,
-            SftpCopyLifecycle,
-            StepsLifecycle,
-        },
-        remote_sudo::RemoteSudo,
-        sftp_copy::SftpCopy,
-        task::Task,
-        Scenario,
+use scenario_rs::scenario::{
+    lifecycle::{
+        ExecutionLifecycle, RemoteSudoLifecycle, RollbackLifecycle, RollbackStepLifecycle,
+        SftpCopyLifecycle, StepsLifecycle,
     },
+    remote_sudo::RemoteSudo,
+    sftp_copy::SftpCopy,
+    task::Task,
+    Scenario,
 };
 use std::{fs::File, io::Read, path::PathBuf, process};
 use tracing::{debug, error, info, warn};
@@ -42,15 +30,7 @@ fn main() {
 
     let cli: Cli = Cli::parse();
 
-    let config = ScenarioConfig::try_from(cli.config_path)
-        .unwrap_or_else(|error| {
-            error!("{}", SEPARATOR);
-            error!("{}", error);
-            error!("{}", SEPARATOR);
-            process::exit(1);
-        });
-
-    let scenario: Scenario = match Scenario::new(config) {
+    let scenario: Scenario = match Scenario::try_from(cli.config_path) {
         Ok(scenario) => scenario,
         Err(error) => {
             error!("{}", SEPARATOR);
@@ -85,13 +65,15 @@ fn execution_lifecycle() -> ExecutionLifecycle {
 
 fn steps_lifecycle() -> StepsLifecycle {
     let mut lifecycle = StepsLifecycle::default();
-    lifecycle.before =
-        |index: usize, task: &Task, total_steps: usize| {
-            let step_number: usize = index + 1;
-            let description = task.description();
-            info!("{}", SEPARATOR);
-            info!("{}", format!("[{step_number}/{total_steps}] {description}").purple());
-        };
+    lifecycle.before = |index: usize, task: &Task, total_steps: usize| {
+        let step_number: usize = index + 1;
+        let description = task.description();
+        info!("{}", SEPARATOR);
+        info!(
+            "{}",
+            format!("[{step_number}/{total_steps}] {description}").purple()
+        );
+    };
     lifecycle.remote_sudo = remote_sudo_lifecycle();
     lifecycle.sftp_copy = sftp_copy_lifecycle();
     lifecycle.rollback = rollback_lifecycle();
@@ -130,44 +112,49 @@ fn sftp_copy_lifecycle() -> SftpCopyLifecycle {
         info!("{}", "Destination:".yellow());
         info!("{}", &sftp_copy.destination_path().bold());
     };
-    lifecycle.files_ready =
-        |source_file: &File, _, pb: &ProgressBar| {
-            if let Ok(metadata) = source_file.metadata() {
-                pb.set_length(metadata.len());
-                pb.set_draw_target(ProgressDrawTarget::stderr());
-                pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})").unwrap()
+    lifecycle.files_ready = |source_file: &File, _, pb: &ProgressBar| {
+        if let Ok(metadata) = source_file.metadata() {
+            pb.set_length(metadata.len());
+            pb.set_draw_target(ProgressDrawTarget::stderr());
+            pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})").unwrap()
                     .with_key("eta", |state: &ProgressState, w: &mut dyn std::fmt::Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
                     .progress_chars("#>-"));
-            } else {
-                warn!("{}", SEPARATOR);
-                warn!("Cannot query source file metadata");
-                warn!("{}", SEPARATOR);
-            }
-        };
+        } else {
+            warn!("{}", SEPARATOR);
+            warn!("Cannot query source file metadata");
+            warn!("{}", SEPARATOR);
+        }
+    };
     lifecycle
 }
 
 fn rollback_lifecycle() -> RollbackLifecycle {
     let mut lifecycle = RollbackLifecycle::default();
-    lifecycle.before =
-        |rollback_steps: &RollbackSteps| {
-            if rollback_steps.is_empty() {
-                info!("{}", SEPARATOR);
-                info!("[{}] No rollback actions found", "rollback".red());
-            }
-        };
+    lifecycle.before = |rollback_steps: &RollbackSteps| {
+        if rollback_steps.is_empty() {
+            info!("{}", SEPARATOR);
+            info!("[{}] No rollback actions found", "rollback".red());
+        }
+    };
     lifecycle.step = rollback_step_lifecycle();
     lifecycle
 }
 
 fn rollback_step_lifecycle() -> RollbackStepLifecycle {
     let mut lifecycle = RollbackStepLifecycle::default();
-    lifecycle.before =
-        |index: usize, rollback_task: &Task, total_rollback_steps: usize| {
-            let task_number = index + 1;
-            let description = rollback_task.description();
-            info!("{}", SEPARATOR);
-            info!("{}", format ! ("[{}] [{task_number}/{total_rollback_steps}] {}", "rollback".red(), description).purple());
-        };
+    lifecycle.before = |index: usize, rollback_task: &Task, total_rollback_steps: usize| {
+        let task_number = index + 1;
+        let description = rollback_task.description();
+        info!("{}", SEPARATOR);
+        info!(
+            "{}",
+            format!(
+                "[{}] [{task_number}/{total_rollback_steps}] {}",
+                "rollback".red(),
+                description
+            )
+            .purple()
+        );
+    };
     lifecycle
 }
