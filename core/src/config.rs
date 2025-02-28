@@ -9,7 +9,7 @@ use std::{
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct PartialScenarioConfig {
-    pub import: Option<String>,
+    pub parent: Option<String>,
     pub credentials: Option<CredentialsConfig>,
     pub server: Option<ServerConfig>,
     pub execute: Option<ExecuteConfig>,
@@ -20,7 +20,7 @@ pub struct PartialScenarioConfig {
 impl PartialScenarioConfig {
     pub fn merge(&self, other: &PartialScenarioConfig) -> PartialScenarioConfig {
         PartialScenarioConfig {
-            import: other.import.clone().or_else(|| self.import.clone()),
+            parent: other.parent.clone().or_else(|| self.parent.clone()),
             credentials: other
                 .credentials
                 .clone()
@@ -77,9 +77,9 @@ impl ScenarioConfig {
         loop {
             let config = Self::load_config_file(&current_path)?;
 
-            if let Some(import_path_str) = &config.import {
+            if let Some(import_path_str) = &config.parent {
                 if visited_imports.contains(import_path_str) {
-                    return Err(ScenarioConfigError::CircularImport(import_path_str.clone()));
+                    return Err(ScenarioConfigError::CircularDependency(import_path_str.clone()));
                 }
 
                 visited_imports.push(import_path_str.clone());
@@ -121,7 +121,7 @@ impl ScenarioConfig {
         };
 
         if !import_path.exists() {
-            return Err(ScenarioConfigError::ImportNotFound(
+            return Err(ScenarioConfigError::ParentConfigNotFound(
                 import_path_str.to_string(),
             ));
         }
@@ -137,7 +137,7 @@ impl TryFrom<PathBuf> for ScenarioConfig {
         let configs_to_merge = Self::resolve_config_imports(config_path)?;
 
         let empty_config = PartialScenarioConfig {
-            import: None,
+            parent: None,
             credentials: None,
             server: None,
             execute: None,

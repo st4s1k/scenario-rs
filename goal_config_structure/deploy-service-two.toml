@@ -1,4 +1,4 @@
-import = "./deploy-scenario.toml"
+parent = "./deploy-scenario.toml"
 
 [variables]
 required = [

@@ -6,8 +6,8 @@ pub enum ScenarioConfigError {
     CannotOpenConfig(#[source] std::io::Error),
     #[error("Cannot read config file: {0}")]
     CannotReadConfig(#[source] toml::de::Error),
-    #[error("Circular import detected: {0}")]
-    CircularImport(String),
+    #[error("Circular dependency detected: {0}")]
+    CircularDependency(String),
     #[error("Missing required credentials configuration")]
     MissingCredentials,
     #[error("Missing required server configuration")]
@@ -16,8 +16,8 @@ pub enum ScenarioConfigError {
     MissingExecute,
     #[error("Missing required tasks configuration")]
     MissingTasks,
-    #[error("Cannot import config: {0}")]
-    ImportNotFound(String)
+    #[error("Parent config not found: {0}")]
+    ParentConfigNotFound(String)
 }
 
 #[derive(Error, Debug)]
