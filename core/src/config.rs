@@ -189,20 +189,20 @@ impl DerefMut for StepsConfig {
 #[derive(Deserialize, Clone, Debug)]
 pub struct StepConfig {
     pub task: String,
-    pub rollback: Option<RollbackStepsConfig>,
+    pub on_fail: Option<OnFailStepsConfig>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
-pub struct RollbackStepsConfig(Vec<String>);
+pub struct OnFailStepsConfig(Vec<String>);
 
-impl Deref for RollbackStepsConfig {
+impl Deref for OnFailStepsConfig {
     type Target = Vec<String>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl DerefMut for RollbackStepsConfig {
+impl DerefMut for OnFailStepsConfig {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }

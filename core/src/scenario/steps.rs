@@ -62,8 +62,8 @@ impl Steps {
             };
 
             if let Err(error) = task_result {
-                step.rollback(&session, variables, &mut lifecycle)
-                    .map_err(StepsError::CannotRollbackStep)?;
+                step.on_fail(&session, variables, &mut lifecycle)
+                    .map_err(StepsError::CannotExecuteOnFailSteps)?;
                 return Err(error);
             };
         }

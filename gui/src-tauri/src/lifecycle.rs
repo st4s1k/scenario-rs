@@ -1,11 +1,11 @@
 use crate::{app::ScenarioAppState, shared::SEPARATOR};
 use scenario_rs::scenario::{
     lifecycle::{
-        ExecutionLifecycle, RemoteSudoLifecycle, RollbackLifecycle, RollbackStepLifecycle,
+        ExecutionLifecycle, RemoteSudoLifecycle, OnFailLifecycle, OnFailStepLifecycle,
         SftpCopyLifecycle, StepsLifecycle,
     },
     remote_sudo::RemoteSudo,
-    rollback::RollbackSteps,
+    on_fail::OnFailSteps,
     sftp_copy::SftpCopy,
     task::Task,
 };
@@ -68,24 +68,24 @@ impl LifecycleHandler {
         ));
     }
 
-    pub fn log_rollback_before(&self, rollback_steps: &RollbackSteps) {
-        if rollback_steps.is_empty() {
+    pub fn log_on_fail_before(&self, on_fail_steps: &OnFailSteps) {
+        if on_fail_steps.is_empty() {
             self.log_message(format!(
-                "{SEPARATOR}\n[rollback] No rollback actions found\n"
+                "{SEPARATOR}\n[on_fail] No on_fail actions found\n"
             ));
         }
     }
 
-    pub fn log_rollback_step_before(
+    pub fn log_on_fail_step_before(
         &self,
         index: usize,
-        rollback_task: &Task,
-        total_rollback_steps: usize,
+        on_fail_task: &Task,
+        total_on_fail_steps: usize,
     ) {
         let task_number = index + 1;
-        let description = rollback_task.description();
+        let description = on_fail_task.description();
         self.log_message(format!(
-            "{SEPARATOR}\n[rollback] [{task_number}/{total_rollback_steps}] {description}\n"
+            "{SEPARATOR}\n[on_fail] [{task_number}/{total_on_fail_steps}] {description}\n"
         ));
     }
 
@@ -102,7 +102,7 @@ fn steps_lifecycle() -> StepsLifecycle {
     lifecycle.before = log_step_before;
     lifecycle.remote_sudo = remote_sudo_lifecycle();
     lifecycle.sftp_copy = sftp_copy_lifecycle();
-    lifecycle.rollback = rollback_lifecycle();
+    lifecycle.on_fail = on_fail_lifecycle();
     lifecycle
 }
 
@@ -119,16 +119,16 @@ fn sftp_copy_lifecycle() -> SftpCopyLifecycle {
     lifecycle
 }
 
-fn rollback_lifecycle() -> RollbackLifecycle {
-    let mut lifecycle = RollbackLifecycle::default();
-    lifecycle.before = log_rollback_before;
-    lifecycle.step = rollback_step_lifecycle();
+fn on_fail_lifecycle() -> OnFailLifecycle {
+    let mut lifecycle = OnFailLifecycle::default();
+    lifecycle.before = log_on_fail_before;
+    lifecycle.step = on_fail_step_lifecycle();
     lifecycle
 }
 
-fn rollback_step_lifecycle() -> RollbackStepLifecycle {
-    let mut lifecycle = RollbackStepLifecycle::default();
-    lifecycle.before = log_rollback_step_before;
+fn on_fail_step_lifecycle() -> OnFailStepLifecycle {
+    let mut lifecycle = OnFailStepLifecycle::default();
+    lifecycle.before = log_on_fail_step_before;
     lifecycle
 }
 
@@ -160,14 +160,14 @@ pub fn log_sftp_copy_before(sftp_copy: &SftpCopy) {
     }
 }
 
-pub fn log_rollback_before(rollback_steps: &RollbackSteps) {
+pub fn log_on_fail_before(on_fail_steps: &OnFailSteps) {
     if let Some(logger) = LIFECYCLE_HANDLER.get() {
-        logger.log_rollback_before(rollback_steps);
+        logger.log_on_fail_before(on_fail_steps);
     }
 }
 
-pub fn log_rollback_step_before(index: usize, rollback_task: &Task, total_rollback_steps: usize) {
+pub fn log_on_fail_step_before(index: usize, on_fail_task: &Task, total_on_fail_steps: usize) {
     if let Some(logger) = LIFECYCLE_HANDLER.get() {
-        logger.log_rollback_step_before(index, rollback_task, total_rollback_steps);
+        logger.log_on_fail_step_before(index, on_fail_task, total_on_fail_steps);
     }
 }

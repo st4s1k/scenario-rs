@@ -54,28 +54,28 @@ pub enum StepsError {
     CannotExecuteRemoteSudoCommand(#[source] RemoteSudoError, String),
     #[error("Cannot execute SftpCopy command: {1}: {0}")]
     CannotExecuteSftpCopyCommand(#[source] SftpCopyError, String),
-    #[error("Cannot rollback step: {0}")]
-    CannotRollbackStep(#[source] StepError),
+    #[error("Cannot execute on-fail steps: {0}")]
+    CannotExecuteOnFailSteps(#[source] StepError),
 }
 
 #[derive(Error, Debug)]
 pub enum StepError {
-    #[error("Cannot create RollbackSteps from config: {0}")]
-    CannotCreateRollbackStepsFromConfig(#[source] RollbackError),
+    #[error("Cannot create OnFailSteps from config: {0}")]
+    CannotCreateOnFailStepsFromConfig(#[source] OnFailError),
     #[error("Cannot create Task from config: {0}")]
     CannotCreateTaskFromConfig(String),
-    #[error("Cannot execute rollback steps: {0}")]
-    CannotExecuteRollbackSteps(#[source] RollbackError),
+    #[error("Cannot execute on-fail steps: {0}")]
+    CannotExecuteOnFailSteps(#[source] OnFailError),
 }
 
 #[derive(Error, Debug)]
-pub enum RollbackError {
-    #[error("Rollback step must be a valid task id: {0}")]
-    InvalidRollbackStep(String),
-    #[error("Cannot rollback RemoteSudo task: {0}")]
-    CannotRollbackRemoteSudo(#[source] RemoteSudoError),
-    #[error("Cannot rollback SftpCopy task: {0}")]
-    CannotRollbackSftpCopy(#[source] SftpCopyError),
+pub enum OnFailError {
+    #[error("OnFail step must be a valid task id: {0}")]
+    InvalidOnFailStep(String),
+    #[error("Cannot execute on-fail steps for RemoteSudo task: {0}")]
+    CannotOnFailRemoteSudo(#[source] RemoteSudoError),
+    #[error("Cannot execute on-fail steps for SftpCopy task: {0}")]
+    CannotOnFailSftpCopy(#[source] SftpCopyError),
 }
 
 #[derive(Error, Debug)]

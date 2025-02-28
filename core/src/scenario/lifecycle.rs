@@ -1,6 +1,6 @@
 use crate::scenario::{
     remote_sudo::RemoteSudo,
-    rollback::RollbackSteps,
+    on_fail::OnFailSteps,
     sftp_copy::SftpCopy,
     task::Task,
     Scenario,
@@ -29,7 +29,7 @@ pub struct StepsLifecycle {
     pub before: fn(index: usize, task: &Task, total_steps: usize),
     pub remote_sudo: RemoteSudoLifecycle,
     pub sftp_copy: SftpCopyLifecycle,
-    pub rollback: RollbackLifecycle,
+    pub on_fail: OnFailLifecycle,
 }
 
 impl Default for StepsLifecycle {
@@ -38,34 +38,34 @@ impl Default for StepsLifecycle {
             before: |_, _, _| {},
             remote_sudo: Default::default(),
             sftp_copy: Default::default(),
-            rollback: Default::default(),
+            on_fail: Default::default(),
         }
     }
 }
 
-pub struct RollbackLifecycle {
-    pub before: fn(rollback_steps: &RollbackSteps),
-    pub step: RollbackStepLifecycle,
+pub struct OnFailLifecycle {
+    pub before: fn(on_fail_steps: &OnFailSteps),
+    pub step: OnFailStepLifecycle,
 }
 
-impl Default for RollbackLifecycle {
+impl Default for OnFailLifecycle {
     fn default() -> Self {
-        RollbackLifecycle {
+        OnFailLifecycle {
             before: |_| {},
             step: Default::default(),
         }
     }
 }
 
-pub struct RollbackStepLifecycle {
-    pub before: fn(index: usize, rollback_task: &Task, total_rollback_steps: usize),
+pub struct OnFailStepLifecycle {
+    pub before: fn(index: usize, on_fail_task: &Task, total_on_fail_steps: usize),
     pub remote_sudo: RemoteSudoLifecycle,
     pub sftp_copy: SftpCopyLifecycle,
 }
 
-impl Default for RollbackStepLifecycle {
+impl Default for OnFailStepLifecycle {
     fn default() -> Self {
-        RollbackStepLifecycle {
+        OnFailStepLifecycle {
             before: |_, _, _| {},
             remote_sudo: Default::default(),
             sftp_copy: Default::default(),

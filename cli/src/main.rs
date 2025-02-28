@@ -1,10 +1,10 @@
 use clap::Parser;
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
-use scenario_rs::scenario::rollback::RollbackSteps;
+use scenario_rs::scenario::on_fail::OnFailSteps;
 use scenario_rs::scenario::{
     lifecycle::{
-        ExecutionLifecycle, RemoteSudoLifecycle, RollbackLifecycle, RollbackStepLifecycle,
+        ExecutionLifecycle, RemoteSudoLifecycle, OnFailLifecycle, OnFailStepLifecycle,
         SftpCopyLifecycle, StepsLifecycle,
     },
     remote_sudo::RemoteSudo,
@@ -76,7 +76,7 @@ fn steps_lifecycle() -> StepsLifecycle {
     };
     lifecycle.remote_sudo = remote_sudo_lifecycle();
     lifecycle.sftp_copy = sftp_copy_lifecycle();
-    lifecycle.rollback = rollback_lifecycle();
+    lifecycle.on_fail = on_fail_lifecycle();
     lifecycle
 }
 
@@ -128,29 +128,29 @@ fn sftp_copy_lifecycle() -> SftpCopyLifecycle {
     lifecycle
 }
 
-fn rollback_lifecycle() -> RollbackLifecycle {
-    let mut lifecycle = RollbackLifecycle::default();
-    lifecycle.before = |rollback_steps: &RollbackSteps| {
-        if rollback_steps.is_empty() {
+fn on_fail_lifecycle() -> OnFailLifecycle {
+    let mut lifecycle = OnFailLifecycle::default();
+    lifecycle.before = |on_fail_steps: &OnFailSteps| {
+        if on_fail_steps.is_empty() {
             info!("{}", SEPARATOR);
-            info!("[{}] No rollback actions found", "rollback".red());
+            info!("[{}] No on-fail actions found", "on-fail".red());
         }
     };
-    lifecycle.step = rollback_step_lifecycle();
+    lifecycle.step = on_fail_step_lifecycle();
     lifecycle
 }
 
-fn rollback_step_lifecycle() -> RollbackStepLifecycle {
-    let mut lifecycle = RollbackStepLifecycle::default();
-    lifecycle.before = |index: usize, rollback_task: &Task, total_rollback_steps: usize| {
+fn on_fail_step_lifecycle() -> OnFailStepLifecycle {
+    let mut lifecycle = OnFailStepLifecycle::default();
+    lifecycle.before = |index: usize, on_fail_task: &Task, total_on_fail_steps: usize| {
         let task_number = index + 1;
-        let description = rollback_task.description();
+        let description = on_fail_task.description();
         info!("{}", SEPARATOR);
         info!(
             "{}",
             format!(
-                "[{}] [{task_number}/{total_rollback_steps}] {}",
-                "rollback".red(),
+                "[{}] [{task_number}/{total_on_fail_steps}] {}",
+                "on-fail".red(),
                 description
             )
             .purple()

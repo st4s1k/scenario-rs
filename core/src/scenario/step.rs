@@ -1,4 +1,4 @@
-use crate::scenario::rollback::RollbackSteps;
+use crate::scenario::on_fail::OnFailSteps;
 use crate::scenario::tasks::Tasks;
 use crate::scenario::variables::Variables;
 use crate::{
@@ -16,7 +16,7 @@ use ssh2::Session;
 #[derive(Debug)]
 pub struct Step {
     pub(crate) task: Task,
-    pub(crate) rollback_steps: RollbackSteps,
+    pub(crate) on_fail_steps: OnFailSteps,
 }
 
 impl TryFrom<(&Tasks, &StepConfig)> for Step {
@@ -27,28 +27,28 @@ impl TryFrom<(&Tasks, &StepConfig)> for Step {
                 .ok_or_else(|| StepError::CannotCreateTaskFromConfig(
                     step_config.task.to_string()
                 ))?,
-            rollback_steps: match step_config.rollback.as_ref() {
+            on_fail_steps: match step_config.on_fail.as_ref() {
                 Some(config) =>
-                    RollbackSteps::try_from((tasks, config))
-                        .map_err(StepError::CannotCreateRollbackStepsFromConfig)?,
-                None => RollbackSteps::default()
+                    OnFailSteps::try_from((tasks, config))
+                        .map_err(StepError::CannotCreateOnFailStepsFromConfig)?,
+                None => OnFailSteps::default()
             },
         })
     }
 }
 
 impl Step {
-    pub fn rollback_steps(&self) -> &RollbackSteps {
-        &self.rollback_steps
+    pub fn on_fail_steps(&self) -> &OnFailSteps {
+        &self.on_fail_steps
     }
 
-    pub(crate) fn rollback(
+    pub(crate) fn on_fail(
         &self,
         session: &Session,
         variables: &Variables,
         lifecycle: &mut StepsLifecycle,
     ) -> Result<(), StepError> {
-        self.rollback_steps.execute(session, variables, &mut lifecycle.rollback)
-            .map_err(StepError::CannotExecuteRollbackSteps)
+        self.on_fail_steps.execute(session, variables, &mut lifecycle.on_fail)
+            .map_err(StepError::CannotExecuteOnFailSteps)
     }
 }

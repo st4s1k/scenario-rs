@@ -15,7 +15,7 @@ pub mod errors;
 pub mod execute;
 pub mod lifecycle;
 pub mod remote_sudo;
-pub mod rollback;
+pub mod on_fail;
 pub mod server;
 pub mod sftp_copy;
 pub mod step;
