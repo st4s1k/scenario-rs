@@ -1,5 +1,4 @@
 # core
-- Scenario config merging
 - Validate path variables and load files
 
 # gui

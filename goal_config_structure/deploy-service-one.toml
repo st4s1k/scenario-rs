@@ -1,9 +1,12 @@
 import = "./deploy-scenario.toml"
 
-[variables]
-required = [
-    "username"
-]
+[credentials]
+username = "my_username"
+password = "my_password"
+
+[server]
+host = "localhost"
+port = "22"
 
 [variables.special]
 timestamp = "%Y-%m-%dT%H%M%S%:z"
@@ -12,5 +15,5 @@ timestamp = "%Y-%m-%dT%H%M%S%:z"
 service_name = "service-one"
 remote_service_script_path = "/usr/local/bin/{service_name}.sh"
 remote_deploy_path = "/usr/local/{service_name}/{service_name}.jar"
-backup_path = "/usr/local/backup/{service_name}/{service_name}-{timestamp}.jar"
+remote_backup_path = "/usr/local/backup/{service_name}/{service_name}-{timestamp}.jar"
 remote_base_path = "/home/{username}"

@@ -8,34 +8,48 @@ use std::{
 use tauri::{AppHandle, Emitter};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ScenarioAppStateConfig {
-    config_path: String,
+pub struct ConfigPathData {
+    variables: HashMap<String, String>,
     output_log: String,
-    required_variables: HashMap<String, String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ScenarioAppStateConfig {
+    last_config_path: String,
+    config_paths: HashMap<String, ConfigPathData>,
 }
 
 impl From<&ScenarioAppState> for ScenarioAppStateConfig {
     fn from(state: &ScenarioAppState) -> Self {
+        let mut config_paths = HashMap::new();
+
+        if let Some(scenario) = &state.scenario {
+            if !state.config_path.is_empty() {
+                let variables_map: HashMap<String, String> = scenario
+                    .variables()
+                    .required()
+                    .deref()
+                    .iter()
+                    .map(|required_variable| {
+                        (
+                            required_variable.name().to_string(),
+                            required_variable.value().to_string(),
+                        )
+                    })
+                    .collect();
+
+                let config_data = ConfigPathData {
+                    variables: variables_map,
+                    output_log: state.output_log.clone(),
+                };
+
+                config_paths.insert(state.config_path.clone(), config_data);
+            }
+        }
+
         Self {
-            config_path: state.config_path.clone(),
-            output_log: state.output_log.clone(),
-            required_variables: state.scenario.as_ref().map_or_else(
-                || HashMap::new(),
-                |scenario| {
-                    scenario
-                        .variables()
-                        .required()
-                        .deref()
-                        .iter()
-                        .map(|required_variable| {
-                            (
-                                required_variable.name().to_string(),
-                                required_variable.value().to_string(),
-                            )
-                        })
-                        .collect()
-                },
-            ),
+            last_config_path: state.config_path.clone(),
+            config_paths,
         }
     }
 }
@@ -79,48 +93,90 @@ impl ScenarioAppState {
     pub fn load_state(&mut self) {
         if let Ok(json) = std::fs::read_to_string(Self::STATE_FILE_PATH) {
             if let Ok(loaded_state) = serde_json::from_str::<ScenarioAppStateConfig>(&json) {
-                self.config_path = loaded_state.config_path.clone();
-                self.output_log = loaded_state.output_log;
+                self.config_path = loaded_state.last_config_path.clone();
                 self.load_config(self.config_path.clone().as_str());
+                self.load_config_data_from_state(&loaded_state);
+            }
+        }
+    }
 
-                if let Some(scenario) = self.scenario.as_mut() {
-                    scenario
-                        .variables_mut()
-                        .required_mut()
-                        .deref_mut()
-                        .iter_mut()
-                        .for_each(|required_variable| {
-                            loaded_state
-                                .required_variables
-                                .get(required_variable.name())
-                                .map(|value| required_variable.set_value(value.clone()));
-                        });
-                }
+    fn load_config_data_from_state(&mut self, state_config: &ScenarioAppStateConfig) {
+        if let Some(config_data) = state_config.config_paths.get(&self.config_path) {
+            self.output_log = config_data.output_log.clone();
+
+            if let Some(scenario) = self.scenario.as_mut() {
+                scenario
+                    .variables_mut()
+                    .required_mut()
+                    .deref_mut()
+                    .iter_mut()
+                    .for_each(|required_variable| {
+                        if let Some(value) = config_data.variables.get(required_variable.name()) {
+                            required_variable.set_value(value.clone());
+                        }
+                    });
             }
         }
     }
 
     pub fn save_state(&mut self) {
-        let state = ScenarioAppStateConfig::from(self.deref());
-        if let Ok(json) = serde_json::to_string_pretty(&state) {
-            if let Err(error) = std::fs::write(Self::STATE_FILE_PATH, json) {
+        let current_state = ScenarioAppStateConfig::from(self.deref());
+
+        let final_state = match std::fs::read_to_string(Self::STATE_FILE_PATH) {
+            Ok(json) => match serde_json::from_str::<ScenarioAppStateConfig>(&json) {
+                Ok(mut existing_state) => {
+                    existing_state.last_config_path = current_state.last_config_path.clone();
+                    existing_state
+                        .config_paths
+                        .extend(current_state.config_paths.clone());
+                    existing_state
+                }
+                Err(error) => {
+                    self.log_message(format!(
+                        "{SEPARATOR}\nFailed to parse existing state: {error}\n{SEPARATOR}\n"
+                    ));
+                    current_state
+                }
+            },
+            Err(_) => current_state,
+        };
+
+        match serde_json::to_string_pretty(&final_state) {
+            Ok(json) => {
+                if let Err(error) = std::fs::write(Self::STATE_FILE_PATH, json) {
+                    self.log_message(format!(
+                        "{SEPARATOR}\nFailed to save state: {error}\n{SEPARATOR}\n"
+                    ));
+                }
+            }
+            Err(error) => {
                 self.log_message(format!(
-                    "{SEPARATOR}\nFailed to save state: {error}\n{SEPARATOR}\n"
+                    "{SEPARATOR}\nFailed to serialize state: {error}\n{SEPARATOR}\n"
                 ));
             }
         }
     }
 
     pub fn load_config(&mut self, config_path: &str) {
-        match Scenario::try_from(config_path) {
+        self.config_path = config_path.to_string();
+        self.scenario = match Scenario::try_from(config_path) {
             Ok(scenario) => {
                 self.log_message(format!("{SEPARATOR}\nScenario loaded\n{SEPARATOR}\n"));
-                self.scenario = Some(scenario);
+                Some(scenario)
             }
             Err(e) => {
                 self.log_message(format!(
                     "{SEPARATOR}\nFailed to load scenario: {e}\n{SEPARATOR}\n"
                 ));
+                None
+            }
+        };
+
+        if self.scenario.is_some() {
+            if let Ok(json) = std::fs::read_to_string(Self::STATE_FILE_PATH) {
+                if let Ok(state_config) = serde_json::from_str::<ScenarioAppStateConfig>(&json) {
+                    self.load_config_data_from_state(&state_config);
+                }
             }
         }
     }

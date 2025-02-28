@@ -3,9 +3,21 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum ScenarioConfigError {
     #[error("Cannot open config file: {0}")]
-    CannotOpenFile(#[source] std::io::Error),
-    #[error("Cannot read TOML config file: {0}")]
-    CannotReadToml(#[source] toml::de::Error),
+    CannotOpenConfig(#[source] std::io::Error),
+    #[error("Cannot read config file: {0}")]
+    CannotReadConfig(#[source] toml::de::Error),
+    #[error("Circular import detected: {0}")]
+    CircularImport(String),
+    #[error("Missing required credentials configuration")]
+    MissingCredentials,
+    #[error("Missing required server configuration")]
+    MissingServer,
+    #[error("Missing required execute configuration")]
+    MissingExecute,
+    #[error("Missing required tasks configuration")]
+    MissingTasks,
+    #[error("Cannot import config: {0}")]
+    ImportNotFound(String)
 }
 
 #[derive(Error, Debug)]

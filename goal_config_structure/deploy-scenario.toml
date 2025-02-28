@@ -21,21 +21,18 @@ steps = [
     ] }
 ]
 
-[variables]
-required = [
-    "local_jar_path",
-    "remote_base_path",
-    "local_jar_basename",
-    "remote_service_script_path",
-    "remote_deploy_path",
-    "backup_path"
-]
+[variables.required]
+"path:local_jar_path" = "Local JAR Path"
+"remote_base_path" = "Remote Base Path"
+"remote_service_script_path" = "Remote Service Script Path"
+"remote_deploy_path" = "Remote Deploy Path"
+"remote_backup_path" = "Remote Backup Path"
 
 [tasks.copy_jar_to_server]
 type = "SftpCopy"
 description = "Copying new deploy file to server"
 source_path = "{local_jar_path}"
-destination_path = "{remote_base_path}/{local_jar_basename}"
+destination_path = "{remote_base_path}/{basename:local_jar_path}"
 error_message = "Failed to copy new deploy file to server."
 
 [tasks.stop_service]
@@ -47,7 +44,7 @@ error_message = "Failed to stop the service on the remote server."
 [tasks.create_backup]
 type = "RemoteSudo"
 description = "Creating backup of current deployment"
-command = "cp -a {remote_deploy_path} {backup_path}"
+command = "cp -a {remote_deploy_path} {remote_backup_path}"
 error_message = "Failed to create backup of the current deployment."
 
 [tasks.remove_current_deploy]
@@ -59,7 +56,7 @@ error_message = "Failed to remove the current deployment."
 [tasks.deploy_new_file]
 type = "RemoteSudo"
 description = "Deploying the new file"
-command = "mv {remote_base_path}/{local_jar_basename} {remote_deploy_path}"
+command = "mv {remote_base_path}/{basename:local_jar_path} {remote_deploy_path}"
 error_message = "Failed to deploy the new file."
 
 [tasks.start_service]
@@ -71,5 +68,5 @@ error_message = "Failed to start the service on the remote server."
 [tasks.restore_backup]
 type = "RemoteSudo"
 description = "Restoring backup of current deployment"
-command = "cp -a {backup_path} {remote_deploy_path}"
+command = "cp -a {remote_backup_path} {remote_deploy_path}"
 error_message = "Failed to restore backup of the current deployment."

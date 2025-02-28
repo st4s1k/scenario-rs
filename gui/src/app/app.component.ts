@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnDestroy } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from "@angular/forms";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
@@ -7,6 +7,7 @@ import { NoRightClickDirective } from './no-right-click.directive';
 import { TitlebarComponent } from "./titlebar/titlebar.component";
 import { ClipboardModule } from 'ngx-clipboard';
 import * as dialog from "@tauri-apps/plugin-dialog"
+import { Subscription } from 'rxjs';
 
 interface RequiredFieldsForm {
   [key: string]: FormControl<string | null>;
@@ -31,12 +32,13 @@ interface RequiredField {
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class AppComponent {
+export class AppComponent implements OnDestroy {
   executionLog = new FormControl<string>('');
   scenarioConfigPath = new FormControl<string>('');
   requiredFields: { [key: string]: RequiredField } = {};
   requiredFieldsFormGroup = new FormGroup<RequiredFieldsForm>({});
   isExecuting = signal(false);
+  private formValueChangesSubscription?: Subscription;
 
   unlisten = listen('log-update', () => {
     invoke<string>('get_log')
@@ -50,7 +52,17 @@ export class AppComponent {
       .then((log) => this.executionLog.setValue(log));
     this.fetchConfigPath()
       .then(() => this.getRequiredVariables());
-    this.requiredFieldsFormGroup.valueChanges
+    this.setupFormValueChangeListener();
+  }
+
+  ngOnDestroy(): void {
+    this.cleanupSubscriptions();
+  }
+
+  private setupFormValueChangeListener(): void {
+    this.cleanupSubscriptions();
+
+    this.formValueChangesSubscription = this.requiredFieldsFormGroup.valueChanges
       .subscribe((requiredFieldsPartial) => {
         for (const name in requiredFieldsPartial) {
           if (name) {
@@ -59,6 +71,13 @@ export class AppComponent {
         }
         this.updateRequiredVariables();
       });
+  }
+
+  private cleanupSubscriptions(): void {
+    if (this.formValueChangesSubscription) {
+      this.formValueChangesSubscription.unsubscribe();
+      this.formValueChangesSubscription = undefined;
+    }
   }
 
   async fetchConfigPath(): Promise<void> {
@@ -113,6 +132,8 @@ export class AppComponent {
   }
 
   private async getRequiredVariables(): Promise<void> {
+    this.requiredFields = {};
+    this.requiredFieldsFormGroup = new FormGroup<RequiredFieldsForm>({});
     return invoke<{ [key: string]: RequiredField }>('get_required_variables')
       .then((requiredVariables) => {
         for (const name in requiredVariables) {
@@ -121,10 +142,10 @@ export class AppComponent {
             type: name.startsWith('path:') ? 'path' : 'text',
             value: requiredVariables[name].value || ''
           };
-          console.log('Adding required field', name, this.requiredFields[name]);
           const formControl = new FormControl(this.requiredFields[name].value);
           this.requiredFieldsFormGroup.addControl(name, formControl);
         }
+        this.setupFormValueChangeListener();
       });
   }
 
@@ -133,7 +154,6 @@ export class AppComponent {
     for (const name in this.requiredFields) {
       requiredVariables[name] = this.requiredFields[name].value;
     }
-    console.log('Updating required variables', JSON.stringify(requiredVariables, null, 2));
     return invoke('update_required_variables', { requiredVariables })
   }
 
