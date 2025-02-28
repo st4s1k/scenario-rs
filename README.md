@@ -2,7 +2,7 @@
 
 I'm too lazy to write it. I'll write it later.
 
-Long story short, it's a CI/CD-like app for automation of remote command execution via **scenario configs**, check out [example-scenario.json](example-scenario.json)
+Long story short, it's a CI/CD-like app for automation of remote command execution via **scenario configs**, check out [example-scenario.toml](example-scenario.toml)
 
 - (description) ...
 
