@@ -12,6 +12,14 @@ pub struct Execute {
     pub(crate) steps: Steps,
 }
 
+impl Default for Execute {
+    fn default() -> Self {
+        Execute {
+            steps: Steps::default(),
+        }
+    }
+}
+
 impl TryFrom<(&Tasks, &ExecuteConfig)> for Execute {
     type Error = ExecuteError;
 

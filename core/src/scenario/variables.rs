@@ -17,6 +17,15 @@ pub struct Variables {
     defined: HashMap<String, String>,
 }
 
+impl Default for Variables {
+    fn default() -> Self {
+        Variables {
+            required: RequiredVariables::default(),
+            defined: HashMap::new(),
+        }
+    }
+}
+
 impl From<&VariablesConfig> for Variables {
     fn from(config: &VariablesConfig) -> Self {
         let mut variables_map = HashMap::<String, String>::new();

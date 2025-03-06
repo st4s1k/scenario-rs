@@ -40,6 +40,12 @@ impl TryFrom<(&Tasks, &StepsConfig)> for Steps {
     }
 }
 
+impl Default for Steps {
+    fn default() -> Self {
+        Steps(Vec::new())
+    }
+}
+
 impl Steps {
     pub(crate) fn execute(
         &self,

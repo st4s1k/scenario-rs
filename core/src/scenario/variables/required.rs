@@ -32,6 +32,12 @@ impl From<&RequiredVariablesConfig> for RequiredVariables {
     }
 }
 
+impl Default for RequiredVariables {
+    fn default() -> Self {
+        RequiredVariables(Vec::new())
+    }
+}
+
 #[derive(Debug)]
 pub struct RequiredVariable {
     pub(crate) name: String,
