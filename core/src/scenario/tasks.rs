@@ -8,7 +8,7 @@ use std::{
 };
 
 #[derive(Debug)]
-pub struct Tasks(HashMap<String, Task>);
+pub struct Tasks(pub HashMap<String, Task>);
 
 impl Deref for Tasks {
     type Target = HashMap<String, Task>;

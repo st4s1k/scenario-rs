@@ -171,7 +171,7 @@ pub struct ExecuteConfig {
 }
 
 #[derive(Deserialize, Clone, Debug)]
-pub struct StepsConfig(Vec<StepConfig>);
+pub struct StepsConfig(pub Vec<StepConfig>);
 
 impl Deref for StepsConfig {
     type Target = Vec<StepConfig>;
@@ -273,7 +273,7 @@ impl TryFrom<PartialVariablesConfig> for VariablesConfig {
 }
 
 #[derive(Deserialize, Clone, Debug, Default)]
-pub struct RequiredVariablesConfig(BTreeMap</* name */ String, /* label */ String>);
+pub struct RequiredVariablesConfig(pub BTreeMap</* name */ String, /* label */ String>);
 
 impl Deref for RequiredVariablesConfig {
     type Target = BTreeMap<String, String>;
