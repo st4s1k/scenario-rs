@@ -1,13 +1,12 @@
 use crate::config::OnFailStepsConfig;
 use crate::scenario::tasks::Tasks;
 use crate::scenario::variables::Variables;
-use crate::scenario::{
-    errors::OnFailError,
-    lifecycle::OnFailLifecycle,
-    task::Task,
-};
+use crate::scenario::{errors::OnFailError, lifecycle::OnFailLifecycle, task::Task};
 use ssh2::Session;
 use std::ops::{Deref, DerefMut};
+use std::sync::mpsc::Sender;
+
+use super::events::Event;
 
 #[derive(Debug)]
 pub struct OnFailSteps(Vec<Task>);
@@ -32,7 +31,9 @@ impl TryFrom<(&Tasks, &OnFailStepsConfig)> for OnFailSteps {
     fn try_from((tasks, config): (&Tasks, &OnFailStepsConfig)) -> Result<Self, Self::Error> {
         let mut on_fail_tasks: Vec<Task> = Vec::new();
         for config_step in config.deref() {
-            let task: Task = tasks.get(config_step).cloned()
+            let task: Task = tasks
+                .get(config_step)
+                .cloned()
                 .ok_or_else(|| OnFailError::InvalidOnFailStep(config_step.clone()))?;
             on_fail_tasks.push(task);
         }
@@ -58,12 +59,41 @@ impl OnFailSteps {
         for (index, on_fail_task) in self.iter().enumerate() {
             (lifecycle.step.before)(index, on_fail_task, self.len());
             match on_fail_task {
-                Task::RemoteSudo { remote_sudo, .. } =>
-                    remote_sudo.execute(&session, variables, &mut lifecycle.step.remote_sudo)
-                        .map_err(OnFailError::CannotOnFailRemoteSudo)?,
-                Task::SftpCopy { sftp_copy, .. } =>
-                    sftp_copy.execute(&session, variables, &mut lifecycle.step.sftp_copy)
-                        .map_err(OnFailError::CannotOnFailSftpCopy)?
+                Task::RemoteSudo { remote_sudo, .. } => remote_sudo
+                    .execute(&session, variables, &mut lifecycle.step.remote_sudo)
+                    .map_err(OnFailError::CannotOnFailRemoteSudo)?,
+                Task::SftpCopy { sftp_copy, .. } => sftp_copy
+                    .execute(&session, variables, &mut lifecycle.step.sftp_copy)
+                    .map_err(OnFailError::CannotOnFailSftpCopy)?,
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn execute_with_events(
+        &self,
+        session: &Session,
+        variables: &Variables,
+        tx: &Sender<Event>,
+    ) -> Result<(), OnFailError> {
+        tx.send(Event::OnFailStepsStarted)
+            .expect("Failed to send OnFailStepsStarted event");
+
+        for (index, on_fail_task) in self.iter().enumerate() {
+            tx.send(Event::OnFailStepStarted {
+                index,
+                total_steps: self.len(),
+                description: on_fail_task.description().to_string(),
+            })
+            .expect("Failed to send OnFailStepStarted event");
+
+            match on_fail_task {
+                Task::RemoteSudo { remote_sudo, .. } => remote_sudo
+                    .execute_with_events(session, variables, tx)
+                    .map_err(OnFailError::CannotOnFailRemoteSudo)?,
+                Task::SftpCopy { sftp_copy, .. } => sftp_copy
+                    .execute_with_events(session, variables, tx)
+                    .map_err(OnFailError::CannotOnFailSftpCopy)?,
             }
         }
         Ok(())

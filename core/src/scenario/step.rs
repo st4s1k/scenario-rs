@@ -1,17 +1,15 @@
+use std::sync::mpsc::Sender;
+
 use crate::scenario::on_fail::OnFailSteps;
 use crate::scenario::tasks::Tasks;
 use crate::scenario::variables::Variables;
 use crate::{
     config::StepConfig,
-    scenario::{
-        errors::StepError
-        ,
-        lifecycle::StepsLifecycle,
-        task::Task
-        ,
-    },
+    scenario::{errors::StepError, lifecycle::StepsLifecycle, task::Task},
 };
 use ssh2::Session;
+
+use super::events::Event;
 
 #[derive(Debug)]
 pub struct Step {
@@ -23,15 +21,13 @@ impl TryFrom<(&Tasks, &StepConfig)> for Step {
     type Error = StepError;
     fn try_from((tasks, step_config): (&Tasks, &StepConfig)) -> Result<Self, Self::Error> {
         Ok(Step {
-            task: tasks.get(&step_config.task).cloned()
-                .ok_or_else(|| StepError::CannotCreateTaskFromConfig(
-                    step_config.task.to_string()
-                ))?,
+            task: tasks.get(&step_config.task).cloned().ok_or_else(|| {
+                StepError::CannotCreateTaskFromConfig(step_config.task.to_string())
+            })?,
             on_fail_steps: match step_config.on_fail.as_ref() {
-                Some(config) =>
-                    OnFailSteps::try_from((tasks, config))
-                        .map_err(StepError::CannotCreateOnFailStepsFromConfig)?,
-                None => OnFailSteps::default()
+                Some(config) => OnFailSteps::try_from((tasks, config))
+                    .map_err(StepError::CannotCreateOnFailStepsFromConfig)?,
+                None => OnFailSteps::default(),
             },
         })
     }
@@ -48,7 +44,19 @@ impl Step {
         variables: &Variables,
         lifecycle: &mut StepsLifecycle,
     ) -> Result<(), StepError> {
-        self.on_fail_steps.execute(session, variables, &mut lifecycle.on_fail)
+        self.on_fail_steps
+            .execute(session, variables, &mut lifecycle.on_fail)
+            .map_err(StepError::CannotExecuteOnFailSteps)
+    }
+
+    pub(crate) fn on_fail_with_events(
+        &self,
+        session: &Session,
+        variables: &Variables,
+        tx: &Sender<Event>,
+    ) -> Result<(), StepError> {
+        self.on_fail_steps
+            .execute_with_events(session, variables, tx)
             .map_err(StepError::CannotExecuteOnFailSteps)
     }
 }

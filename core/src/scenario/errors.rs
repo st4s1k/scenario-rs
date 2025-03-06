@@ -17,7 +17,7 @@ pub enum ScenarioConfigError {
     #[error("Missing required tasks configuration")]
     MissingTasks,
     #[error("Parent config not found: {0}")]
-    ParentConfigNotFound(String)
+    ParentConfigNotFound(String),
 }
 
 #[derive(Error, Debug)]
@@ -92,6 +92,8 @@ pub enum RemoteSudoError {
     CannotEstablishSessionChannel(#[source] ssh2::Error),
     #[error("Cannot execute remote command: {0}")]
     CannotExecuteRemoteCommand(#[source] ssh2::Error),
+    #[error("Cannot read channel output: {0}")]
+    CannotReadChannelOutput(#[source] std::io::Error),
     #[error("Cannot obtain exit status of remote command: {0}")]
     CannotObtainRemoteCommandExitStatus(#[source] ssh2::Error),
     #[error("Remote command failed with status code: {0}")]
