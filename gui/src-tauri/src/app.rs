@@ -1,9 +1,12 @@
-use crate::{lifecycle::LifecycleHandler, shared::SEPARATOR};
-use scenario_rs::scenario::{variables::required::RequiredVariable, Scenario};
+use crate::{
+    lifecycle::{process_event, LifecycleHandler},
+    shared::SEPARATOR,
+};
+use scenario_rs::scenario::{events::Event, variables::required::RequiredVariable, Scenario};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
-    ops::{Deref, DerefMut},
+    ops::{Deref, DerefMut}, sync::mpsc::Sender,
 };
 use tauri::{AppHandle, Emitter};
 
@@ -60,6 +63,7 @@ pub struct ScenarioAppState {
     pub(crate) app_handle: AppHandle,
     pub(crate) scenario: Option<Scenario>,
     pub(crate) is_executing: bool,
+    pub(crate) tx: Option<Sender<Event>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -87,6 +91,7 @@ impl ScenarioAppState {
             app_handle: app,
             scenario: None,
             is_executing: false,
+            tx: None,
         }
     }
 
@@ -102,7 +107,9 @@ impl ScenarioAppState {
 
     fn load_config_data_from_state(&mut self, state_config: &ScenarioAppStateConfig) {
         if let Some(config_data) = state_config.config_paths.get(&self.config_path) {
-            self.output_log = config_data.output_log.clone();
+            if !config_data.output_log.is_empty() {
+                self.output_log = config_data.output_log.clone();
+            }
 
             if let Some(scenario) = self.scenario.as_mut() {
                 scenario
@@ -179,29 +186,39 @@ impl ScenarioAppState {
                 }
             }
         }
+
+        let (tx, rx) = LifecycleHandler::try_initialize(self.app_handle.clone());
+
+        self.tx = Some(tx);
+
+        tauri::async_runtime::spawn(async move {
+            for event in rx {
+                process_event(event.clone());
+
+                if let Event::ScenarioCompleted | Event::ScenarioError(_) = event {
+                    break;
+                }
+            }
+        });
     }
 
     pub fn execute_scenario(&mut self) {
-        let lifecycle_handler = LifecycleHandler::try_initialize(self.app_handle.clone());
+        if let Some(scenario) = self.scenario.as_ref() {
+            self.is_executing = true;
 
-        self.is_executing = true;
-
-        let scenario = match self.scenario.as_ref() {
-            Some(scenario) => scenario,
-            None => {
-                self.log_message(format!("{SEPARATOR}\nNo scenario loaded\n{SEPARATOR}\n"));
-                return;
+            if let Err(error) = scenario.execute(self.tx.as_ref().unwrap().clone()) {
+                let _ = self
+                    .tx
+                    .as_ref()
+                    .unwrap()
+                    .clone()
+                    .send(Event::ScenarioError(error.to_string()));
             }
-        };
 
-        match scenario.execute_with_lifecycle(lifecycle_handler) {
-            Ok(_) => self.log_message(format!(
-                "{SEPARATOR}\nScenario completed successfully!\n{SEPARATOR}\n"
-            )),
-            Err(e) => self.log_message(format!("{SEPARATOR}\nScenario failed: {e}\n{SEPARATOR}\n")),
+            self.is_executing = false;
+        } else {
+            self.log_message(format!("{SEPARATOR}\nNo scenario loaded\n{SEPARATOR}\n"));
         }
-
-        self.is_executing = false;
     }
 
     pub fn get_required_variables(&self) -> BTreeMap<String, RequiredVariableDTO> {

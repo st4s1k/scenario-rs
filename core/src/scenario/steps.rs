@@ -2,7 +2,7 @@ use crate::scenario::variables::Variables;
 use crate::{
     config::StepsConfig,
     scenario::{
-        errors::StepsError, lifecycle::StepsLifecycle, step::Step, task::Task, tasks::Tasks,
+        errors::StepsError, step::Step, task::Task, tasks::Tasks,
     },
 };
 use ssh2::Session;
@@ -52,40 +52,6 @@ impl Steps {
         &self,
         session: &Session,
         variables: &Variables,
-        mut lifecycle: &mut StepsLifecycle,
-    ) -> Result<(), StepsError> {
-        for (index, step) in self.iter().enumerate() {
-            let task = &step.task;
-            (lifecycle.before)(index, task, self.len());
-            let error_message = task.error_message().to_string();
-
-            let task_result = match task {
-                Task::RemoteSudo { remote_sudo, .. } => remote_sudo
-                    .execute(session, variables, &mut lifecycle.remote_sudo)
-                    .map_err(|error| {
-                        StepsError::CannotExecuteRemoteSudoCommand(error, error_message)
-                    }),
-                Task::SftpCopy { sftp_copy, .. } => sftp_copy
-                    .execute(session, variables, &mut lifecycle.sftp_copy)
-                    .map_err(|error| {
-                        StepsError::CannotExecuteSftpCopyCommand(error, error_message)
-                    }),
-            };
-
-            if let Err(error) = task_result {
-                step.on_fail(&session, variables, &mut lifecycle)
-                    .map_err(StepsError::CannotExecuteOnFailSteps)?;
-                return Err(error);
-            };
-        }
-
-        Ok(())
-    }
-
-    pub(crate) fn execute_with_events(
-        &self,
-        session: &Session,
-        variables: &Variables,
         tx: &Sender<Event>,
     ) -> Result<(), StepsError> {
         for (index, step) in self.iter().enumerate() {
@@ -103,7 +69,7 @@ impl Steps {
                     tx.send(Event::RemoteSudoBefore(remote_sudo.command().to_string()))
                         .unwrap();
                     remote_sudo
-                        .execute_with_events(session, variables, tx)
+                        .execute(session, variables, tx)
                         .map_err(|e| {
                             StepsError::CannotExecuteRemoteSudoCommand(e, error_message.clone())
                         })
@@ -115,7 +81,7 @@ impl Steps {
                     })
                     .unwrap();
                     sftp_copy
-                        .execute_with_events(session, variables, tx)
+                        .execute(session, variables, tx)
                         .map_err(|e| {
                             StepsError::CannotExecuteSftpCopyCommand(e, error_message.clone())
                         })

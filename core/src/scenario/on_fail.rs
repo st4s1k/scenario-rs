@@ -1,7 +1,7 @@
 use crate::config::OnFailStepsConfig;
 use crate::scenario::tasks::Tasks;
 use crate::scenario::variables::Variables;
-use crate::scenario::{errors::OnFailError, lifecycle::OnFailLifecycle, task::Task};
+use crate::scenario::{errors::OnFailError, task::Task};
 use ssh2::Session;
 use std::ops::{Deref, DerefMut};
 use std::sync::mpsc::Sender;
@@ -52,28 +52,6 @@ impl OnFailSteps {
         &self,
         session: &Session,
         variables: &Variables,
-        lifecycle: &mut OnFailLifecycle,
-    ) -> Result<(), OnFailError> {
-        (lifecycle.before)(&self);
-
-        for (index, on_fail_task) in self.iter().enumerate() {
-            (lifecycle.step.before)(index, on_fail_task, self.len());
-            match on_fail_task {
-                Task::RemoteSudo { remote_sudo, .. } => remote_sudo
-                    .execute(&session, variables, &mut lifecycle.step.remote_sudo)
-                    .map_err(OnFailError::CannotOnFailRemoteSudo)?,
-                Task::SftpCopy { sftp_copy, .. } => sftp_copy
-                    .execute(&session, variables, &mut lifecycle.step.sftp_copy)
-                    .map_err(OnFailError::CannotOnFailSftpCopy)?,
-            }
-        }
-        Ok(())
-    }
-
-    pub(crate) fn execute_with_events(
-        &self,
-        session: &Session,
-        variables: &Variables,
         tx: &Sender<Event>,
     ) -> Result<(), OnFailError> {
         tx.send(Event::OnFailStepsStarted)
@@ -89,10 +67,10 @@ impl OnFailSteps {
 
             match on_fail_task {
                 Task::RemoteSudo { remote_sudo, .. } => remote_sudo
-                    .execute_with_events(session, variables, tx)
+                    .execute(session, variables, tx)
                     .map_err(OnFailError::CannotOnFailRemoteSudo)?,
                 Task::SftpCopy { sftp_copy, .. } => sftp_copy
-                    .execute_with_events(session, variables, tx)
+                    .execute(session, variables, tx)
                     .map_err(OnFailError::CannotOnFailSftpCopy)?,
             }
         }

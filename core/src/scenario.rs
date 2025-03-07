@@ -5,7 +5,6 @@ use crate::{
 use credentials::Credentials;
 use errors::ScenarioError;
 use events::Event;
-use lifecycle::ExecutionLifecycle;
 use server::Server;
 use ssh2::Session;
 use std::{net::TcpStream, path::PathBuf, sync::mpsc::Sender};
@@ -15,7 +14,6 @@ pub mod credentials;
 pub mod errors;
 pub mod events;
 pub mod execute;
-pub mod lifecycle;
 pub mod on_fail;
 pub mod remote_sudo;
 pub mod server;
@@ -89,30 +87,14 @@ impl TryFrom<&str> for Scenario {
 }
 
 impl Scenario {
-    pub fn execute_with_lifecycle(
-        &self,
-        mut lifecycle: ExecutionLifecycle,
-    ) -> Result<(), ScenarioError> {
-        (lifecycle.before)(&self);
-
-        let session: Session = self.new_session()?;
-
-        self.execute
-            .steps
-            .execute(&session, &self.variables, &mut lifecycle.steps)
-            .map_err(ScenarioError::CannotExecuteSteps)?;
-
-        Ok(())
-    }
-
-    pub fn execute_with_events(&self, tx: Sender<Event>) -> Result<(), ScenarioError> {
+    pub fn execute(&self, tx: Sender<Event>) -> Result<(), ScenarioError> {
         tx.send(Event::ScenarioStarted).unwrap();
 
         let session: Session = self.new_session()?;
 
         self.execute
             .steps
-            .execute_with_events(&session, &self.variables, &tx)
+            .execute(&session, &self.variables, &tx)
             .map_err(ScenarioError::CannotExecuteSteps)?;
 
         tx.send(Event::ScenarioCompleted).unwrap();

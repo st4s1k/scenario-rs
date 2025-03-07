@@ -1,5 +1,5 @@
 // events.rs
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Event {
     // Scenario-level events
     ScenarioStarted,

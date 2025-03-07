@@ -5,7 +5,7 @@ use crate::scenario::tasks::Tasks;
 use crate::scenario::variables::Variables;
 use crate::{
     config::StepConfig,
-    scenario::{errors::StepError, lifecycle::StepsLifecycle, task::Task},
+    scenario::{errors::StepError, task::Task},
 };
 use ssh2::Session;
 
@@ -38,17 +38,6 @@ impl Step {
         &self.on_fail_steps
     }
 
-    pub(crate) fn on_fail(
-        &self,
-        session: &Session,
-        variables: &Variables,
-        lifecycle: &mut StepsLifecycle,
-    ) -> Result<(), StepError> {
-        self.on_fail_steps
-            .execute(session, variables, &mut lifecycle.on_fail)
-            .map_err(StepError::CannotExecuteOnFailSteps)
-    }
-
     pub(crate) fn on_fail_with_events(
         &self,
         session: &Session,
@@ -56,7 +45,7 @@ impl Step {
         tx: &Sender<Event>,
     ) -> Result<(), StepError> {
         self.on_fail_steps
-            .execute_with_events(session, variables, tx)
+            .execute(session, variables, tx)
             .map_err(StepError::CannotExecuteOnFailSteps)
     }
 }

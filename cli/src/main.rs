@@ -36,7 +36,7 @@ fn main() {
     let (tx, rx) = channel();
 
     // Spawn scenario execution in a separate thread.
-    std::thread::spawn(move || match scenario.execute_with_events(tx.clone()) {
+    std::thread::spawn(move || match scenario.execute(tx.clone()) {
         Ok(_) => {
             info!("{}", SEPARATOR);
             info!("{}", "Scenario completed successfully!".cyan());
