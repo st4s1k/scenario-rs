@@ -57,8 +57,8 @@ impl TryFrom<ScenarioConfig> for Scenario {
 
         let mut username_vars = HashMap::new();
         username_vars.insert("username".to_string(), credentials.username.clone());
-        variables.update(username_vars);
-        
+        variables.upsert(username_vars);
+
         let scenario = Scenario {
             server,
             credentials,

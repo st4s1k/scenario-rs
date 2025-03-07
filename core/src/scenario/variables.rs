@@ -3,13 +3,12 @@ pub mod required;
 use crate::{
     config::{SpecialVariablesConfig, VariablesConfig},
     scenario::{
-        errors::PlaceholderResolutionError,
-        utils::HasPlaceholders,
+        errors::PlaceholderResolutionError, utils::HasPlaceholders,
         variables::required::RequiredVariables,
     },
 };
 use chrono::Local;
-use std::{ collections::HashMap, ops::Deref, path::PathBuf, str::FromStr };
+use std::{collections::HashMap, ops::Deref, path::PathBuf, str::FromStr};
 
 #[derive(Debug)]
 pub struct Variables {
@@ -64,22 +63,62 @@ impl Variables {
         &mut self.required
     }
 
-    pub(crate) fn resolve_placeholders(&self, input: &str) -> Result<String, PlaceholderResolutionError> {
-        let mut output = input.to_string();
+    pub fn upsert(&mut self, variables: HashMap<String, String>) {
+        for (name, value) in variables {
+            self.defined.insert(name.clone(), value.clone());
 
-        let mut variables = self.defined.iter()
+            if name.starts_with("path:") {
+                let path = PathBuf::from(value);
+                if let Some(file_name) = path.file_name() {
+                    if let Some(file_name_str) = file_name.to_str() {
+                        let basename_key = name.replace("path:", "basename:");
+                        self.defined.insert(basename_key, file_name_str.to_string());
+                    }
+                }
+            }
+
+            self.required.remove(&name);
+        }
+    }
+
+    pub(crate) fn resolve_placeholders(
+        &self,
+        input: &str,
+    ) -> Result<String, PlaceholderResolutionError> {
+        if !input.has_placeholders() {
+            return Ok(input.to_string());
+        }
+
+        let mut variables = self
+            .defined
+            .iter()
             .map(|(key, value)| (key.as_str(), value.as_str()))
             .collect::<HashMap<&str, &str>>();
-        self.required.iter().for_each(|required_variable| {
-            variables.insert(required_variable.name.as_str(), required_variable.value.as_str());
+
+        self.required.iter().for_each(|(name, required_variable)| {
+            variables.insert(name.as_str(), required_variable.value.as_str());
         });
-        for (key, value) in variables {
-            output = output.replace(&format!("{{{key}}}"), value);
+
+        let mut output = input.to_string();
+
+        loop {
+            let previous = output.clone();
+
+            for (key, value) in &variables {
+                let placeholder = format!("{{{}}}", key);
+                output = output.replace(&placeholder, value);
+            }
+
+            if !output.has_placeholders() {
+                return Ok(output);
+            }
+
+            if output == previous {
+                return Err(PlaceholderResolutionError::CannotResolvePlaceholders(
+                    output,
+                ));
+            }
         }
-        if output.has_placeholders() {
-            return Err(PlaceholderResolutionError::CannotResolvePlaceholders(output));
-        }
-        Ok(output)
     }
 
     fn _resolve_special_variables(&mut self, config: &SpecialVariablesConfig) {
@@ -91,15 +130,11 @@ impl Variables {
 
     fn _resolve_placeholders(&self) -> Result<HashMap<String, String>, PlaceholderResolutionError> {
         let mut resolved_variables = self.defined.clone();
-        self.required.iter().for_each(|required_variable| {
-            resolved_variables.insert(
-                required_variable.name.clone(),
-                required_variable.value.clone(),
-            );
+        self.required.iter().for_each(|(name, required_variable)| {
+            resolved_variables.insert(name.clone(), required_variable.value.clone());
         });
-        let mut iterations = 0;
-        let max_iterations = 10;
-        while iterations < max_iterations {
+
+        loop {
             let mut changes = false;
             for key in &resolved_variables.keys().cloned().collect::<Vec<String>>() {
                 let value = &resolved_variables[key];
@@ -112,16 +147,18 @@ impl Variables {
             if !changes {
                 break;
             }
-            iterations += 1;
         }
 
-        let unresolved_keys = resolved_variables.iter()
+        let unresolved_keys = resolved_variables
+            .iter()
             .filter(|(_, value)| value.has_placeholders())
             .map(|(key, _)| key.to_owned())
             .collect::<Vec<String>>();
 
         if !unresolved_keys.is_empty() {
-            return Err(PlaceholderResolutionError::CannotResolveVariablesPlaceholders(unresolved_keys));
+            return Err(
+                PlaceholderResolutionError::CannotResolveVariablesPlaceholders(unresolved_keys),
+            );
         }
 
         Ok(resolved_variables)

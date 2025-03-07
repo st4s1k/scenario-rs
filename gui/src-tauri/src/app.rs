@@ -8,7 +8,8 @@ use scenario_rs::scenario::{
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
-    ops::{Deref, DerefMut}, sync::mpsc::Sender,
+    ops::Deref,
+    sync::mpsc::Sender,
 };
 use tauri::{AppHandle, Emitter};
 
@@ -33,13 +34,9 @@ impl From<&ScenarioAppState> for ScenarioAppStateConfig {
                 let variables_map: HashMap<String, String> = scenario
                     .variables()
                     .required()
-                    .deref()
                     .iter()
-                    .map(|required_variable| {
-                        (
-                            required_variable.name().to_string(),
-                            required_variable.value().to_string(),
-                        )
+                    .map(|(name, required_variable)| {
+                        (name.to_string(), required_variable.value().to_string())
                     })
                     .collect();
 
@@ -103,6 +100,14 @@ impl ScenarioAppState {
                 self.config_path = loaded_state.last_config_path.clone();
                 self.load_config(self.config_path.clone().as_str());
                 self.load_config_data_from_state(&loaded_state);
+                if let Some(scenario) = self.scenario.as_mut() {
+                    let required_variables = loaded_state
+                        .config_paths
+                        .get(&self.config_path)
+                        .map(|data| data.variables.clone())
+                        .unwrap_or_default();
+                    scenario.variables_mut().upsert(required_variables);
+                }
             }
         }
     }
@@ -116,14 +121,7 @@ impl ScenarioAppState {
             if let Some(scenario) = self.scenario.as_mut() {
                 scenario
                     .variables_mut()
-                    .required_mut()
-                    .deref_mut()
-                    .iter_mut()
-                    .for_each(|required_variable| {
-                        if let Some(value) = config_data.variables.get(required_variable.name()) {
-                            required_variable.set_value(value.clone());
-                        }
-                    });
+                    .upsert(config_data.variables.clone());
             }
         }
     }
@@ -194,24 +192,22 @@ impl ScenarioAppState {
         if let Some(scenario) = self.scenario.as_ref() {
             self.is_executing = true;
 
-        let (tx, rx) = LifecycleHandler::try_initialize(self.app_handle.clone());
-        self.tx = Some(tx);
+            let (tx, rx) = LifecycleHandler::try_initialize(self.app_handle.clone());
+            self.tx = Some(tx);
 
-        tauri::async_runtime::spawn(async move {
-            for event in rx {
-                process_event(event.clone());
+            tauri::async_runtime::spawn(async move {
+                for event in rx {
+                    process_event(event.clone());
 
-                if let Event::ScenarioCompleted | Event::ScenarioError(_) = event {
-                    break;
+                    if let Event::ScenarioCompleted | Event::ScenarioError(_) = event {
+                        break;
+                    }
                 }
-            }
-        });
+            });
 
-            if let Err(error) = scenario.execute(self.tx.as_ref().unwrap().clone()) {
-                self.tx
-                    .as_ref()
-                    .unwrap()
-                    .send_event(Event::ScenarioError(error.to_string()));
+            let tx = self.tx.as_ref().unwrap();
+            if let Err(error) = scenario.execute(tx.clone()) {
+                tx.send_event(Event::ScenarioError(error.to_string()));
             }
 
             self.is_executing = false;
@@ -226,9 +222,9 @@ impl ScenarioAppState {
                 .variables()
                 .required()
                 .iter()
-                .map(|required_variable| {
+                .map(|(name, required_variable)| {
                     (
-                        required_variable.name().to_string(),
+                        name.to_string(),
                         RequiredVariableDTO::from(required_variable),
                     )
                 })

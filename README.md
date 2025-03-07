@@ -71,7 +71,7 @@ npm run tauri build
 ▶️ **run:**
 
 ```
-cargo run
+cargo run -- -c ./example-scenario.toml
 ```
 
 🛠️ **build:**
@@ -83,13 +83,13 @@ cargo build
 ⚡ **run executable:**
 
 ```
-<cloned-dir>/scenario-rs/target/debug/scenario-rs-cli.exe --config-path ./example-scenario.json
+<cloned-dir>/scenario-rs/target/debug/scenario-rs-cli.exe --config-path ./example-scenario.toml
 ```
 
 or
 
 ```
-<cloned-dir>/scenario-rs/target/debug/scenario-rs-cli.exe -c ./example-scenario.json
+<cloned-dir>/scenario-rs/target/debug/scenario-rs-cli.exe -c ./example-scenario.toml
 ```
 
 ### 📟 [cli.release] 🎁
@@ -103,11 +103,11 @@ cargo build --release
 ⚡ **run executable:**
 
 ```
-<cloned-dir>/scenario-rs/target/release/scenario-rs-cli.exe --config-path ./example-scenario.json
+<cloned-dir>/scenario-rs/target/release/scenario-rs-cli.exe --config-path ./example-scenario.toml
 ```
 
 or
 
 ```
-<cloned-dir>/scenario-rs/target/release/scenario-rs-cli.exe -c ./example-scenario.json
+<cloned-dir>/scenario-rs/target/release/scenario-rs-cli.exe -c ./example-scenario.toml
 ```
