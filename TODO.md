@@ -7,7 +7,6 @@
 - Display all scenario variables
 - Display scenario steps
 - Display scenario tasks
-- Delegate file loading to **core** (backend)
 
 # cli
 
