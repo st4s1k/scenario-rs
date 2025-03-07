@@ -1,8 +1,7 @@
 use clap::Parser;
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
-use scenario_rs::scenario::events::Event;
-use scenario_rs::scenario::Scenario;
+use scenario_rs::scenario::{events::Event, utils::SendEvent, Scenario};
 use std::sync::mpsc::channel;
 use std::{path::PathBuf, process};
 use tracing::{debug, error, info};
@@ -46,7 +45,7 @@ fn main() {
             error!("{}", SEPARATOR);
             error!("Scenario execution failed: {}", error);
             error!("{}", SEPARATOR);
-            tx.send(Event::ScenarioError(error.to_string())).unwrap();
+            tx.send_event(Event::ScenarioError(error.to_string()));
         }
     });
 

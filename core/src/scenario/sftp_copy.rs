@@ -1,14 +1,10 @@
 use crate::{
     config::SftpCopyConfig,
-    scenario::{errors::SftpCopyError, variables::Variables},
+    mock,
+    scenario::{errors::SftpCopyError, variables::Variables, utils::SendEvent},
 };
 use ssh2::Session;
-use std::{
-    fs::File,
-    io::{Read, Write},
-    path::Path,
-    sync::mpsc::Sender,
-};
+use std::{fs::File, io::Read, path::Path, sync::mpsc::Sender};
 
 use super::events::Event;
 
@@ -49,17 +45,20 @@ impl SftpCopy {
             .resolve_placeholders(&self.destination_path)
             .map_err(SftpCopyError::CannotResolveDestinationPathPlaceholders)?;
 
-        tx.send(Event::SftpCopyBefore {
+        tx.send_event(Event::SftpCopyBefore {
             source: resolved_source.clone(),
             destination: resolved_destination.clone(),
-        })
-        .expect("Failed to send SftpCopyBefore event");
+        });
 
         let mut source_file =
             File::open(&resolved_source).map_err(SftpCopyError::CannotOpenSourceFile)?;
-        let sftp = session
+
+        let session_trait = mock::get_session(session);
+
+        let sftp = session_trait
             .sftp()
             .map_err(SftpCopyError::CannotOpenChannelAndInitializeSftp)?;
+
         let mut destination_file = sftp
             .create(Path::new(&resolved_destination))
             .map_err(SftpCopyError::CannotCreateDestinationFile)?;
@@ -78,20 +77,20 @@ impl SftpCopy {
             if bytes_read == 0 {
                 break;
             }
+
             destination_file
                 .write_all(&buffer[..bytes_read])
                 .map_err(SftpCopyError::CannotWriteDestinationFile)?;
+
             current_bytes += bytes_read as u64;
 
-            tx.send(Event::SftpCopyProgress {
+            tx.send_event(Event::SftpCopyProgress {
                 current: current_bytes,
                 total: total_bytes,
-            })
-            .expect("Failed to send SftpCopyProgress event");
+            });
         }
 
-        tx.send(Event::SftpCopyAfter)
-            .expect("Failed to send SftpCopyAfter event");
+        tx.send_event(Event::SftpCopyAfter);
 
         Ok(())
     }

@@ -1,4 +1,7 @@
 use thiserror::Error;
+use std::sync::mpsc::SendError;
+
+use super::events::Event;
 
 #[derive(Error, Debug)]
 pub enum ScenarioConfigError {
@@ -38,6 +41,10 @@ pub enum ScenarioError {
     CannotAuthenticateWithAgent(#[source] ssh2::Error),
     #[error("Cannot execute steps: {0}")]
     CannotExecuteSteps(#[source] StepsError),
+    #[error("Cannot send scenario started event: {0}")]
+    CannotSendScenarioStartedEvent(#[from] SendError<Event>),
+    #[error("Cannot send scenario completed event: {0}")]
+    CannotSendScenarioCompletedEvent(String),
 }
 
 #[derive(Error, Debug)]
@@ -93,7 +100,7 @@ pub enum RemoteSudoError {
     #[error("Cannot execute remote command: {0}")]
     CannotExecuteRemoteCommand(#[source] ssh2::Error),
     #[error("Cannot read channel output: {0}")]
-    CannotReadChannelOutput(#[source] std::io::Error),
+    CannotReadChannelOutput(#[source] ssh2::Error),
     #[error("Cannot obtain exit status of remote command: {0}")]
     CannotObtainRemoteCommandExitStatus(#[source] ssh2::Error),
     #[error("Remote command failed with status code: {0}")]
@@ -113,7 +120,7 @@ pub enum SftpCopyError {
     #[error("Cannot read from source file: {0}")]
     CannotReadSourceFile(#[source] std::io::Error),
     #[error("Cannot write to destination file: {0}")]
-    CannotWriteDestinationFile(#[source] std::io::Error),
+    CannotWriteDestinationFile(#[source] ssh2::Error),
     #[error("Cannot resolve placeholders in source file: {0}")]
     CannotResolveSourcePathPlaceholders(#[source] PlaceholderResolutionError),
     #[error("Cannot resolve placeholders in destination file: {0}")]

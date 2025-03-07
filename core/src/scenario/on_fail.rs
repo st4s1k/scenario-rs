@@ -1,7 +1,7 @@
 use crate::config::OnFailStepsConfig;
 use crate::scenario::tasks::Tasks;
 use crate::scenario::variables::Variables;
-use crate::scenario::{errors::OnFailError, task::Task};
+use crate::scenario::{errors::OnFailError, task::Task, utils::SendEvent};
 use ssh2::Session;
 use std::ops::{Deref, DerefMut};
 use std::sync::mpsc::Sender;
@@ -54,16 +54,14 @@ impl OnFailSteps {
         variables: &Variables,
         tx: &Sender<Event>,
     ) -> Result<(), OnFailError> {
-        tx.send(Event::OnFailStepsStarted)
-            .expect("Failed to send OnFailStepsStarted event");
+        tx.send_event(Event::OnFailStepsStarted);
 
         for (index, on_fail_task) in self.iter().enumerate() {
-            tx.send(Event::OnFailStepStarted {
+            tx.send_event(Event::OnFailStepStarted {
                 index,
                 total_steps: self.len(),
                 description: on_fail_task.description().to_string(),
-            })
-            .expect("Failed to send OnFailStepStarted event");
+            });
 
             match on_fail_task {
                 Task::RemoteSudo { remote_sudo, .. } => remote_sudo

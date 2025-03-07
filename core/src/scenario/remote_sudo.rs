@@ -1,10 +1,11 @@
-use std::{io::Read, sync::mpsc::Sender};
+use std::sync::mpsc::Sender;
 
 use crate::{
     config::RemoteSudoConfig,
-    scenario::{errors::RemoteSudoError, variables::Variables},
+    mock,
+    scenario::{errors::RemoteSudoError, variables::Variables, utils::SendEvent},
 };
-use ssh2::{Channel, Session};
+use ssh2::Session;
 
 use super::events::Event;
 
@@ -32,16 +33,17 @@ impl RemoteSudo {
         variables: &Variables,
         tx: &Sender<Event>,
     ) -> Result<(), RemoteSudoError> {
-        tx.send(Event::RemoteSudoBefore(self.command.clone()))
-            .expect("Failed to send RemoteSudoBefore event");
-
-        let mut channel: Channel = session
-            .channel_session()
-            .map_err(RemoteSudoError::CannotEstablishSessionChannel)?;
-
         let command = variables
             .resolve_placeholders(&self.command)
             .map_err(RemoteSudoError::CannotResolveCommandPlaceholders)?;
+
+        tx.send_event(Event::RemoteSudoBefore(command.clone()));
+
+        let session_trait = mock::get_session(session);
+
+        let mut channel = session_trait
+            .channel_session()
+            .map_err(RemoteSudoError::CannotEstablishSessionChannel)?;
 
         channel
             .exec(&command)
@@ -53,8 +55,8 @@ impl RemoteSudo {
             .map_err(RemoteSudoError::CannotReadChannelOutput)?;
 
         let truncated_output: String = output.chars().take(1000).collect();
-        tx.send(Event::RemoteSudoChannelOutput(truncated_output))
-            .expect("Failed to send RemoteSudoChannelOutput event");
+
+        tx.send_event(Event::RemoteSudoChannelOutput(truncated_output));
 
         let exit_status = channel
             .exit_status()

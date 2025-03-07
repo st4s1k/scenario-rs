@@ -2,7 +2,9 @@ use crate::{
     lifecycle::{process_event, LifecycleHandler},
     shared::SEPARATOR,
 };
-use scenario_rs::scenario::{events::Event, variables::required::RequiredVariable, Scenario};
+use scenario_rs::scenario::{
+    events::Event, utils::SendEvent, variables::required::RequiredVariable, Scenario,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -186,9 +188,13 @@ impl ScenarioAppState {
                 }
             }
         }
+    }
+
+    pub fn execute_scenario(&mut self) {
+        if let Some(scenario) = self.scenario.as_ref() {
+            self.is_executing = true;
 
         let (tx, rx) = LifecycleHandler::try_initialize(self.app_handle.clone());
-
         self.tx = Some(tx);
 
         tauri::async_runtime::spawn(async move {
@@ -200,19 +206,12 @@ impl ScenarioAppState {
                 }
             }
         });
-    }
-
-    pub fn execute_scenario(&mut self) {
-        if let Some(scenario) = self.scenario.as_ref() {
-            self.is_executing = true;
 
             if let Err(error) = scenario.execute(self.tx.as_ref().unwrap().clone()) {
-                let _ = self
-                    .tx
+                self.tx
                     .as_ref()
                     .unwrap()
-                    .clone()
-                    .send(Event::ScenarioError(error.to_string()));
+                    .send_event(Event::ScenarioError(error.to_string()));
             }
 
             self.is_executing = false;
