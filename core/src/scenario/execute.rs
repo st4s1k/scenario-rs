@@ -3,7 +3,7 @@ use crate::{
     scenario::{errors::ExecuteError, steps::Steps, tasks::Tasks},
 };
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Execute {
     pub(crate) steps: Steps,
 }

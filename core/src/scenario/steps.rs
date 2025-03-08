@@ -9,7 +9,7 @@ use std::sync::mpsc::Sender;
 
 use super::events::Event;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Steps(Vec<Step>);
 
 impl Deref for Steps {

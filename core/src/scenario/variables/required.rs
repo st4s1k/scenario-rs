@@ -4,7 +4,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RequiredVariables(HashMap<String, RequiredVariable>);
 
 impl Deref for RequiredVariables {
@@ -44,7 +44,7 @@ impl Default for RequiredVariables {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RequiredVariable {
     pub(crate) name: String,
     pub(crate) label: String,

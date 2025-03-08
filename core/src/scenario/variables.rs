@@ -10,7 +10,7 @@ use crate::{
 use chrono::Local;
 use std::{collections::HashMap, ops::Deref, path::PathBuf, str::FromStr};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Variables {
     required: RequiredVariables,
     defined: HashMap<String, String>,

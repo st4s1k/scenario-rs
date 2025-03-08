@@ -11,7 +11,7 @@ use ssh2::Session;
 
 use super::events::Event;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Step {
     pub(crate) task: Task,
     pub(crate) on_fail_steps: OnFailSteps,

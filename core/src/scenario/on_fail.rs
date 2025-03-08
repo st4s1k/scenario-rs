@@ -8,7 +8,7 @@ use std::sync::mpsc::Sender;
 
 use super::events::Event;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct OnFailSteps(Vec<Task>);
 
 impl Deref for OnFailSteps {

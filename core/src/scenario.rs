@@ -26,7 +26,7 @@ pub mod tasks;
 pub mod utils;
 pub mod variables;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Scenario {
     pub(crate) server: Server,
     pub(crate) credentials: Credentials,

@@ -1,6 +1,6 @@
 use crate::config::ServerConfig;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Server {
     pub(crate) host: String,
     pub(crate) port: String,
