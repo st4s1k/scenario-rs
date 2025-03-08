@@ -2,7 +2,7 @@ use crate::{app::ScenarioAppState, shared::SEPARATOR};
 use scenario_rs::scenario::events::Event;
 use std::sync::{
     mpsc,
-    mpsc::{Receiver, Sender},
+    mpsc::Sender,
     Mutex, OnceLock,
 };
 use tauri::{AppHandle, Emitter, Manager};
