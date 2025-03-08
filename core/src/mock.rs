@@ -1,5 +1,3 @@
-//! Mock implementations for testing and debugging
-
 use std::path::Path;
 
 pub trait SessionTrait {
@@ -8,7 +6,6 @@ pub trait SessionTrait {
 }
 
 pub trait ChannelTrait {
-    // Change exec to take &mut self to match ssh2::Channel's signature
     fn exec(&mut self, command: &str) -> Result<(), ssh2::Error>;
     fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error>;
     fn exit_status(&self) -> Result<i32, ssh2::Error>;
@@ -22,7 +19,6 @@ pub trait WriteTrait {
     fn write_all(&mut self, buf: &[u8]) -> Result<(), ssh2::Error>;
 }
 
-// Implementation for the real SSH2 Session
 impl SessionTrait for ssh2::Session {
     fn channel_session(&self) -> Result<Box<dyn ChannelTrait>, ssh2::Error> {
         self.channel_session()
@@ -34,10 +30,8 @@ impl SessionTrait for ssh2::Session {
     }
 }
 
-// Implementation for the real SSH2 Channel
 impl ChannelTrait for ssh2::Channel {
     fn exec(&mut self, command: &str) -> Result<(), ssh2::Error> {
-        // Call exec on mutable self
         self.exec(command)
     }
 
@@ -62,7 +56,6 @@ impl ChannelTrait for ssh2::Channel {
     }
 }
 
-// Implementation for the real SSH2 Sftp
 impl SftpTrait for ssh2::Sftp {
     fn create(&self, path: &Path) -> Result<Box<dyn WriteTrait>, ssh2::Error> {
         self.create(path)
@@ -70,7 +63,6 @@ impl SftpTrait for ssh2::Sftp {
     }
 }
 
-// Wrapper for ssh2::File to implement our WriteTrait
 struct SshFileWrapper(ssh2::File);
 
 impl WriteTrait for SshFileWrapper {
@@ -86,7 +78,6 @@ impl WriteTrait for SshFileWrapper {
 pub mod debug {
     use super::*;
 
-    /// Mock session for debugging
     pub struct MockSession;
 
     impl SessionTrait for MockSession {
@@ -101,12 +92,10 @@ pub mod debug {
         }
     }
 
-    /// Mock channel for debugging
     pub struct MockChannel;
 
     impl ChannelTrait for MockChannel {
-        // Update the mock implementation to match the new trait signature
-        fn exec(&mut self, command: &str) -> Result<(), ssh2::Error> {
+        fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
             std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(())
         }
@@ -124,27 +113,24 @@ pub mod debug {
         }
     }
 
-    /// Mock SFTP for debugging
     pub struct MockSftp;
 
     impl SftpTrait for MockSftp {
-        fn create(&self, path: &Path) -> Result<Box<dyn WriteTrait>, ssh2::Error> {
+        fn create(&self, _path: &Path) -> Result<Box<dyn WriteTrait>, ssh2::Error> {
             std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(Box::new(MockFile))
         }
     }
 
-    /// Mock file for debugging
     pub struct MockFile;
 
     impl WriteTrait for MockFile {
-        fn write_all(&mut self, buf: &[u8]) -> Result<(), ssh2::Error> {
+        fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {
             std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(())
         }
     }
 
-    /// Create a new mock session for debugging
     pub fn new_mock_session() -> Box<dyn SessionTrait> {
         std::thread::sleep(std::time::Duration::from_millis(100));
         Box::new(MockSession)
