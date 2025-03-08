@@ -75,7 +75,7 @@ export class AppComponent implements OnDestroy {
     }
   }
 
-  private setupFormValueChangeListener(): void {
+  private async setupFormValueChangeListener(): Promise<void> {
     this.cleanupSubscriptions();
 
     this.formValueChangesSubscription = this.requiredFieldsFormGroup.valueChanges
@@ -85,7 +85,9 @@ export class AppComponent implements OnDestroy {
             this.requiredFields[name].value = requiredFieldsPartial[name]!;
           }
         }
-        this.updateRequiredVariables();
+        this.updateRequiredVariables().then(() => {
+          this.getDefinedVariables();
+        });
       });
   }
 
