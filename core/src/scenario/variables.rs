@@ -65,19 +65,30 @@ impl Variables {
 
     pub fn upsert(&mut self, variables: HashMap<String, String>) {
         for (name, value) in variables {
-            self.defined.insert(name.clone(), value.clone());
+            if self.required.contains_key(&name) {
+                if let Some(required_variable) = self.required.get_mut(&name) {
+                    required_variable.value = value.clone();
+                }
+            } else {
+                self.defined.insert(name.clone(), value.clone());
+            }
 
             if name.starts_with("path:") {
                 let path = PathBuf::from(value);
                 if let Some(file_name) = path.file_name() {
                     if let Some(file_name_str) = file_name.to_str() {
                         let basename_key = name.replace("path:", "basename:");
-                        self.defined.insert(basename_key, file_name_str.to_string());
+
+                        if self.required.contains_key(&basename_key) {
+                            if let Some(required_variable) = self.required.get_mut(&basename_key) {
+                                required_variable.value = file_name_str.to_string();
+                            }
+                        } else {
+                            self.defined.insert(basename_key, file_name_str.to_string());
+                        }
                     }
                 }
             }
-
-            self.required.remove(&name);
         }
     }
 

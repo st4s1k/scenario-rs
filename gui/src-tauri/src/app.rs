@@ -15,7 +15,7 @@ use tauri::{AppHandle, Emitter};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigPathData {
-    variables: HashMap<String, String>,
+    required_variables: HashMap<String, String>,
     output_log: String,
 }
 
@@ -31,7 +31,7 @@ impl From<&ScenarioAppState> for ScenarioAppStateConfig {
 
         if let Some(scenario) = &state.scenario {
             if !state.config_path.is_empty() {
-                let variables_map: HashMap<String, String> = scenario
+                let required_variables: HashMap<String, String> = scenario
                     .variables()
                     .required()
                     .iter()
@@ -41,7 +41,7 @@ impl From<&ScenarioAppState> for ScenarioAppStateConfig {
                     .collect();
 
                 let config_data = ConfigPathData {
-                    variables: variables_map,
+                    required_variables,
                     output_log: state.output_log.clone(),
                 };
 
@@ -104,7 +104,7 @@ impl ScenarioAppState {
                     let required_variables = loaded_state
                         .config_paths
                         .get(&self.config_path)
-                        .map(|data| data.variables.clone())
+                        .map(|data| data.required_variables.clone())
                         .unwrap_or_default();
                     scenario.variables_mut().upsert(required_variables);
                 }
@@ -121,7 +121,7 @@ impl ScenarioAppState {
             if let Some(scenario) = self.scenario.as_mut() {
                 scenario
                     .variables_mut()
-                    .upsert(config_data.variables.clone());
+                    .upsert(config_data.required_variables.clone());
             }
         }
     }
@@ -229,6 +229,27 @@ impl ScenarioAppState {
                     )
                 })
                 .collect()
+        } else {
+            BTreeMap::new()
+        }
+    }
+
+    pub fn get_defined_variables(&mut self) -> BTreeMap<String, String> {
+        if let Some(scenario) = &self.scenario {
+            match scenario.variables().defined() {
+                Ok(defined_vars) => {
+                    defined_vars
+                                    .iter()
+                                    .map(|(name, value)| (name.to_string(), value.to_string()))
+                                    .collect()
+                }
+                Err(err) => {
+                    self.log_message(format!(
+                        "{SEPARATOR}\nFailed to get defined variables: {err}\n{SEPARATOR}\n"
+                    ));
+                    BTreeMap::new()
+                },
+            }
         } else {
             BTreeMap::new()
         }

@@ -19,6 +19,10 @@ interface RequiredField {
   value: string;
 }
 
+interface DefinedVariables {
+  [key: string]: string;
+}
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -33,12 +37,16 @@ interface RequiredField {
   styleUrl: './app.component.scss'
 })
 export class AppComponent implements OnDestroy {
+
+  Object = Object;
+
   executionLog = new FormControl<string>('');
   scenarioConfigPath = new FormControl<string>('');
   requiredFields: { [key: string]: RequiredField } = {};
   requiredFieldsFormGroup = new FormGroup<RequiredFieldsForm>({});
   isExecuting = signal(false);
   private formValueChangesSubscription?: Subscription;
+  definedVariables: DefinedVariables = {};
 
   unlisten = listen('log-update', () => {
     invoke<string>('get_log')
@@ -51,7 +59,11 @@ export class AppComponent implements OnDestroy {
     invoke<string>('get_log')
       .then((log) => this.executionLog.setValue(log));
     this.fetchConfigPath()
-      .then(() => this.getRequiredVariables());
+      .then(() => Promise.all([
+        this.getRequiredVariables(),
+        this.getDefinedVariables()
+      ]));
+
     this.setupFormValueChangeListener();
   }
 
@@ -120,6 +132,7 @@ export class AppComponent implements OnDestroy {
       this.scenarioConfigPath.setValue(configPath);
       await this.loadConfigFile();
       await this.getRequiredVariables();
+      await this.getDefinedVariables();
     }
   }
 
@@ -146,6 +159,13 @@ export class AppComponent implements OnDestroy {
           this.requiredFieldsFormGroup.addControl(name, formControl);
         }
         this.setupFormValueChangeListener();
+      });
+  }
+
+  private async getDefinedVariables(): Promise<void> {
+    return invoke<{ [key: string]: string }>('get_defined_variables')
+      .then((definedVariables) => {
+        this.definedVariables = definedVariables || {};
       });
   }
 

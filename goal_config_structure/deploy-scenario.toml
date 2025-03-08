@@ -31,7 +31,7 @@ steps = [
 [tasks.copy_jar_to_server]
 type = "SftpCopy"
 description = "Copying new deploy file to server"
-source_path = "{local_jar_path}"
+source_path = "{path:local_jar_path}"
 destination_path = "{remote_base_path}/{basename:local_jar_path}"
 error_message = "Failed to copy new deploy file to server."
 

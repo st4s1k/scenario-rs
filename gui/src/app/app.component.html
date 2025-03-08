@@ -19,7 +19,7 @@
       <input type="checkbox" />
     </label>
     <div class="expandable">
-      <form id="required-fields-form" class="row gap-10" [formGroup]="requiredFieldsFormGroup">
+      <form class="fields-form row gap-10" [formGroup]="requiredFieldsFormGroup">
         <div class="col gap-10">
           @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
           <div class="row gap-10">
@@ -38,6 +38,30 @@
           }
         </div>
       </form>
+    </div>
+    }
+
+    @if (Object.keys(definedVariables).length > 0) {
+    <label class="row title">Defined variables:
+      <input type="checkbox" />
+    </label>
+    <div class="expandable">
+      <div class="fields-form row gap-10">
+        <div class="col gap-10">
+          @for (variable of Object.entries(definedVariables); track variable[0]) {
+          <div class="row gap-10">
+            <label class="title">{{variable[0]}}</label>
+          </div>
+          }
+        </div>
+        <div class="col grow gap-10">
+          @for (variable of Object.entries(definedVariables); track variable[0]) {
+          <div class="row justify-content-center gap-10">
+            <input class="text-field grow" type="text" [value]="variable[1]" readonly />
+          </div>
+          }
+        </div>
+      </div>
     </div>
     }
 

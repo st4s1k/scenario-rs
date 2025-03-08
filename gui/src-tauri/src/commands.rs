@@ -64,6 +64,14 @@ pub fn execute_scenario(state: State<'_, Mutex<ScenarioAppState>>) {
     state.execute_scenario();
 }
 
+#[tauri::command(async)]
+pub fn get_defined_variables(
+    state: State<'_, Mutex<ScenarioAppState>>,
+) -> BTreeMap<String, String> {
+    let mut state = safe_get_state(state.lock());
+    state.get_defined_variables()
+}
+
 fn safe_get_state<'a, T>(
     lock_result: Result<MutexGuard<'a, T>, PoisonError<MutexGuard<'a, T>>>,
 ) -> MutexGuard<'a, T> {
