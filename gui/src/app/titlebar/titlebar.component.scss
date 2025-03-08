@@ -12,6 +12,10 @@
     height: styles.$titlebar-height;
     background: styles.$secondary-color-lighter-5;
 
+    #spacer {
+        flex: 1;
+    }
+
     .button {
         display: inline-flex;
         justify-content: center;
@@ -26,6 +30,13 @@
             width: 14px;
             height: 14px;
             color: rgb(255, 255, 255, 0.5);
+        }
+
+        &#save {
+            svg {
+                width: 20px;
+                height: 20px;
+            }
         }
 
         &:hover {
@@ -44,15 +55,12 @@
             background-color: rgb(255, 255, 255, 0.2);
         }
 
-        &#save {
-            svg {
-                width: 20px;
-                height: 20px;
-            }
+        .tooltip-arrow-top {
+            transform: translate(-5px, styles.$titlebar-height + 5px);
+        }
 
-            .tooltip-arrow-top {
-                transform: translate(-5px, styles.$titlebar-height + 5px);
-            }
+        .tooltip-arrow-left {
+            transform: translate(105px, 5px);
         }
     }
 }

@@ -145,13 +145,18 @@ impl ScenarioAppState {
         };
 
         match serde_json::to_string_pretty(&final_state) {
-            Ok(json) => {
-                if let Err(error) = std::fs::write(Self::STATE_FILE_PATH, json) {
+            Ok(json) => match std::fs::write(Self::STATE_FILE_PATH, json) {
+                Ok(_) => {
+                    self.log_message(format!(
+                        "{SEPARATOR}\nApplication state saved\n{SEPARATOR}\n"
+                    ));
+                }
+                Err(error) => {
                     self.log_message(format!(
                         "{SEPARATOR}\nFailed to save state: {error}\n{SEPARATOR}\n"
                     ));
                 }
-            }
+            },
             Err(error) => {
                 self.log_message(format!(
                     "{SEPARATOR}\nFailed to serialize state: {error}\n{SEPARATOR}\n"
@@ -246,5 +251,24 @@ impl ScenarioAppState {
     pub fn clear_log(&mut self) {
         self.output_log.clear();
         let _ = self.app_handle.emit("log-update", ());
+    }
+
+    pub fn clear_state(&mut self) {
+        let empty_state = ScenarioAppStateConfig {
+            last_config_path: String::new(),
+            config_paths: HashMap::new(),
+        };
+
+        if let Ok(json) = serde_json::to_string_pretty(&empty_state) {
+            if let Err(error) = std::fs::write(Self::STATE_FILE_PATH, json) {
+                self.log_message(format!(
+                    "{SEPARATOR}\nFailed to clear state file: {error}\n{SEPARATOR}\n"
+                ));
+            }
+        }
+
+        self.log_message(format!(
+            "{SEPARATOR}\nApplication state cleared\n{SEPARATOR}\n"
+        ));
     }
 }

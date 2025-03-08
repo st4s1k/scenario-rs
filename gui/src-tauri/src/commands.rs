@@ -74,6 +74,13 @@ pub fn get_defined_variables(
     state.get_defined_variables()
 }
 
+#[tauri::command(async)]
+pub fn clear_state(state: State<'_, Mutex<ScenarioAppState>>) -> Result<(), String> {
+    let mut state = safe_get_state(state.lock());
+    state.clear_state();
+    Ok(())
+}
+
 fn safe_get_state<'a, T>(
     lock_result: Result<MutexGuard<'a, T>, PoisonError<MutexGuard<'a, T>>>,
 ) -> MutexGuard<'a, T> {

@@ -16,6 +16,10 @@ export class TitlebarComponent {
     invoke('save_state');
   }
 
+  clearState(): void {
+    invoke('clear_state');
+  }
+
   minimize(): void {
     appWindow.minimize();
   }

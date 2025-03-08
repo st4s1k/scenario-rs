@@ -165,7 +165,7 @@ button {
 .tooltip {
     opacity: 0;
     visibility: hidden;
-    width: fit-content;
+    width: max-content;
     background-color: $secondary-color-lighter-2;
     color: $secondary-color-lighter-60;
     text-align: center;
