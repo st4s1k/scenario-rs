@@ -89,15 +89,14 @@ impl TryFrom<&str> for Scenario {
 }
 
 impl Scenario {
-    pub fn execute(&self, tx: Sender<Event>) -> Result<(), ScenarioError> {
-        tx.send_event(Event::ScenarioStarted);
-
-        #[cfg(debug_assertions)]
-        {
-            println!("[DEBUG] Starting scenario execution in debug mode");
-            println!("[DEBUG] Server: {}:{}", self.server.host, self.server.port);
-            println!("[DEBUG] Username: {}", self.credentials.username);
+    pub fn execute(&self, tx: Sender<Event>) {
+        if let Err(error) = self._execute(tx.clone()) {
+            tx.send_event(Event::ScenarioError(format!("{error}")));
         }
+    }
+
+    pub fn _execute(&self, tx: Sender<Event>) -> Result<(), ScenarioError> {
+        tx.send_event(Event::ScenarioStarted);
 
         let session: Session = self.new_session()?;
 
@@ -113,11 +112,6 @@ impl Scenario {
     pub fn new_session(&self) -> Result<Session, ScenarioError> {
         #[cfg(debug_assertions)]
         {
-            println!(
-                "[DEBUG] Creating mock session instead of connecting to {}:{}",
-                self.server.host, self.server.port
-            );
-
             let session = Session::new().map_err(ScenarioError::CannotCreateANewSession)?;
             return Ok(session);
         }

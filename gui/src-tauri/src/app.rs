@@ -1,15 +1,13 @@
-use crate::{
-    lifecycle::{process_event, LifecycleHandler},
-    shared::SEPARATOR,
-};
-use scenario_rs::scenario::{
-    events::Event, utils::SendEvent, variables::required::RequiredVariable, Scenario,
-};
+use crate::{lifecycle::LifecycleHandler, shared::SEPARATOR};
+use scenario_rs::scenario::{variables::required::RequiredVariable, Scenario};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
     ops::Deref,
-    sync::mpsc::Sender,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
 use tauri::{AppHandle, Emitter};
 
@@ -61,8 +59,7 @@ pub struct ScenarioAppState {
     pub(crate) output_log: String,
     pub(crate) app_handle: AppHandle,
     pub(crate) scenario: Option<Scenario>,
-    pub(crate) is_executing: bool,
-    pub(crate) tx: Option<Sender<Event>>,
+    pub(crate) is_executing: Arc<AtomicBool>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -89,8 +86,7 @@ impl ScenarioAppState {
             output_log: String::new(),
             app_handle: app,
             scenario: None,
-            is_executing: false,
-            tx: None,
+            is_executing: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -189,28 +185,17 @@ impl ScenarioAppState {
     }
 
     pub fn execute_scenario(&mut self) {
-        if let Some(scenario) = self.scenario.as_ref() {
-            self.is_executing = true;
+        if let Some(scenario) = self.scenario.as_ref().cloned() {
+            let app_handle = self.app_handle.clone();
+            let tx = LifecycleHandler::try_initialize(app_handle);
 
-            let (tx, rx) = LifecycleHandler::try_initialize(self.app_handle.clone());
-            self.tx = Some(tx);
+            let is_executing = self.is_executing.clone();
 
             tauri::async_runtime::spawn(async move {
-                for event in rx {
-                    process_event(event.clone());
-
-                    if let Event::ScenarioCompleted | Event::ScenarioError(_) = event {
-                        break;
-                    }
-                }
+                is_executing.store(true, Ordering::SeqCst);
+                scenario.execute(tx);
+                is_executing.store(false, Ordering::SeqCst);
             });
-
-            let tx = self.tx.as_ref().unwrap();
-            if let Err(error) = scenario.execute(tx.clone()) {
-                tx.send_event(Event::ScenarioError(error.to_string()));
-            }
-
-            self.is_executing = false;
         } else {
             self.log_message(format!("{SEPARATOR}\nNo scenario loaded\n{SEPARATOR}\n"));
         }
@@ -237,18 +222,16 @@ impl ScenarioAppState {
     pub fn get_defined_variables(&mut self) -> BTreeMap<String, String> {
         if let Some(scenario) = &self.scenario {
             match scenario.variables().defined() {
-                Ok(defined_vars) => {
-                    defined_vars
-                                    .iter()
-                                    .map(|(name, value)| (name.to_string(), value.to_string()))
-                                    .collect()
-                }
+                Ok(defined_vars) => defined_vars
+                    .iter()
+                    .map(|(name, value)| (name.to_string(), value.to_string()))
+                    .collect(),
                 Err(err) => {
                     self.log_message(format!(
                         "{SEPARATOR}\nFailed to get defined variables: {err}\n{SEPARATOR}\n"
                     ));
                     BTreeMap::new()
-                },
+                }
             }
         } else {
             BTreeMap::new()

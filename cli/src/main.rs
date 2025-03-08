@@ -1,7 +1,7 @@
 use clap::Parser;
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
-use scenario_rs::scenario::{events::Event, utils::SendEvent, Scenario};
+use scenario_rs::scenario::{events::Event, Scenario};
 use std::sync::mpsc::channel;
 use std::{path::PathBuf, process};
 use tracing::{debug, error, info};
@@ -35,19 +35,7 @@ fn main() {
     let (tx, rx) = channel();
 
     // Spawn scenario execution in a separate thread.
-    std::thread::spawn(move || match scenario.execute(tx.clone()) {
-        Ok(_) => {
-            info!("{}", SEPARATOR);
-            info!("{}", "Scenario completed successfully!".cyan());
-            info!("{}", SEPARATOR);
-        }
-        Err(error) => {
-            error!("{}", SEPARATOR);
-            error!("Scenario execution failed: {}", error);
-            error!("{}", SEPARATOR);
-            tx.send_event(Event::ScenarioError(error.to_string()));
-        }
-    });
+    std::thread::spawn(move || scenario.execute(tx));
 
     // Process events as they come in.
     let mut active_progress_bar: Option<ProgressBar> = None;

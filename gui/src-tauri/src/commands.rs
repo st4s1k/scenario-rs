@@ -1,4 +1,5 @@
 use crate::app::{RequiredVariableDTO, ScenarioAppState};
+use std::sync::atomic::Ordering;
 use std::sync::{MutexGuard, PoisonError};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -58,7 +59,8 @@ pub fn update_required_variables(
 #[tauri::command(async)]
 pub fn execute_scenario(state: State<'_, Mutex<ScenarioAppState>>) {
     let mut state = safe_get_state(state.lock());
-    if state.is_executing {
+    if state.is_executing.load(Ordering::SeqCst) {
+        eprintln!("Execution already in progress. Ignoring request.");
         return;
     }
     state.execute_scenario();

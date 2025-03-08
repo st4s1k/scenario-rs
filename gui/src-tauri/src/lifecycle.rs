@@ -15,12 +15,24 @@ pub struct LifecycleHandler {
 }
 
 impl LifecycleHandler {
-    pub fn try_initialize(window: AppHandle) -> (Sender<Event>, Receiver<Event>) {
+    pub fn try_initialize(window: AppHandle) -> Sender<Event> {
         LIFECYCLE_HANDLER.get_or_init(|| LifecycleHandler::new(window));
 
-        let (tx, rx) = mpsc::channel();
+        let (tx, rx) = mpsc::channel::<Event>();
 
-        (tx, rx)
+        tauri::async_runtime::spawn(async move {
+            for event in rx {
+                if let Some(logger) = LIFECYCLE_HANDLER.get() {
+                    logger.handle_event(&event);
+                }
+
+                if let Event::ScenarioCompleted | Event::ScenarioError(_) = event {
+                    break;
+                }
+            }
+        });
+
+        tx
     }
 
     pub fn new(window: AppHandle) -> Self {
@@ -31,6 +43,7 @@ impl LifecycleHandler {
         match event {
             Event::ScenarioStarted => {
                 self.log_message("Scenario started...\n".to_string());
+                let _ = self.app_handle.emit("execution-status", true);
             }
             Event::StepStarted {
                 index,
@@ -88,12 +101,14 @@ impl LifecycleHandler {
             Event::ScenarioCompleted => {
                 self.log_message(format!(
                     "{SEPARATOR}\nScenario completed successfully!\n{SEPARATOR}\n"
-                ));
+                 ));
+                let _ = self.app_handle.emit("execution-status", false);
             }
             Event::ScenarioError(error) => {
                 self.log_message(format!(
                     "{SEPARATOR}\nScenario execution failed: {error}\n{SEPARATOR}\n"
                 ));
+                let _ = self.app_handle.emit("execution-status", false);
             }
             Event::StepCompleted => {
                 self.log_message("Step completed\n".to_string());
@@ -118,11 +133,5 @@ impl LifecycleHandler {
         let mut state = state.lock().unwrap();
         state.output_log.push_str(&message);
         let _ = self.app_handle.emit("log-update", ());
-    }
-}
-
-pub fn process_event(event: Event) {
-    if let Some(logger) = LIFECYCLE_HANDLER.get() {
-        logger.handle_event(&event);
     }
 }

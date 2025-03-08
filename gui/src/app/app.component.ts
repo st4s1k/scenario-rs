@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, signal, OnDestroy } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from "@angular/forms";
-import { listen } from "@tauri-apps/api/event";
+import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { NoRightClickDirective } from './no-right-click.directive';
 import { TitlebarComponent } from "./titlebar/titlebar.component";
@@ -55,6 +55,8 @@ export class AppComponent implements OnDestroy {
       });
   });
 
+  unlistenExecutionStatus?: UnlistenFn;
+
   ngOnInit(): void {
     invoke<string>('get_log')
       .then((log) => this.executionLog.setValue(log));
@@ -65,10 +67,14 @@ export class AppComponent implements OnDestroy {
       ]));
 
     this.setupFormValueChangeListener();
+    this.setupExecutionStatusListener();
   }
 
   ngOnDestroy(): void {
     this.cleanupSubscriptions();
+    if (this.unlistenExecutionStatus) {
+      this.unlistenExecutionStatus();
+    }
   }
 
   private setupFormValueChangeListener(): void {
@@ -177,9 +183,13 @@ export class AppComponent implements OnDestroy {
     return invoke('update_required_variables', { requiredVariables })
   }
 
+  private async setupExecutionStatusListener(): Promise<void> {
+    this.unlistenExecutionStatus = await listen<boolean>('execution-status', (event) => {
+      this.isExecuting.set(event.payload);
+    });
+  }
+
   executeScenario(): void {
-    this.isExecuting.set(true);
-    invoke('execute_scenario')
-      .then(() => this.isExecuting.set(false));
+    invoke('execute_scenario');
   }
 }

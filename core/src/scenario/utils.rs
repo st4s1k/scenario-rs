@@ -19,7 +19,7 @@ where
 impl HasPlaceholders for String {}
 impl HasPlaceholders for &str {}
 
-pub trait SendEvent<T> {
+pub (crate) trait SendEvent<T> {
     fn send_event(&self, event: T);
 }
 
