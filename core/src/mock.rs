@@ -91,12 +91,12 @@ pub mod debug {
 
     impl SessionTrait for MockSession {
         fn channel_session(&self) -> Result<Box<dyn ChannelTrait>, ssh2::Error> {
-            println!("[DEBUG] Creating mock channel session");
+            std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(Box::new(MockChannel))
         }
 
         fn sftp(&self) -> Result<Box<dyn SftpTrait>, ssh2::Error> {
-            println!("[DEBUG] Creating mock SFTP session");
+            std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(Box::new(MockSftp))
         }
     }
@@ -107,19 +107,19 @@ pub mod debug {
     impl ChannelTrait for MockChannel {
         // Update the mock implementation to match the new trait signature
         fn exec(&mut self, command: &str) -> Result<(), ssh2::Error> {
-            println!("[DEBUG] Would execute command: {}", command);
+            std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(())
         }
 
         fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error> {
-            let mock_output = "[DEBUG] Mock command output\nLine 1\nLine 2\nLine 3\n";
+            let mock_output = "Mock command output\nLine 1\nLine 2\nLine 3\n";
             output.push_str(mock_output);
-            println!("[DEBUG] Generated mock output");
+            std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(mock_output.len())
         }
 
         fn exit_status(&self) -> Result<i32, ssh2::Error> {
-            println!("[DEBUG] Mock command exit status: 0");
+            std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(0)
         }
     }
@@ -129,7 +129,7 @@ pub mod debug {
 
     impl SftpTrait for MockSftp {
         fn create(&self, path: &Path) -> Result<Box<dyn WriteTrait>, ssh2::Error> {
-            println!("[DEBUG] Creating mock file at: {:?}", path);
+            std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(Box::new(MockFile))
         }
     }
@@ -139,14 +139,14 @@ pub mod debug {
 
     impl WriteTrait for MockFile {
         fn write_all(&mut self, buf: &[u8]) -> Result<(), ssh2::Error> {
-            println!("[DEBUG] Writing {} bytes to mock file", buf.len());
+            std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(())
         }
     }
 
     /// Create a new mock session for debugging
     pub fn new_mock_session() -> Box<dyn SessionTrait> {
-        println!("[DEBUG] Creating new mock session");
+        std::thread::sleep(std::time::Duration::from_millis(100));
         Box::new(MockSession)
     }
 }
