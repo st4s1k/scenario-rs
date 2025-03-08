@@ -48,13 +48,7 @@ export class AppComponent implements OnDestroy {
   private formValueChangesSubscription?: Subscription;
   definedVariables: DefinedVariables = {};
 
-  unlisten = listen('log-update', () => {
-    invoke<string>('get_log')
-      .then((log) => {
-        this.executionLog.setValue(log);
-      });
-  });
-
+  unlistenLogUpdates?: UnlistenFn;
   unlistenExecutionStatus?: UnlistenFn;
 
   ngOnInit(): void {
@@ -67,11 +61,15 @@ export class AppComponent implements OnDestroy {
       ]));
 
     this.setupFormValueChangeListener();
+    this.setupLogUpdatesListener();
     this.setupExecutionStatusListener();
   }
 
   ngOnDestroy(): void {
     this.cleanupSubscriptions();
+    if (this.unlistenLogUpdates) {
+      this.unlistenLogUpdates();
+    }
     if (this.unlistenExecutionStatus) {
       this.unlistenExecutionStatus();
     }
@@ -181,6 +179,15 @@ export class AppComponent implements OnDestroy {
       requiredVariables[name] = this.requiredFields[name].value;
     }
     return invoke('update_required_variables', { requiredVariables })
+  }
+
+  private async setupLogUpdatesListener(): Promise<void> {
+    this.unlistenLogUpdates = await listen('log-update', () => {
+      invoke<string>('get_log')
+        .then((log) => {
+          this.executionLog.setValue(log);
+        });
+    });
   }
 
   private async setupExecutionStatusListener(): Promise<void> {
