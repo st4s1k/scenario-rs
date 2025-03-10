@@ -33,9 +33,6 @@ steps = [
     ] }
 ]
 
-# Variables section
-[variables]
-
 # will be prompted for input
 [variables.required]
 "path:local_jar_path" = "Local JAR Path"
