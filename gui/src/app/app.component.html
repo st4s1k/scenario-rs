@@ -1,8 +1,8 @@
 <div class="row" appNoRightClick>
   <app-titlebar></app-titlebar>
 </div>
-<div class="row grow" appNoRightClick>
-  <div class="col grow container unselectable gap-15" #container>
+<div class="container unselectable row grow" #container appNoRightClick>
+  <div class="col grow gap-15" >
 
     <div class="row">
       <h1 class="title">scenario-rs</h1>
@@ -18,49 +18,45 @@
     <label class="row title">Required fields:
       <input type="checkbox" />
     </label>
-    <div class="expandable">
-      <form class="fields-form row gap-10" [formGroup]="requiredFieldsFormGroup">
-        <div class="col gap-10">
-          @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
-          <div class="row gap-10">
-            <label class="title">{{requiredField.value.label}}</label>
-          </div>
+    <form class="row expandable fields-form gap-10" [formGroup]="requiredFieldsFormGroup">
+      <div class="col gap-10">
+        @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
+        <div class="row gap-10">
+          <label class="title">{{requiredField.value.label}}</label>
+        </div>
+        }
+      </div>
+      <div class="col grow gap-10">
+        @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
+        <div class="row justify-content-center gap-10">
+          <input class="text-field grow" type="text" [formControlName]="requiredField.key" />
+          @if (requiredField.value.type === 'path') {
+          <button (click)="selectRequiredFile(requiredField.key)">Select</button>
           }
         </div>
-        <div class="col grow gap-10">
-          @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
-          <div class="row justify-content-center gap-10">
-            <input class="text-field grow" type="text" [formControlName]="requiredField.key" />
-            @if (requiredField.value.type === 'path') {
-            <button (click)="selectRequiredFile(requiredField.key)">Select</button>
-            }
-          </div>
-          }
-        </div>
-      </form>
-    </div>
+        }
+      </div>
+    </form>
     }
 
     @if (Object.keys(definedVariables).length > 0) {
     <label class="row title">Defined variables:
-      <input type="checkbox" />
+      <input type="checkbox" checked/>
     </label>
-    <div class="expandable">
-      <div class="fields-form row gap-10">
-        <div class="col gap-10">
-          @for (variable of Object.entries(definedVariables); track variable[0]) {
-          <div class="row gap-10">
-            <label class="title">{{variable[0]}}</label>
-          </div>
-          }
+    <div class="row expandable fields-form gap-10">
+      <div class="col gap-10">
+        @for (variable of Object.entries(definedVariables); track variable[0]) {
+        <div class="row gap-10">
+          <label class="title">{{variable[0]}}</label>
         </div>
-        <div class="col grow gap-10">
-          @for (variable of Object.entries(definedVariables); track variable[0]) {
-          <div class="row justify-content-center gap-10">
-            <input class="text-field grow" type="text" [value]="variable[1]" readonly />
-          </div>
-          }
+        }
+      </div>
+      <div class="col grow gap-10">
+        @for (variable of Object.entries(definedVariables); track variable[0]) {
+        <div class="row justify-content-center gap-10">
+          <input class="text-field grow" type="text" [value]="variable[1]" readonly />
         </div>
+        }
       </div>
     </div>
     }
@@ -80,20 +76,18 @@
     <label class="row title">Execution log:
       <input type="checkbox" />
     </label>
-    <div class="row grow gap-5 expandable">
+    <div class="row grow expandable gap-5">
       <div class="col justify-content-space-between">
-        <div class="col">
-          <button id="copy-log-button" class="log-button" ngxClipboard *ngxClipboardIfSupported
-            cbContent="{{executionLog.value || undefined}}" [container]="container">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-              <g fill="currentColor">
-                <path d="M11 0H0v11h3V9H2V2h7v1h2z" />
-                <path d="M16 5H5v11h11zm-9 9V7h7v7z" />
-              </g>
-            </svg>
-            <span class="tooltip-arrow-left">Copy log</span>
-          </button>
-        </div>
+        <button id="copy-log-button" class="log-button" ngxClipboard *ngxClipboardIfSupported
+          cbContent="{{executionLog.value || undefined}}" [container]="container">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+            <g fill="currentColor">
+              <path d="M11 0H0v11h3V9H2V2h7v1h2z" />
+              <path d="M16 5H5v11h11zm-9 9V7h7v7z" />
+            </g>
+          </svg>
+          <span class="tooltip-arrow-left">Copy log</span>
+        </button>
         <button id="clear-log-button" class="log-button" (click)="clearLog()">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="20 15 40 52">
             <path fill="currentColor" d="M52 33v29H28V33H52 M57 28H23v39h34V28L57 28z" />
@@ -106,5 +100,6 @@
         <textarea readonly class="col grow" [formControl]="executionLog"></textarea>
       </div>
     </div>
+    <div class="padding-row-5"></div>
   </div>
 </div>

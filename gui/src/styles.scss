@@ -12,6 +12,10 @@ $secondary-color-lighter-60: color-mix(in srgb, $secondary-color 40%, white);
 $secondary-color-lighter-70: color-mix(in srgb, $secondary-color 30%, white);
 $text-color: $secondary-color-lighter-70;
 $button-text-color: $secondary-color;
+$gap-5: 5px;
+$gap-10: 10px;
+$gap-15: 15px;
+$gap-20: 20px;
 
 html {
     margin: 0;
@@ -22,6 +26,7 @@ html {
         margin: 0;
         padding: 0;
         height: 100%;
+        overflow: hidden;
 
         font-family: monospace;
         font-size: $default-font-size;
@@ -49,13 +54,6 @@ h1 {
     color: $text-color;
     font-size: $default-font-size;
     background-color: $secondary-color-lighter-5;
-    border-color: $primary-color;
-    border-width: 1px;
-
-    &:focus {
-        outline-color: $primary-color-lighter-40;
-        outline-style: solid;
-    }
 
     &::selection {
         background-color: $primary-color-lighter-40;
@@ -73,16 +71,16 @@ label {
 .text-field {
     @extend .text-area;
     height: 26px;
-    border-top: none;
-    border-left: none;
-    border-right: none;
+    border: none;
     border-bottom: 1px solid $primary-color;
     background-color: transparent;
 
     &:focus {
+        outline-offset: 5px;
+        outline-color: $primary-color-lighter-40;
+        outline-style: solid;
         border: none;
         border-bottom: 1px solid $primary-color;
-        outline-offset: 5px;
     }
 }
 
@@ -91,6 +89,10 @@ textarea {
 
     padding: 10px;
     resize: none;
+
+    &:focus {
+        outline: none;
+    }
 }
 
 button {
@@ -150,16 +152,20 @@ button {
     justify-content: space-between;
 }
 
-.gap-15 {
-    gap: 15px;
+.gap-5 {
+    gap: $gap-5;
 }
 
 .gap-10 {
-    gap: 10px;
+    gap: $gap-10;
 }
 
-.gap-5 {
-    gap: 5px;
+.gap-15 {
+    gap: $gap-15;
+}
+
+.gap-20 {
+    gap: $gap-20;
 }
 
 .tooltip {

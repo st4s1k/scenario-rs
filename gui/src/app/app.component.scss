@@ -1,13 +1,20 @@
 @use '../styles.scss';
 
 :host {
-    display: flex;
-    flex-direction: column;
     height: 100%;
 }
 
 .container {
-    padding: 20px;
+    padding: 0 styles.$gap-20;
+    height: calc(100% - #{styles.$titlebar-height});
+    overflow: auto;
+    box-sizing: border-box;
+}
+
+.padding-row-5{
+    min-height: styles.$gap-5;
+    max-height: styles.$gap-5;
+    width: 100%;
 }
 
 .title {
@@ -37,7 +44,14 @@
     }
 }
 
+.expandable {
+    border: 1px solid styles.$primary-color;
+    background-color: styles.$secondary-color-lighter-2;
+    padding: styles.$gap-10;
+}
+
 .title:has(input[type="checkbox"]:checked)+.expandable {
+    min-height: 0;
     max-height: 0;
     opacity: 0;
     overflow: hidden;
@@ -45,8 +59,10 @@
 }
 
 .title:has(input[type="checkbox"])+.expandable {
+    min-height: calc(3 * #{styles.$field-height} + 2 * #{styles.$gap-10});
     max-height: 100%;
     opacity: 1;
+    overflow: auto;
     transition: all 0.5s ease-in-out;
 }
 
@@ -55,7 +71,7 @@ button.log-button {
     height: 22px;
     padding: 0px;
     color: styles.$primary-color;
-    background-color: styles.$secondary-color;
+    background-color: transparent;
     outline-style: none;
     border: 1px solid transparent;
 
@@ -88,15 +104,8 @@ button.log-button {
     }
 }
 
-.fields-form {
-    align-items: center;
-    border: 1px solid styles.$primary-color;
-    padding: 10px;
-    background-color: styles.$secondary-color-lighter-2;
-
-    .row {
-        height: styles.$field-height;
-    }
+.fields-form .row {
+    min-height: styles.$field-height;
 }
 
 .loader {
