@@ -5,65 +5,55 @@
 }
 
 .container {
-    padding: 0 styles.$gap-20;
     height: calc(100% - #{styles.$titlebar-height});
-    overflow: auto;
     box-sizing: border-box;
 }
 
-.padding-row-5{
+.main-content {
+    padding: 0 styles.$gap-20;
+    overflow: auto;
+}
+
+.padding-row-5 {
     min-height: styles.$gap-5;
     max-height: styles.$gap-5;
     width: 100%;
-}
-
-.title {
-    color: styles.$primary-color;
-    font-weight: bold;
-
-    input[type="checkbox"] {
-        display: none;
-    }
-
-    &:has(input[type="checkbox"]) {
-
-        &:focus,
-        &:hover {
-            color: styles.$primary-color-lighter-40;
-        }
-
-        &:before {
-            content: '[-]\00a0';
-        }
-    }
-
-    &:has(input[type="checkbox"]:checked) {
-        &:before {
-            content: '[+]\00a0';
-        }
-    }
 }
 
 .expandable {
     border: 1px solid styles.$primary-color;
     background-color: styles.$secondary-color-lighter-2;
     padding: styles.$gap-10;
+    transition: opacity 0.1s ease-in-out;
 }
 
-.title:has(input[type="checkbox"]:checked)+.expandable {
-    min-height: 0;
-    max-height: 0;
-    opacity: 0;
+.expandable-container {
+    min-height: styles.$title-size;
     overflow: hidden;
-    transition: all 0.5s cubic-bezier(0, 1, 0, 1);
-}
 
-.title:has(input[type="checkbox"])+.expandable {
-    min-height: calc(3 * #{styles.$field-height} + 2 * #{styles.$gap-10});
-    max-height: 100%;
-    opacity: 1;
-    overflow: auto;
-    transition: all 0.5s ease-in-out;
+    &>.title {
+        height: styles.$title-size;
+    }
+
+    &:has(.title input[type="checkbox"]:checked) {
+        max-height: styles.$title-size;
+        transition: all 0.3s cubic-bezier(0, 1, 0, 1);
+    }
+
+    &:has(.title :not(input[type="checkbox"]:checked)) {
+        max-height: 100%;
+        transition: all 0.5s ease-in-out;
+    }
+
+    .title:has(input[type="checkbox"]:checked)+.expandable {
+        overflow: hidden;
+        opacity: 0;
+    }
+
+    .title:has(:not(input[type="checkbox"]:checked))+.expandable {
+        overflow: auto;
+        opacity: 1;
+    }
 }
 
 button.log-button {

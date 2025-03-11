@@ -1,0 +1,30 @@
+<div class="sidebar" [style.width.px]="sidebarWidth" [class.resizing]="isResizing" [class.collapsed]="isCollapsed" appNoRightClick>
+  <div class="resize-handle" (mousedown)="startResize($event)"></div>
+  
+  <div class="sidebar-inner">
+    <div class="content-area">
+      @switch (activeTab) {
+        @case ('variables') {
+          <div class="tab-content">
+            <div class="col grow gap-10">
+              @for (variable of Object.entries(definedVariables); track variable[0]) {
+                <div class="col gap-5">
+                  <label class="title">{{variable[0]}}</label>
+                  <input class="text-field grow" type="text" [value]="variable[1]" readonly />
+                </div>
+              }
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+    <div class="tabs">
+      @for (tab of tabsConfig; track tab.id) {
+        <div class="tab" [class.active]="isTabActive(tab.id)" (click)="toggleTab(tab.id)">
+          <span class="title">{{tab.title}}</span>
+        </div>
+      }
+    </div>
+  </div>
+</div>

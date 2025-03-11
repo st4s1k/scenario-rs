@@ -1,0 +1,120 @@
+@use '../../styles.scss';
+
+:host {
+  height: 100%;
+  position: sticky;
+  top: 0;
+}
+
+.sidebar {
+  position: relative;
+  height: calc(100vh - #{styles.$titlebar-height});
+  min-width: styles.$title-size;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease;
+  background-color: styles.$secondary-color-lighter-2;
+
+  &.resizing {
+    transition: none;
+    user-select: none;
+  }
+
+  &.collapsed {
+    width: styles.$title-size;
+    min-width: styles.$title-size;
+
+    .resize-handle {
+      display: none;
+    }
+  }
+
+  .resize-handle {
+    position: absolute;
+    top: 0;
+    transform: translateX(-100%);
+    bottom: 0;
+    width: 4px;
+    cursor: ew-resize;
+    z-index: 10;
+    transition: background-color 0.2s ease;
+    border-right: 1px solid styles.$secondary-color-lighter-20;
+
+    &:hover {
+      background-color: styles.$secondary-color-lighter-20;
+    }
+  }
+}
+
+.sidebar-inner {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+  width: styles.$title-size;
+  min-width: styles.$title-size;
+  flex-shrink: 0;
+  background-color: styles.$secondary-color-lighter-5;
+  border-left: 1px solid styles.$secondary-color-lighter-20;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  writing-mode: vertical-lr;
+  width: styles.$title-size;
+  min-height: calc(styles.$title-size * 2);
+  padding: styles.$gap-10 0;
+  cursor: pointer;
+  border-bottom: 1px solid styles.$secondary-color-lighter-20;
+
+  .title {
+    width: 100%;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &.active {
+    background-color: styles.$secondary-color-lighter-10;
+  }
+}
+
+.content-area {
+  flex: 1;
+  display: flex;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s ease;
+  min-width: 0;
+
+  .sidebar.collapsed & {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0s 0.3s;
+  }
+}
+
+.tab-content {
+  display: flex;
+  padding: styles.$gap-10;
+  width: 100%;
+  top: 0;
+  bottom: 0;
+  overflow: auto;
+
+  select {
+    height: styles.$field-height;
+  }
+
+  p {
+    margin: styles.$gap-5 0;
+  }
+}

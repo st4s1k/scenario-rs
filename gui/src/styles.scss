@@ -1,3 +1,4 @@
+// Global variables
 $titlebar-height: 30px;
 $field-height: 30px;
 $primary-color: rgb(218, 165, 32); // goldenrod
@@ -7,16 +8,19 @@ $secondary-color: rgb(30, 30, 30);
 $secondary-color-lighter-2: color-mix(in srgb, $secondary-color 98%, white);
 $secondary-color-lighter-5: color-mix(in srgb, $secondary-color 95%, white);
 $secondary-color-lighter-10: color-mix(in srgb, $secondary-color 90%, white);
+$secondary-color-lighter-20: color-mix(in srgb, $secondary-color 80%, white);
 $secondary-color-lighter-40: color-mix(in srgb, $secondary-color 60%, white);
 $secondary-color-lighter-60: color-mix(in srgb, $secondary-color 40%, white);
 $secondary-color-lighter-70: color-mix(in srgb, $secondary-color 30%, white);
 $text-color: $secondary-color-lighter-70;
 $button-text-color: $secondary-color;
+$title-size: 30px;
 $gap-5: 5px;
 $gap-10: 10px;
 $gap-15: 15px;
 $gap-20: 20px;
 
+// Base styles
 html {
     margin: 0;
     padding: 0;
@@ -35,6 +39,17 @@ html {
     }
 }
 
+// Global styles for specific states
+body.resizing-sidebar {
+  cursor: ew-resize !important;
+  user-select: none;
+  
+  * {
+    cursor: ew-resize !important;
+  }
+}
+
+// Utility classes
 .unselectable {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
@@ -126,6 +141,7 @@ button {
     }
 }
 
+// Layout utilities
 .row {
     display: flex;
     flex-direction: row;
@@ -168,6 +184,7 @@ button {
     gap: $gap-20;
 }
 
+// Tooltip styles
 .tooltip {
     opacity: 0;
     visibility: hidden;
@@ -246,6 +263,34 @@ button {
                 opacity: 0;
                 transition: none;
             }
+        }
+    }
+}
+
+// Common title styles
+.title {
+    color: $primary-color;
+    font-weight: bold;
+    
+    // Styles for collapsible titles
+    input[type="checkbox"] {
+        display: none;
+    }
+
+    &:has(input[type="checkbox"]) {
+        &:focus,
+        &:hover {
+            color: $primary-color-lighter-40;
+        }
+
+        &:before {
+            content: '[-]\00a0';
+        }
+    }
+
+    &:has(input[type="checkbox"]:checked) {
+        &:before {
+            content: '[+]\00a0';
         }
     }
 }

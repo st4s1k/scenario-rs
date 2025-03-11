@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal, OnDestroy } from '@angular/core';
+import { Component, signal, OnDestroy, HostListener } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from "@angular/forms";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
@@ -8,6 +8,7 @@ import { TitlebarComponent } from "./titlebar/titlebar.component";
 import { ClipboardModule } from 'ngx-clipboard';
 import * as dialog from "@tauri-apps/plugin-dialog"
 import { Subscription } from 'rxjs';
+import { SidebarComponent } from './sidebar/sidebar.component';
 
 interface RequiredFieldsForm {
   [key: string]: FormControl<string | null>;
@@ -31,7 +32,8 @@ interface DefinedVariables {
     ReactiveFormsModule,
     ClipboardModule,
     TitlebarComponent,
-    NoRightClickDirective
+    NoRightClickDirective,
+    SidebarComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -39,7 +41,7 @@ interface DefinedVariables {
 export class AppComponent implements OnDestroy {
 
   Object = Object;
-
+  
   executionLog = new FormControl<string>('');
   scenarioConfigPath = new FormControl<string>('');
   requiredFields: { [key: string]: RequiredField } = {};
