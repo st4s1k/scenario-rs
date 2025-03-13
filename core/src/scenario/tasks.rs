@@ -1,13 +1,10 @@
-use crate::{
-    config::TasksConfig,
-    scenario::task::Task,
-};
+use crate::{config::TasksConfig, scenario::task::Task};
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
 };
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Tasks(pub HashMap<String, Task>);
 
 impl Deref for Tasks {

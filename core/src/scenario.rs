@@ -34,6 +34,7 @@ pub struct Scenario {
     pub(crate) credentials: Credentials,
     pub(crate) execute: Execute,
     pub(crate) variables: Variables,
+    pub(crate) tasks: Tasks,
 }
 
 impl Scenario {
@@ -43,6 +44,10 @@ impl Scenario {
 
     pub fn variables_mut(&mut self) -> &mut Variables {
         &mut self.variables
+    }
+
+    pub fn tasks(&self) -> &Tasks {
+        &self.tasks
     }
 }
 
@@ -66,6 +71,7 @@ impl TryFrom<ScenarioConfig> for Scenario {
             credentials,
             execute,
             variables,
+            tasks,
         };
         Ok(scenario)
     }
