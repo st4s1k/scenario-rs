@@ -5,7 +5,6 @@ const appWindow = getCurrentWebviewWindow()
 
 @Component({
   selector: 'app-titlebar',
-  standalone: true,
   imports: [],
   templateUrl: './titlebar.component.html',
   styleUrl: './titlebar.component.scss'

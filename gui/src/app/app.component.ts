@@ -26,7 +26,6 @@ interface DefinedVariables {
 
 @Component({
   selector: 'app-root',
-  standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,

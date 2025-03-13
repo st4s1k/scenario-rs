@@ -8,7 +8,6 @@ interface TabConfig {
 
 @Component({
   selector: 'app-sidebar',
-  standalone: true,
   imports: [CommonModule],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss'
