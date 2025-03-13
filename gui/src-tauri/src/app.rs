@@ -1,5 +1,5 @@
 use crate::{lifecycle::LifecycleHandler, shared::SEPARATOR};
-use scenario_rs::scenario::{variables::required::RequiredVariable, Scenario};
+use scenario_rs::scenario::{task::Task, variables::required::RequiredVariable, Scenario};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -73,6 +73,47 @@ impl From<&RequiredVariable> for RequiredVariableDTO {
         Self {
             label: required_variable.label().to_string(),
             value: required_variable.value().to_string(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TaskDTO {
+    description: String,
+    error_message: String,
+    task_type: String,
+    command: Option<String>,
+    source_path: Option<String>,
+    destination_path: Option<String>,
+}
+
+impl From<&Task> for TaskDTO {
+    fn from(task: &Task) -> Self {
+        match task {
+            Task::RemoteSudo {
+                description,
+                error_message,
+                remote_sudo,
+            } => Self {
+                description: description.to_string(),
+                error_message: error_message.to_string(),
+                task_type: "RemoteSudo".to_string(),
+                command: Some(remote_sudo.command().to_string()),
+                source_path: None,
+                destination_path: None,
+            },
+            Task::SftpCopy {
+                description,
+                error_message,
+                sftp_copy,
+            } => Self {
+                description: description.to_string(),
+                error_message: error_message.to_string(),
+                task_type: "SftpCopy".to_string(),
+                command: None,
+                source_path: Some(sftp_copy.source_path().to_string()),
+                destination_path: Some(sftp_copy.destination_path().to_string()),
+            },
         }
     }
 }
@@ -218,6 +259,18 @@ impl ScenarioAppState {
                         RequiredVariableDTO::from(required_variable),
                     )
                 })
+                .collect()
+        } else {
+            BTreeMap::new()
+        }
+    }
+
+    pub fn get_tasks(&self) -> BTreeMap<String, TaskDTO> {
+        if let Some(scenario) = self.scenario.as_ref() {
+            scenario
+                .tasks()
+                .iter()
+                .map(|(id, task)| (id.clone(), TaskDTO::from(task)))
                 .collect()
         } else {
             BTreeMap::new()

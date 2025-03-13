@@ -1,4 +1,4 @@
-use crate::app::{RequiredVariableDTO, ScenarioAppState};
+use crate::app::{RequiredVariableDTO, ScenarioAppState, TaskDTO};
 use std::sync::atomic::Ordering;
 use std::sync::{MutexGuard, PoisonError};
 use std::{
@@ -79,6 +79,12 @@ pub fn clear_state(state: State<'_, Mutex<ScenarioAppState>>) -> Result<(), Stri
     let mut state = safe_get_state(state.lock());
     state.clear_state();
     Ok(())
+}
+
+#[tauri::command(async)]
+pub fn get_tasks(state: State<'_, Mutex<ScenarioAppState>>) -> BTreeMap<String, TaskDTO> {
+    let state = safe_get_state(state.lock());
+    state.get_tasks()
 }
 
 fn safe_get_state<'a, T>(

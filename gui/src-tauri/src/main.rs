@@ -4,7 +4,7 @@
 use crate::app::ScenarioAppState;
 use commands::{
     clear_log, clear_state, execute_scenario, get_config_path, get_defined_variables, get_log,
-    get_required_variables, load_config, save_state, update_required_variables,
+    get_required_variables, get_tasks, load_config, save_state, update_required_variables,
 };
 use std::sync::Mutex;
 use tauri::Manager;
@@ -35,7 +35,8 @@ fn main() {
             update_required_variables,
             get_defined_variables,
             execute_scenario,
-            clear_state
+            clear_state,
+            get_tasks
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
