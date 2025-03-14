@@ -1,93 +1,79 @@
-<div class="row" appNoRightClick>
+<header appNoRightClick>
   <app-titlebar></app-titlebar>
-</div>
-<div class="container row grow unselectable" #container appNoRightClick>
-  <!-- Main content -->
-  <div class="main-content col grow gap-15">
-    <div class="row">
-      <h1 class="title">scenario-rs</h1>
-    </div>
+</header>
 
-    <div class="row justify-content-center gap-10">
-      <label class="title">Config file:</label>
-      <input class="text-field grow" type="text" [formControl]="scenarioConfigPath">
-      <button (click)="selectConfigFile()">Select</button>
-    </div>
+<div class="app-container unselectable" #container>
+  <div class="main-container">
+    <div class="main-content">
+      <label><h1>scenario-rs</h1></label>
 
-    @if ((requiredFields | keyvalue).length > 0) {
-    <div class="expandable-container">
-      <div class="col grow gap-15">
-        <label class="title row">Required fields:
+      <div class="config-section">
+        <label>Config file:</label>
+        <input class="text-field" type="text" [formControl]="scenarioConfigPath">
+        <button (click)="selectConfigFile()">Select</button>
+      </div>
+
+      @if ((requiredFields | keyvalue).length > 0) {
+      <div class="expandable-container">
+        <label class="expandable-title">Required fields:
           <input type="checkbox" />
         </label>
-        <form class="expandable fields-form row gap-10" [formGroup]="requiredFieldsFormGroup">
-          <div class="col gap-10">
+        <div class="expandable">
+          <form class="expandable-content required-fields" [formGroup]="requiredFieldsFormGroup">
             @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
-            <div class="row gap-10">
-              <label class="title">{{requiredField.value.label}}</label>
-            </div>
-            }
-          </div>
-          <div class="col grow gap-10">
-            @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
-            <div class="row justify-content-center gap-10">
-              <input class="text-field grow" type="text" [formControlName]="requiredField.key" />
+            <label>{{requiredField.value.label}}</label>
+            <div class="field-container">
+              <input class="text-field" type="text" [formControlName]="requiredField.key" />
               @if (requiredField.value.type === 'path') {
               <button (click)="selectRequiredFile(requiredField.key)">Select</button>
               }
             </div>
             }
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
-    </div>
-    }
+      }
 
-    <div class="row gap-10">
-      <div class="col grow"></div>
-      <div class="col">
+      <div class="execute-section">
         <button (click)="executeScenario()">Execute Scenario</button>
-      </div>
-      <div class="col grow justify-content-center">
         @if (isExecuting()) {
         <span class="loader"></span>
         }
       </div>
-    </div>
 
-    <!-- Execution log  -->
-    <div class="expandable-container row grow">
-      <div class="col grow gap-15">
-        <label class="title row">Execution log:
+      <div class="log-section expandable-container">
+        <label class="expandable-title">Execution log:
           <input type="checkbox" />
         </label>
-        <div class="expandable row grow gap-5">
-          <div class="col justify-content-space-between">
-            <button id="copy-log-button" class="log-button" ngxClipboard *ngxClipboardIfSupported
-              cbContent="{{executionLog.value || undefined}}" [container]="container">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-                <g fill="currentColor">
-                  <path d="M11 0H0v11h3V9H2V2h7v1h2z" />
-                  <path d="M16 5H5v11h11zm-9 9V7h7v7z" />
-                </g>
-              </svg>
-              <span class="tooltip-arrow-left">Copy log</span>
-            </button>
-            <button id="clear-log-button" class="log-button" (click)="clearLog()">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="20 15 40 52">
-                <path fill="currentColor" d="M52 33v29H28V33H52 M57 28H23v39h34V28L57 28z" />
-                <path fill="currentColor" d="M45 20v-3H35v3H20v5h40v-5H45z" />
-              </svg>
-              <span class="tooltip-arrow-left">Clear log</span>
-            </button>
-          </div>
-          <div class="col grow">
-            <textarea readonly class="col grow" [formControl]="executionLog"></textarea>
+        <div class="expandable">
+          <div class="expandable-content">
+            <div class="log-controls">
+              <button class="log-button" ngxClipboard *ngxClipboardIfSupported
+                cbContent="{{executionLog.value || undefined}}" [container]="container">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                  <g fill="currentColor">
+                    <path d="M11 0H0v11h3V9H2V2h7v1h2z" />
+                    <path d="M16 5H5v11h11zm-9 9V7h7v7z" />
+                  </g>
+                </svg>
+                <span class="tooltip-arrow-left">Copy log</span>
+              </button>
+              <div></div> <!-- Empty div for spacing: auto 1fr auto -->
+              <button class="log-button" (click)="clearLog()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="20 15 40 52">
+                  <path fill="currentColor" d="M52 33v29H28V33H52 M57 28H23v39h34V28L57 28z" />
+                  <path fill="currentColor" d="M45 20v-3H35v3H20v5h40v-5H45z" />
+                </svg>
+                <span class="tooltip-arrow-left">Clear log</span>
+              </button>
+            </div>
+            <div class="log-content">
+              <textarea readonly [formControl]="executionLog"></textarea>
+            </div>
           </div>
         </div>
-        <div class="padding-row-5"></div>
       </div>
     </div>
   </div>
-  <app-sidebar [definedVariables]="definedVariables"></app-sidebar>
+  <app-sidebar [definedVariables]="definedVariables" [tasks]="tasks"></app-sidebar>
 </div>

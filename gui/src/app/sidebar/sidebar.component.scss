@@ -10,8 +10,8 @@
   position: relative;
   height: calc(100vh - #{styles.$titlebar-height});
   min-width: styles.$title-size;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 1fr;
   transition: width 0.3s ease;
   background-color: styles.$secondary-color-lighter-2;
 
@@ -44,77 +44,97 @@
       background-color: styles.$secondary-color-lighter-20;
     }
   }
-}
 
-.sidebar-inner {
-  display: flex;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-}
+  .sidebar-inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    overflow: hidden;
 
-.tabs {
-  display: flex;
-  flex-direction: column;
-  width: styles.$title-size;
-  min-width: styles.$title-size;
-  flex-shrink: 0;
-  background-color: styles.$secondary-color-lighter-5;
-  border-left: 1px solid styles.$secondary-color-lighter-20;
-}
+    .content-area {
+      display: grid;
+      opacity: 1;
+      visibility: visible;
+      min-width: 0;
+      overflow: hidden;
 
-.tab {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  writing-mode: vertical-lr;
-  width: styles.$title-size;
-  min-height: calc(styles.$title-size * 2);
-  padding: styles.$gap-10 0;
-  cursor: pointer;
-  border-bottom: 1px solid styles.$secondary-color-lighter-20;
+      .tab-content {
+        display: grid;
+        padding: styles.$gap-10;
+        overflow: auto;
 
-  .title {
-    width: 100%;
-    text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+        .variables {
+          display: grid;
+          grid-auto-flow: row;
+          grid-auto-rows: min-content;
+          gap: styles.$gap-10;
 
-  &.active {
-    background-color: styles.$secondary-color-lighter-10;
-  }
-}
+          .variable {
+            display: grid;
+            grid-auto-flow: row;
+            gap: styles.$gap-5;
+          }
+        }
 
-.content-area {
-  flex: 1;
-  display: flex;
-  opacity: 1;
-  visibility: visible;
-  transition: opacity 0.2s ease;
-  min-width: 0;
+        .tasks {
+          display: grid;
+          grid-auto-rows: min-content;
 
-  .sidebar.collapsed & {
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s ease, visibility 0s 0.3s;
-  }
-}
+          .task {
+            display: grid;
+            border-bottom: 1px solid styles.$secondary-color-lighter-10;
+            padding-bottom: styles.$gap-5;
 
-.tab-content {
-  display: flex;
-  padding: styles.$gap-10;
-  width: 100%;
-  top: 0;
-  bottom: 0;
-  overflow: auto;
+            .expandable-container {
+            }
+            .expandable-title:hover+.expandable .expandable-content {
+              border-left: 1px solid styles.$primary-color-lighter-40;
+            }
 
-  select {
-    height: styles.$field-height;
-  }
+            .expandable-content {
+              display: grid;
+              border: none;
+              border-left: 1px solid styles.$primary-color;
+              background-color: transparent;
+              padding-left: 10px;
+              gap: styles.$gap-10;
 
-  p {
-    margin: styles.$gap-5 0;
+              .task-item {
+                display: grid;
+                gap: styles.$gap-5;
+              }
+            }
+
+            &:last-child {
+              border-bottom: none;
+              padding-bottom: 0;
+            }
+          }
+        }
+      }
+    }
+
+    .tabs {
+      display: grid;
+      grid-auto-rows: min-content;
+      width: styles.$title-size - 1px;
+      min-width: styles.$title-size - 1px;
+      background-color: styles.$secondary-color-lighter-5;
+      border-left: 1px solid styles.$secondary-color-lighter-20;
+
+      .tab {
+        display: grid;
+        writing-mode: vertical-lr;
+        align-items: center; // Center the text vertically
+        justify-items: center; // Center the text horizontally
+        width: styles.$title-size;
+        padding: styles.$gap-10 0;
+        cursor: pointer;
+        border-bottom: 1px solid styles.$secondary-color-lighter-20;
+
+        &.active {
+          background-color: styles.$secondary-color-lighter-10;
+        }
+      }
+    }
   }
 }

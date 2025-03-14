@@ -2,133 +2,183 @@
 
 :host {
     height: 100%;
+    display: grid;
+    grid-template-rows: styles.$titlebar-height 1fr;
 }
 
-.container {
-    height: calc(100% - #{styles.$titlebar-height});
-    box-sizing: border-box;
-}
-
-.main-content {
-    padding: 0 styles.$gap-20;
+.app-container {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    height: 100%;
     overflow: auto;
 }
 
-.padding-row-5 {
-    min-height: styles.$gap-5;
-    max-height: styles.$gap-5;
-    width: 100%;
-}
+.main-container {
+    overflow: auto;
+    height: 100%;
+    display: grid;
+    grid-template-rows: 1fr;
 
-.expandable {
-    border: 1px solid styles.$primary-color;
-    background-color: styles.$secondary-color-lighter-2;
-    padding: styles.$gap-10;
-    transition: opacity 0.1s ease-in-out;
-}
+    .main-content {
+        padding: styles.$gap-20;
+        display: grid;
+        grid-template-rows: auto auto auto auto 1fr;
+        gap: styles.$gap-15;
+        min-width: 600px;
+        min-height: 600px;
 
-.expandable-container {
-    min-height: styles.$title-size;
-    overflow: hidden;
+        .config-section {
+            display: grid;
+            width: 100%;
+            max-width: 800px;
+            justify-self: center;
+            grid-template-columns: auto minmax(100px, 1fr) auto;
+            gap: styles.$gap-10;
+            align-items: center;
 
-    &>.title {
-        height: styles.$title-size;
-    }
+            label {
+                grid-column: 1;
+                text-align: left;
+            }
 
-    &:has(.title input[type="checkbox"]:checked) {
-        max-height: styles.$title-size;
-        transition: all 0.3s cubic-bezier(0, 1, 0, 1);
-    }
+            input {
+                grid-column: 2;
+                width: 100%;
+            }
 
-    &:has(.title :not(input[type="checkbox"]:checked)) {
-        max-height: 100%;
-        transition: all 0.5s ease-in-out;
-    }
-
-    .title:has(input[type="checkbox"]:checked)+.expandable {
-        overflow: hidden;
-        opacity: 0;
-    }
-
-    .title:has(:not(input[type="checkbox"]:checked))+.expandable {
-        overflow: auto;
-        opacity: 1;
-    }
-}
-
-button.log-button {
-    width: 22px;
-    height: 22px;
-    padding: 0px;
-    color: styles.$primary-color;
-    background-color: transparent;
-    outline-style: none;
-    border: 1px solid transparent;
-
-    svg {
-        display: block;
-        width: 16px;
-        margin: auto;
-        aspect-ratio: 1;
-    }
-
-    &:active {
-        background-color: styles.$secondary-color-lighter-5;
-
-        &:focus,
-        &:hover {
-            border: 1px solid styles.$secondary-color-lighter-10;
+            button {
+                grid-column: 3;
+            }
         }
 
-        svg {
-            scale: 0.95;
+        .required-fields {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: styles.$gap-10;
+            align-items: start;
+
+            label {
+                align-self: center;
+                width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .field-container {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                grid-column: 2;
+                gap: styles.$gap-10;
+                align-items: center;
+            }
         }
-    }
 
-    &:hover {
-        color: styles.$primary-color-lighter-40;
-    }
+        .execute-section {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            grid-auto-rows: min-content;
+            gap: styles.$gap-10;
 
-    .tooltip-arrow-left {
-        transform: translate(22px, -20px);
-    }
-}
+            button {
+                grid-column: 2;
+            }
 
-.fields-form .row {
-    min-height: styles.$field-height;
-}
+            .loader {
+                grid-column: 3;
+                width: 24px;
+                height: 24px;
+                display: inline-block;
+                position: relative;
 
-.loader {
-    width: 24px;
-    height: 24px;
-    display: inline-block;
-    position: absolute;
-}
+                &::after,
+                &::before {
+                    content: '';
+                    width: 24px;
+                    height: 24px;
+                    border: 2px solid styles.$primary-color-lighter-40;
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    box-sizing: border-box;
+                    animation: rotation 2s ease-in-out infinite;
+                }
 
-.loader::after,
-.loader::before {
-    content: '';
-    width: 24px;
-    height: 24px;
-    border: 2px solid styles.$primary-color-lighter-40;
-    position: absolute;
-    left: 0;
-    top: 0;
-    box-sizing: border-box;
-    animation: rotation 2s ease-in-out infinite;
-}
+                &::after {
+                    border-color: styles.$primary-color;
+                    animation-delay: 1s;
+                }
 
-.loader::after {
-    border-color: styles.$primary-color;
-    animation-delay: 1s;
-}
+                @keyframes rotation {
+                    0% {
+                        transform: rotate(0deg);
+                    }
 
-@keyframes rotation {
-    0% {
-        transform: rotate(0deg);
-    }
+                    100% {
+                        transform: rotate(360deg);
+                    }
+                }
+            }
+        }
 
-    100% {
-        transform: rotate(360deg);
+        .log-section {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            height: 100%;
+
+            .expandable-content {
+                display: grid;
+                grid-template-columns: auto 1fr;
+                gap: styles.$gap-5;
+
+                .log-controls {
+                    display: grid;
+                    grid-template-rows: auto 1fr auto;
+                    gap: styles.$gap-5;
+
+                    .log-button {
+                        width: 22px;
+                        height: 22px;
+                        padding: 0px;
+                        color: styles.$primary-color;
+                        background-color: transparent;
+                        outline-style: none;
+                        border: 1px solid transparent;
+
+                        svg {
+                            display: block;
+                            width: 16px;
+                            margin: auto;
+                            aspect-ratio: 1;
+                        }
+
+                        &:active {
+                            background-color: styles.$secondary-color-lighter-5;
+
+                            &:focus,
+                            &:hover {
+                                border: 1px solid styles.$secondary-color-lighter-10;
+                            }
+
+                            svg {
+                                scale: 0.95;
+                            }
+                        }
+
+                        &:hover {
+                            color: styles.$primary-color-lighter-40;
+                        }
+
+                        .tooltip-arrow-left {
+                            transform: translate(22px, -20px);
+                        }
+                    }
+                }
+
+                .log-content {
+                    display: grid;
+                }
+            }
+        }
     }
 }

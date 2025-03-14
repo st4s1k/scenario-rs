@@ -40,13 +40,61 @@ html {
 }
 
 // Global styles for specific states
-body.resizing-sidebar {
-  cursor: ew-resize !important;
-  user-select: none;
-  
-  * {
+.resizing-sidebar {
     cursor: ew-resize !important;
-  }
+    user-select: none;
+
+    * {
+        cursor: ew-resize !important;
+    }
+}
+
+// Utility mixins
+@mixin field-focus {
+    outline-offset: 5px;
+    outline-color: $primary-color-lighter-40;
+    outline-style: solid;
+}
+
+@mixin button-hover {
+    background-color: $primary-color-lighter-40;
+    outline-offset: -4px;
+    outline: 3px double $secondary-color;
+}
+
+@mixin button-active {
+    color: $primary-color;
+    background-color: $secondary-color;
+    outline: 1px solid $primary-color;
+    border: 1px solid $primary-color;
+}
+
+@mixin centered-grid {
+    display: grid;
+    align-items: center;
+    justify-items: center;
+}
+
+@mixin expandable-transition {
+    .expandable-title:has(input[type="checkbox"]:checked)+.expandable {
+        max-height: 0;
+        opacity: 0;
+        margin-top: 0;
+        margin-bottom: 0;
+        padding: 0;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0, 1, 0, 1);
+    }
+
+    .expandable-title:has(:not(input[type="checkbox"]:checked))+.expandable {
+        max-height: 2000px;
+        /* Large enough to fit content */
+        opacity: 1;
+        margin-top: 5px;
+        margin-bottom: 5px;
+        overflow: visible;
+        transition: all 0.5s ease;
+    }
 }
 
 // Utility classes
@@ -61,11 +109,12 @@ body.resizing-sidebar {
 
 h1 {
     text-align: center;
-    flex-grow: 1;
+    width: 100%;
     margin: 0;
 }
 
-.text-area {
+// Base form elements styling
+.text {
     color: $text-color;
     font-size: $default-font-size;
     background-color: $secondary-color-lighter-5;
@@ -77,30 +126,29 @@ h1 {
 }
 
 label {
-    font-size: $default-font-size;
-    color: $text-color;
-    display: flex;
-    align-items: center;
+    color: $primary-color;
+    font-weight: bold;
 }
 
 .text-field {
-    @extend .text-area;
+    @extend .text;
+
     height: 26px;
     border: none;
     border-bottom: 1px solid $primary-color;
     background-color: transparent;
+    font-family: inherit;
 
     &:focus {
-        outline-offset: 5px;
-        outline-color: $primary-color-lighter-40;
-        outline-style: solid;
+        @include field-focus;
+
         border: none;
         border-bottom: 1px solid $primary-color;
     }
 }
 
 textarea {
-    @extend .text-area;
+    @extend .text;
 
     padding: 10px;
     resize: none;
@@ -121,53 +169,21 @@ button {
     outline-offset: -3px;
     outline: 2px solid $secondary-color;
 
-    font-size: $default-font-size;
-    font-family: monospace;
+    font-size: inherit;
+    font-family: inherit;
     font-weight: bold;
 
     &:focus,
     &:hover {
-        background-color: $primary-color-lighter-40;
-        outline-offset: -4px;
-        outline: 3px double $secondary-color;
+        @include button-hover;
     }
 
     &:active {
-        color: $primary-color;
-        background-color: $secondary-color;
-        outline-offset: -4px;
-        outline: 1px solid $primary-color;
-        border: 1px solid $primary-color;
+        @include button-active;
     }
 }
 
-// Layout utilities
-.row {
-    display: flex;
-    flex-direction: row;
-}
-
-.col {
-    display: flex;
-    flex-direction: column;
-}
-
-.grow {
-    flex-grow: 1;
-}
-
-.justify-content-center {
-    justify-content: center;
-}
-
-.justify-content-end {
-    justify-content: flex-end;
-}
-
-.justify-content-space-between {
-    justify-content: space-between;
-}
-
+// Spacing utilities (keeping minimal utilities)
 .gap-5 {
     gap: $gap-5;
 }
@@ -206,7 +222,7 @@ button {
         margin-top: -5px;
         border-width: 5px;
         border-style: solid;
-        border-color:  transparent transparent transparent transparent;
+        border-color: transparent transparent transparent transparent;
     }
 }
 
@@ -267,30 +283,53 @@ button {
     }
 }
 
-// Common title styles
-.title {
-    color: $primary-color;
-    font-weight: bold;
-    
-    // Styles for collapsible titles
-    input[type="checkbox"] {
-        display: none;
-    }
+// Base expandable container styles
+.expandable-container {
+    min-height: $title-size;
+    width: 100%;
 
-    &:has(input[type="checkbox"]) {
-        &:focus,
-        &:hover {
-            color: $primary-color-lighter-40;
+    .expandable-title {
+        min-height: $title-size;
+        height: $title-size;
+        cursor: pointer;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+
+        input[type="checkbox"] {
+            display: none;
         }
 
-        &:before {
-            content: '[-]\00a0';
+        &:has(input[type="checkbox"]) {
+
+            &:focus,
+            &:hover {
+                color: $primary-color-lighter-40;
+            }
+
+            &:before {
+                content: '[-]\00a0';
+            }
+        }
+
+        &:has(input[type="checkbox"]:checked) {
+            &:before {
+                content: '[+]\00a0';
+            }
         }
     }
 
-    &:has(input[type="checkbox"]:checked) {
-        &:before {
-            content: '[+]\00a0';
+    .expandable {
+        .expandable-content {
+            display: grid;
+            padding: $gap-10;
+            box-sizing: border-box;
+            border: 1px solid $primary-color;
+            background-color: $secondary-color-lighter-2;
+            width: 100%;
+            height: 100%;
         }
     }
+
+    @include expandable-transition;
 }

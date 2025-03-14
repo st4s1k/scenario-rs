@@ -1,29 +1,83 @@
-<div class="sidebar" [style.width.px]="sidebarWidth" [class.resizing]="isResizing" [class.collapsed]="isCollapsed" appNoRightClick>
+<div class="sidebar" [style.width.px]="sidebarWidth" [class.resizing]="isResizing" [class.collapsed]="isCollapsed"
+  appNoRightClick>
   <div class="resize-handle" (mousedown)="startResize($event)"></div>
-  
+
   <div class="sidebar-inner">
     <div class="content-area">
       @switch (activeTab) {
-        @case ('variables') {
-          <div class="tab-content">
-            <div class="col grow gap-10">
-              @for (variable of Object.entries(definedVariables); track variable[0]) {
-                <div class="col gap-5">
-                  <label class="title">{{variable[0]}}</label>
-                  <input class="text-field grow" type="text" [value]="variable[1]" readonly />
+      @case ('variables') {
+      <div class="tab-content">
+        <div class="variables">
+          @for (variable of Object.entries(definedVariables); track variable[0]) {
+          <div class="variable">
+            <label>{{variable[0]}}</label>
+            <input class="text-field" type="text" [value]="variable[1]" readonly />
+          </div>
+          }
+        </div>
+      </div>
+      }
+      @case ('tasks') {
+      <div class="tab-content">
+        <div class="tasks">
+          @for (task of Object.entries(tasks); track task[0]) {
+          <div class="task expandable-container">
+            <label class="expandable-title">
+              {{task[0]}}
+              <input type="checkbox" checked />
+            </label>
+
+            <div class="expandable">
+              <div class="expandable-content">
+                <div class="task-item">
+                  <label>Type:</label>
+                  <span>{{task[1].task_type}}</span>
                 </div>
-              }
+
+                <div class="task-item">
+                  <label>Description:</label>
+                  <span>{{task[1].description}}</span>
+                </div>
+
+                @switch (task[1].task_type) {
+                @case ('RemoteSudo') {
+                <div class="task-item">
+                  <label>Command:</label>
+                  <input class="text-field" type="text" [value]="task[1].command" readonly />
+                </div>
+                }
+                @case ('SftpCopy') {
+                <div class="task-item">
+                  <label>Source Path:</label>
+                  <input class="text-field" type="text" [value]="task[1].source_path" readonly />
+                </div>
+                <div class="task-item">
+                  <label>Destination Path:</label>
+                  <input class="text-field" type="text" [value]="task[1].destination_path" readonly />
+                </div>
+                }
+                @default {
+                <div class="task-item">
+                  <label>Details:</label>
+                  <span>No specific details for this task type</span>
+                </div>
+                }
+                }
+              </div>
             </div>
           </div>
-        }
+          }
+        </div>
+      </div>
+      }
       }
     </div>
 
     <div class="tabs">
       @for (tab of tabsConfig; track tab.id) {
-        <div class="tab" [class.active]="isTabActive(tab.id)" (click)="toggleTab(tab.id)">
-          <span class="title">{{tab.title}}</span>
-        </div>
+      <div class="tab" [class.active]="isTabActive(tab.id)" (click)="toggleTab(tab.id)">
+        <label>{{tab.title}}</label>
+      </div>
       }
     </div>
   </div>

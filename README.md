@@ -124,9 +124,11 @@ For automation scripts or CI/CD pipelines:
 scenario-rs-cli --config-path ./your-scenario.toml
 ```
 
-## Screenshot
+## Screenshots
 
-![screenshot](screenshot.png)
+![screenshot](screenshots/screenshot_1.png)
+
+![screenshot](screenshots/screenshot_2.png)
 
 ## DIY
 

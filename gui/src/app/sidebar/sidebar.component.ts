@@ -6,6 +6,15 @@ interface TabConfig {
   title: string;
 }
 
+interface Task {
+  description: string;
+  error_message: string;
+  task_type: string;
+  command?: string;
+  source_path?: string;
+  destination_path?: string;
+}
+
 @Component({
   selector: 'app-sidebar',
   imports: [CommonModule],
@@ -14,6 +23,7 @@ interface TabConfig {
 })
 export class SidebarComponent implements OnChanges {
   @Input() definedVariables: { [key: string]: string } = {};
+  @Input() tasks: { [key: string]: Task } = {};
 
   activeTab: string = 'variables';
   sidebarWidth = 30;
@@ -21,7 +31,8 @@ export class SidebarComponent implements OnChanges {
   isCollapsed = true;
 
   tabsConfig: TabConfig[] = [
-    { id: 'variables', title: 'Defined variables' }
+    { id: 'variables', title: 'Variables' },
+    { id: 'tasks', title: 'Tasks' }
   ];
 
   private readonly minSidebarWidth = 40;
@@ -148,7 +159,7 @@ export class SidebarComponent implements OnChanges {
     // Switch tabs with Alt+1, Alt+2, Alt+3 etc.
     if (event.altKey && !isNaN(Number(event.key))) {
       const tabIndex = Number(event.key) - 1;
-      const tabIds = ['variables'];
+      const tabIds = ['variables', 'tasks'];
       if (tabIndex >= 0 && tabIndex < tabIds.length) {
         const tabId = tabIds[tabIndex];
         this.toggleTab(tabId);
