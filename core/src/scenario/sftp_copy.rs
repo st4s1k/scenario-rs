@@ -1,9 +1,8 @@
 use crate::{
     config::SftpCopyConfig,
-    mock,
-    scenario::{errors::SftpCopyError, variables::Variables, utils::SendEvent},
+    scenario::{errors::SftpCopyError, utils::SendEvent, variables::Variables},
+    session::Session,
 };
-use ssh2::Session;
 use std::{fs::File, io::Read, path::Path, sync::mpsc::Sender};
 
 use super::events::Event;
@@ -53,9 +52,7 @@ impl SftpCopy {
         let mut source_file =
             File::open(&resolved_source).map_err(SftpCopyError::CannotOpenSourceFile)?;
 
-        let session_trait = mock::get_session(session);
-
-        let sftp = session_trait
+        let sftp = session
             .sftp()
             .map_err(SftpCopyError::CannotOpenChannelAndInitializeSftp)?;
 

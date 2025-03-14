@@ -1,13 +1,12 @@
 use std::sync::mpsc::Sender;
 
-use crate::scenario::on_fail::OnFailSteps;
-use crate::scenario::tasks::Tasks;
-use crate::scenario::variables::Variables;
 use crate::{
     config::StepConfig,
-    scenario::{errors::StepError, task::Task},
+    scenario::{
+        errors::StepError, on_fail::OnFailSteps, task::Task, tasks::Tasks, variables::Variables,
+    },
+    session::Session,
 };
-use ssh2::Session;
 
 use super::events::Event;
 

@@ -2,10 +2,9 @@ use std::sync::mpsc::Sender;
 
 use crate::{
     config::RemoteSudoConfig,
-    mock,
-    scenario::{errors::RemoteSudoError, variables::Variables, utils::SendEvent},
+    scenario::{errors::RemoteSudoError, utils::SendEvent, variables::Variables},
+    session::Session,
 };
-use ssh2::Session;
 
 use super::events::Event;
 
@@ -39,9 +38,7 @@ impl RemoteSudo {
 
         tx.send_event(Event::RemoteSudoBefore(command.clone()));
 
-        let session_trait = mock::get_session(session);
-
-        let mut channel = session_trait
+        let mut channel = session
             .channel_session()
             .map_err(RemoteSudoError::CannotEstablishSessionChannel)?;
 

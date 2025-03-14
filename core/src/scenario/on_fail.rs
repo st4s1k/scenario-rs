@@ -1,10 +1,14 @@
-use crate::config::OnFailStepsConfig;
-use crate::scenario::tasks::Tasks;
-use crate::scenario::variables::Variables;
-use crate::scenario::{errors::OnFailError, task::Task, utils::SendEvent};
-use ssh2::Session;
-use std::ops::{Deref, DerefMut};
-use std::sync::mpsc::Sender;
+use crate::{
+    config::OnFailStepsConfig,
+    scenario::{
+        errors::OnFailError, task::Task, tasks::Tasks, utils::SendEvent, variables::Variables,
+    },
+    session::Session,
+};
+use std::{
+    ops::{Deref, DerefMut},
+    sync::mpsc::Sender,
+};
 
 use super::events::Event;
 

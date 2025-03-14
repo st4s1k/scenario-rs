@@ -1,11 +1,15 @@
-use crate::scenario::variables::Variables;
 use crate::{
     config::StepsConfig,
-    scenario::{errors::StepsError, step::Step, task::Task, tasks::Tasks, utils::SendEvent},
+    scenario::{
+        errors::StepsError, step::Step, task::Task, tasks::Tasks, utils::SendEvent,
+        variables::Variables,
+    },
+    session::Session,
 };
-use ssh2::Session;
-use std::ops::{Deref, DerefMut};
-use std::sync::mpsc::Sender;
+use std::{
+    ops::{Deref, DerefMut},
+    sync::mpsc::Sender,
+};
 
 use super::events::Event;
 
