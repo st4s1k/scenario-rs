@@ -24,8 +24,6 @@
         display: grid;
         grid-template-rows: auto auto auto auto 1fr;
         gap: styles.$gap-15;
-        min-width: 600px;
-        min-height: 600px;
 
         .config-section {
             display: grid;
@@ -60,6 +58,7 @@
             label {
                 align-self: center;
                 width: 100%;
+                min-width: max-content;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
