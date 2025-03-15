@@ -1,7 +1,5 @@
 use crate::{
-    config::SftpCopyConfig,
-    scenario::{errors::SftpCopyError, utils::SendEvent, variables::Variables},
-    session::Session,
+    scenario::{errors::SftpCopyError, utils::SendEvent, variables::Variables}, session::Session
 };
 use std::{fs::File, io::Read, path::Path, sync::mpsc::Sender};
 
@@ -11,15 +9,6 @@ use super::events::Event;
 pub struct SftpCopy {
     pub(crate) source_path: String,
     pub(crate) destination_path: String,
-}
-
-impl From<&SftpCopyConfig> for SftpCopy {
-    fn from(config: &SftpCopyConfig) -> Self {
-        SftpCopy {
-            source_path: config.source_path.clone(),
-            destination_path: config.destination_path.clone(),
-        }
-    }
 }
 
 impl SftpCopy {

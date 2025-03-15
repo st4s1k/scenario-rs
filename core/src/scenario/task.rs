@@ -1,5 +1,5 @@
 use crate::{
-    config::TaskConfig,
+    config::{TaskConfig, TaskType},
     scenario::{
         remote_sudo::RemoteSudo,
         sftp_copy::SftpCopy
@@ -22,25 +22,27 @@ pub enum Task {
 }
 
 impl From<&TaskConfig> for Task {
-    fn from(task_config: &TaskConfig) -> Self {
-        match task_config {
-            TaskConfig::RemoteSudo {
-                description,
-                error_message,
-                remote_sudo: config,
+    fn from(config: &TaskConfig) -> Self {
+        match &config.task_type {
+            TaskType::RemoteSudo {
+                command
             } => Task::RemoteSudo {
-                description: description.clone(),
-                error_message: error_message.clone(),
-                remote_sudo: RemoteSudo::from(config),
+                description: config.description.clone(),
+                error_message: config.error_message.clone(),
+                remote_sudo: RemoteSudo {
+                    command: command.clone(),
+                }
             },
-            TaskConfig::SftpCopy {
-                description,
-                error_message,
-                sftp_copy: config,
+            TaskType::SftpCopy {
+                source_path,
+                destination_path,
             } => Task::SftpCopy {
-                description: description.clone(),
-                error_message: error_message.clone(),
-                sftp_copy: SftpCopy::from(config),
+                description: config.description.clone(),
+                error_message: config.error_message.clone(),
+                sftp_copy: SftpCopy {
+                    source_path: source_path.clone(),
+                    destination_path: destination_path.clone(),
+                }
             },
         }
     }

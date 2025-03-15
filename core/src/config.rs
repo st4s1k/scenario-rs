@@ -79,7 +79,9 @@ impl ScenarioConfig {
 
             if let Some(import_path_str) = &config.parent {
                 if visited_imports.contains(import_path_str) {
-                    return Err(ScenarioConfigError::CircularDependency(import_path_str.clone()));
+                    return Err(ScenarioConfigError::CircularDependency(
+                        import_path_str.clone(),
+                    ));
                 }
 
                 visited_imports.push(import_path_str.clone());
@@ -367,29 +369,21 @@ impl DerefMut for TasksConfig {
 }
 
 #[derive(Deserialize, Clone, Debug)]
+pub struct TaskConfig {
+    pub description: String,
+    pub error_message: String,
+    #[serde(flatten)]
+    pub task_type: TaskType,
+}
+
+#[derive(Deserialize, Clone, Debug)]
 #[serde(tag = "type")]
-pub enum TaskConfig {
+pub enum TaskType {
     RemoteSudo {
-        description: String,
-        error_message: String,
-        #[serde(flatten)]
-        remote_sudo: RemoteSudoConfig,
+        command: String,
     },
     SftpCopy {
-        description: String,
-        error_message: String,
-        #[serde(flatten)]
-        sftp_copy: SftpCopyConfig,
+        source_path: String,
+        destination_path: String,
     },
-}
-
-#[derive(Deserialize, Clone, Debug)]
-pub struct RemoteSudoConfig {
-    pub command: String,
-}
-
-#[derive(Deserialize, Clone, Debug)]
-pub struct SftpCopyConfig {
-    pub source_path: String,
-    pub destination_path: String,
 }

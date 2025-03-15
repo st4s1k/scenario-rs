@@ -1,7 +1,6 @@
 use std::sync::mpsc::Sender;
 
 use crate::{
-    config::RemoteSudoConfig,
     scenario::{errors::RemoteSudoError, utils::SendEvent, variables::Variables},
     session::Session,
 };
@@ -11,14 +10,6 @@ use super::events::Event;
 #[derive(Debug, Clone)]
 pub struct RemoteSudo {
     pub(crate) command: String,
-}
-
-impl From<&RemoteSudoConfig> for RemoteSudo {
-    fn from(config: &RemoteSudoConfig) -> Self {
-        RemoteSudo {
-            command: config.command.clone(),
-        }
-    }
 }
 
 impl RemoteSudo {

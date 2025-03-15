@@ -29,7 +29,7 @@ impl TryFrom<(&Tasks, &ExecuteConfig)> for Execute {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{StepConfig, StepsConfig, TaskConfig};
+    use crate::config::{StepConfig, StepsConfig, TaskConfig, TaskType};
     use crate::scenario::errors::ExecuteError;
     use crate::scenario::task::Task;
     use std::collections::HashMap;
@@ -137,10 +137,10 @@ mod tests {
     }
 
     fn create_remote_sudo_task() -> Task {
-        let config = TaskConfig::RemoteSudo {
+        let config = TaskConfig {
             description: "Test task 1".to_string(),
             error_message: "Task 1 failed".to_string(),
-            remote_sudo: crate::config::RemoteSudoConfig {
+            task_type: TaskType::RemoteSudo {
                 command: "echo test".to_string(),
             },
         };
@@ -148,10 +148,10 @@ mod tests {
     }
 
     fn create_sftp_copy_task() -> Task {
-        let config = TaskConfig::SftpCopy {
+        let config = TaskConfig {
             description: "Test task 2".to_string(),
             error_message: "Task 2 failed".to_string(),
-            sftp_copy: crate::config::SftpCopyConfig {
+            task_type: TaskType::SftpCopy {
                 source_path: "/test/source".to_string(),
                 destination_path: "/test/dest".to_string(),
             },
