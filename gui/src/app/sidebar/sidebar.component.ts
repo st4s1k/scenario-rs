@@ -22,7 +22,7 @@ interface Task {
   styleUrl: './sidebar.component.scss'
 })
 export class SidebarComponent implements OnChanges {
-  @Input() definedVariables: { [key: string]: string } = {};
+  @Input() resolvedVariables: { [key: string]: string } = {};
   @Input() tasks: { [key: string]: Task } = {};
 
   activeTab: string = 'variables';

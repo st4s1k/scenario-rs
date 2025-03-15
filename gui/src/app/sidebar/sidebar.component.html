@@ -8,7 +8,7 @@
       @case ('variables') {
       <div class="tab-content">
         <div class="variables">
-          @for (variable of Object.entries(definedVariables); track variable[0]) {
+          @for (variable of Object.entries(resolvedVariables); track variable[0]) {
           <div class="variable">
             <label>{{variable[0]}}</label>
             <input class="text-field" type="text" [value]="variable[1]" readonly />

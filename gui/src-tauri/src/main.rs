@@ -3,7 +3,7 @@
 
 use crate::app::ScenarioAppState;
 use commands::{
-    clear_log, clear_state, execute_scenario, get_config_path, get_defined_variables, get_log,
+    clear_log, clear_state, execute_scenario, get_config_path, get_resolved_variables, get_log,
     get_required_variables, get_tasks, load_config, save_state, update_required_variables,
 };
 use std::sync::Mutex;
@@ -33,7 +33,7 @@ fn main() {
             load_config,
             get_required_variables,
             update_required_variables,
-            get_defined_variables,
+            get_resolved_variables,
             execute_scenario,
             clear_state,
             get_tasks

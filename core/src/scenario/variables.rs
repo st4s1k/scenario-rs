@@ -51,7 +51,7 @@ impl From<&VariablesConfig> for Variables {
 }
 
 impl Variables {
-    pub fn defined(&self) -> Result<HashMap<String, String>, PlaceholderResolutionError> {
+    pub fn resolved(&self) -> Result<HashMap<String, String>, PlaceholderResolutionError> {
         Ok(self._resolve_placeholders()?)
     }
 

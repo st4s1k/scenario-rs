@@ -20,7 +20,7 @@ interface RequiredField {
   value: string;
 }
 
-interface DefinedVariables {
+interface ResolvedVariables {
   [key: string]: string;
 }
 
@@ -56,7 +56,7 @@ export class AppComponent implements OnDestroy {
   requiredFieldsFormGroup = new FormGroup<RequiredFieldsForm>({});
   isExecuting = signal(false);
   private formValueChangesSubscription?: Subscription;
-  definedVariables: DefinedVariables = {};
+  resolvedVariables: ResolvedVariables = {};
   tasks: { [key: string]: Task } = {};
 
   unlistenLogUpdates?: UnlistenFn;
@@ -68,7 +68,7 @@ export class AppComponent implements OnDestroy {
     this.fetchConfigPath()
       .then(() => Promise.all([
         this.getRequiredVariables(),
-        this.getDefinedVariables(),
+        this.getResolvedVariables(),
         this.getTasks()
       ]));
 
@@ -98,7 +98,7 @@ export class AppComponent implements OnDestroy {
           }
         }
         this.updateRequiredVariables().then(() => {
-          this.getDefinedVariables();
+          this.getResolvedVariables();
         });
       });
   }
@@ -150,7 +150,7 @@ export class AppComponent implements OnDestroy {
       this.scenarioConfigPath.setValue(configPath);
       await this.loadConfigFile();
       await this.getRequiredVariables();
-      await this.getDefinedVariables();
+      await this.getResolvedVariables();
     }
   }
 
@@ -181,10 +181,10 @@ export class AppComponent implements OnDestroy {
       });
   }
 
-  private async getDefinedVariables(): Promise<void> {
-    return invoke<{ [key: string]: string }>('get_defined_variables')
-      .then((definedVariables) => {
-        this.definedVariables = definedVariables || {};
+  private async getResolvedVariables(): Promise<void> {
+    return invoke<{ [key: string]: string }>('get_resolved_variables')
+      .then((resolvedVariables) => {
+        this.resolvedVariables = resolvedVariables || {};
       });
   }
 

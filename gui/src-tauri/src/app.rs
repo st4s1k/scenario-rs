@@ -277,16 +277,16 @@ impl ScenarioAppState {
         }
     }
 
-    pub fn get_defined_variables(&mut self) -> BTreeMap<String, String> {
+    pub fn get_resolved_variables(&mut self) -> BTreeMap<String, String> {
         if let Some(scenario) = &self.scenario {
-            match scenario.variables().defined() {
-                Ok(defined_vars) => defined_vars
+            match scenario.variables().resolved() {
+                Ok(resolved) => resolved
                     .iter()
                     .map(|(name, value)| (name.to_string(), value.to_string()))
                     .collect(),
                 Err(err) => {
                     self.log_message(format!(
-                        "{SEPARATOR}\nFailed to get defined variables: {err}\n{SEPARATOR}\n"
+                        "{SEPARATOR}\nFailed to get resolved variables: {err}\n{SEPARATOR}\n"
                     ));
                     BTreeMap::new()
                 }
