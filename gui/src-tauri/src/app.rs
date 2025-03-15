@@ -143,7 +143,10 @@ impl ScenarioAppState {
                         .get(&self.config_path)
                         .map(|data| data.required_variables.clone())
                         .unwrap_or_default();
-                    scenario.variables_mut().upsert(required_variables);
+                    scenario
+                        .variables_mut()
+                        .required_mut()
+                        .upsert(required_variables);
                 }
             }
         }
@@ -158,6 +161,7 @@ impl ScenarioAppState {
             if let Some(scenario) = self.scenario.as_mut() {
                 scenario
                     .variables_mut()
+                    .required_mut()
                     .upsert(config_data.required_variables.clone());
             }
         }

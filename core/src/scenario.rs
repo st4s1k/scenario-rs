@@ -7,7 +7,7 @@ use credentials::Credentials;
 use errors::ScenarioError;
 use events::Event;
 use server::Server;
-use std::{collections::HashMap, path::PathBuf, sync::mpsc::Sender};
+use std::{path::PathBuf, sync::mpsc::Sender};
 use utils::SendEvent;
 use variables::Variables;
 
@@ -58,11 +58,12 @@ impl TryFrom<ScenarioConfig> for Scenario {
         let tasks = Tasks::from(&config.tasks);
         let execute = Execute::try_from((&tasks, &config.execute))
             .map_err(ScenarioError::CannotCreateExecuteFromConfig)?;
-        let mut variables = Variables::from(&config.variables);
 
-        let mut username_vars = HashMap::new();
-        username_vars.insert("username".to_string(), credentials.username.clone());
-        variables.upsert(username_vars);
+        // Insert the username into defined variables
+        let mut variables_config = config.variables.clone();
+        variables_config.defined.insert("username".to_string(), credentials.username.clone());
+
+        let variables = Variables::from(&variables_config);
 
         let scenario = Scenario {
             server,

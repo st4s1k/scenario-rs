@@ -44,6 +44,33 @@ impl Default for RequiredVariables {
     }
 }
 
+impl RequiredVariables {
+    pub fn upsert(&mut self, variables: HashMap<String, String>) {
+        for (name, value) in variables {
+            if self.contains_key(&name) {
+                if let Some(required_variable) = self.get_mut(&name) {
+                    required_variable.set_value(value.clone());
+                }
+            }
+
+            if name.starts_with("path:") {
+                let path = PathBuf::from(value);
+                if let Some(file_name) = path.file_name() {
+                    if let Some(file_name_str) = file_name.to_str() {
+                        let basename_key = name.replace("path:", "basename:");
+
+                        if self.contains_key(&basename_key) {
+                            if let Some(required_variable) = self.get_mut(&basename_key) {
+                                required_variable.set_value(file_name_str.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct RequiredVariable {
     pub(crate) name: String,

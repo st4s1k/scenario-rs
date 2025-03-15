@@ -29,6 +29,7 @@ impl From<&VariablesConfig> for Variables {
     fn from(config: &VariablesConfig) -> Self {
         let mut variables_map = HashMap::<String, String>::new();
         variables_map.extend(config.defined.deref().clone());
+
         for (key, value) in &variables_map.clone() {
             if key.starts_with("path:") {
                 PathBuf::from_str(value.as_str())
@@ -61,35 +62,6 @@ impl Variables {
 
     pub fn required_mut(&mut self) -> &mut RequiredVariables {
         &mut self.required
-    }
-
-    pub fn upsert(&mut self, variables: HashMap<String, String>) {
-        for (name, value) in variables {
-            if self.required.contains_key(&name) {
-                if let Some(required_variable) = self.required.get_mut(&name) {
-                    required_variable.value = value.clone();
-                }
-            } else {
-                self.defined.insert(name.clone(), value.clone());
-            }
-
-            if name.starts_with("path:") {
-                let path = PathBuf::from(value);
-                if let Some(file_name) = path.file_name() {
-                    if let Some(file_name_str) = file_name.to_str() {
-                        let basename_key = name.replace("path:", "basename:");
-
-                        if self.required.contains_key(&basename_key) {
-                            if let Some(required_variable) = self.required.get_mut(&basename_key) {
-                                required_variable.value = file_name_str.to_string();
-                            }
-                        } else {
-                            self.defined.insert(basename_key, file_name_str.to_string());
-                        }
-                    }
-                }
-            }
-        }
     }
 
     pub(crate) fn resolve_placeholders(

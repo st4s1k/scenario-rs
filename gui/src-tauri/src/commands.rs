@@ -52,7 +52,10 @@ pub fn update_required_variables(
 ) {
     let mut state = safe_get_state(state.lock());
     if let Some(scenario) = state.scenario.as_mut() {
-        scenario.variables_mut().upsert(required_variables);
+        scenario
+            .variables_mut()
+            .required_mut()
+            .upsert(required_variables);
     }
 }
 
