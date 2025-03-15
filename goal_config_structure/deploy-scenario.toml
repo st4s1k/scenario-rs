@@ -1,3 +1,12 @@
+[credentials]
+username = "my_username_parent" # will be added to the variables
+password = "my_password_parent" # if not provided, will use the ssh-agent
+#                               # [!] the password will not be added to the variables
+
+[server]
+host = "parent.example.com" # required
+port = "22" # optional, default is 22
+
 [execute]
 steps = [
     { task = "copy_jar_to_server" },
@@ -21,17 +30,27 @@ steps = [
     ] }
 ]
 
+# Required Variables
+
 [variables.required]
-"path:local_jar_path" = "Local JAR Path"
-"remote_base_path" = "Remote Base Path"
-"remote_service_script_path" = "Remote Service Script Path"
-"remote_deploy_path" = "Remote Deploy Path"
-"remote_backup_path" = "Remote Backup Path"
+service_name = { type = "String", label = "Service Name" }
+local_jar_path = { type = "Path", label = "Local JAR Path" }
+timestamp = { type = "Timestamp", label = "Timestamp", format = "%Y-%m-%dT%H%M%S%:z", read_only = true }
+
+# Defined Variables
+
+[variables.defined]
+remote_service_script_path = "/usr/local/bin/{service_name}.sh"
+remote_deploy_path = "/usr/local/{service_name}/{service_name}.jar"
+remote_backup_path = "/usr/local/backup/{service_name}/{service_name}-{timestamp}.jar"
+remote_base_path = "/home/{username}"
+
+# Tasks
 
 [tasks.copy_jar_to_server]
 type = "SftpCopy"
 description = "Copying new deploy file to server"
-source_path = "{path:local_jar_path}"
+source_path = "{local_jar_path}"
 destination_path = "{remote_base_path}/{basename:local_jar_path}"
 error_message = "Failed to copy new deploy file to server."
 

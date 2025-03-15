@@ -1,5 +1,9 @@
 use crate::{lifecycle::LifecycleHandler, shared::SEPARATOR};
-use scenario_rs::scenario::{task::Task, variables::required::RequiredVariable, Scenario};
+use scenario_rs::scenario::{
+    task::Task,
+    variables::required::{RequiredVariable, VariableType},
+    Scenario,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -33,17 +37,22 @@ impl From<&ScenarioAppState> for ScenarioAppStateConfig {
                     .variables()
                     .required()
                     .iter()
+                    .filter(|(_, required_variable)| {
+                        !required_variable.value().is_empty() && !required_variable.read_only()
+                    })
                     .map(|(name, required_variable)| {
                         (name.to_string(), required_variable.value().to_string())
                     })
                     .collect();
 
-                let config_data = ConfigPathData {
-                    required_variables,
-                    output_log: state.output_log.clone(),
-                };
+                if !required_variables.is_empty() || !state.output_log.is_empty() {
+                    let config_data = ConfigPathData {
+                        required_variables,
+                        output_log: state.output_log.clone(),
+                    };
 
-                config_paths.insert(state.config_path.clone(), config_data);
+                    config_paths.insert(state.config_path.clone(), config_data);
+                }
             }
         }
 
@@ -66,13 +75,22 @@ pub struct ScenarioAppState {
 pub struct RequiredVariableDTO {
     label: String,
     value: String,
+    var_type: String,
+    read_only: bool,
 }
 
 impl From<&RequiredVariable> for RequiredVariableDTO {
     fn from(required_variable: &RequiredVariable) -> Self {
+        let var_type = match required_variable.var_type() {
+            VariableType::String => "text".to_string(),
+            VariableType::Path => "path".to_string(),
+            VariableType::Timestamp { .. } => "timestamp".to_string(),
+        };
         Self {
             label: required_variable.label().to_string(),
             value: required_variable.value().to_string(),
+            var_type,
+            read_only: required_variable.read_only(),
         }
     }
 }

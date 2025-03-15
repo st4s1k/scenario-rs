@@ -1,6 +1,5 @@
 use crate::scenario::errors::ScenarioConfigError;
 use serde::Deserialize;
-use std::collections::BTreeMap;
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
@@ -215,15 +214,12 @@ pub struct VariablesConfig {
     #[serde(default)]
     pub required: RequiredVariablesConfig,
     #[serde(default)]
-    pub special: SpecialVariablesConfig,
-    #[serde(default)]
     pub defined: DefinedVariablesConfig,
 }
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct PartialVariablesConfig {
     pub required: Option<RequiredVariablesConfig>,
-    pub special: Option<SpecialVariablesConfig>,
     pub defined: Option<DefinedVariablesConfig>,
 }
 
@@ -249,14 +245,6 @@ impl PartialVariablesConfig {
 
         PartialVariablesConfig {
             required: Some(merged_required),
-            special: match (&self.special, &other.special) {
-                (Some(self_special), Some(other_special)) => {
-                    Some(self_special.merge(other_special))
-                }
-                (None, Some(special)) => Some(special.clone()),
-                (Some(special), None) => Some(special.clone()),
-                (None, None) => None,
-            },
             defined: Some(merged_defined),
         }
     }
@@ -268,17 +256,27 @@ impl TryFrom<PartialVariablesConfig> for VariablesConfig {
     fn try_from(partial: PartialVariablesConfig) -> Result<Self, Self::Error> {
         Ok(VariablesConfig {
             required: partial.required.unwrap_or_default(),
-            special: partial.special.unwrap_or_default(),
             defined: partial.defined.unwrap_or_default(),
         })
     }
 }
 
+#[derive(Deserialize, Clone, Debug)]
+pub struct RequiredVariableConfig {
+    #[serde(flatten)]
+    pub var_type: VariableTypeConfig,
+    #[serde(default)]
+    pub label: Option<String>,
+    #[serde(default)]
+    pub read_only: bool,
+}
+
 #[derive(Deserialize, Clone, Debug, Default)]
-pub struct RequiredVariablesConfig(pub BTreeMap</* name */ String, /* label */ String>);
+pub struct RequiredVariablesConfig(pub HashMap<String, RequiredVariableConfig>);
 
 impl Deref for RequiredVariablesConfig {
-    type Target = BTreeMap<String, String>;
+    type Target = HashMap<String, RequiredVariableConfig>;
+
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -298,6 +296,16 @@ impl RequiredVariablesConfig {
         }
         RequiredVariablesConfig(merged)
     }
+}
+
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(tag = "type")]
+pub enum VariableTypeConfig {
+    String,
+    Path,
+    Timestamp {
+        format: String,
+    },
 }
 
 #[derive(Deserialize, Clone, Debug, Default)]

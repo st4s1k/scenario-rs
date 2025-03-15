@@ -1,19 +1,13 @@
 parent = "./deploy-scenario.toml"
 
 [credentials]
-username = "my_username"
-password = "my_password"
+username = "my_username_service_one" # will be added to the variables
+password = "my_password_service_one" # if not provided, will use the ssh-agent
+#                                    # [!] the password will not be added to the variables
 
 [server]
-host = "localhost"
-port = "22"
-
-[variables.special]
-timestamp = "%Y-%m-%dT%H%M%S%:z"
+host = "service-one.example.com" # required
+port = "23" # optional, default is 22
 
 [variables.defined]
 service_name = "service-one"
-remote_service_script_path = "/usr/local/bin/{service_name}.sh"
-remote_deploy_path = "/usr/local/{service_name}/{service_name}.jar"
-remote_backup_path = "/usr/local/backup/{service_name}/{service_name}-{timestamp}.jar"
-remote_base_path = "/home/{username}"

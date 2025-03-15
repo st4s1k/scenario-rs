@@ -16,8 +16,9 @@ interface RequiredFieldsForm {
 
 interface RequiredField {
   label: string;
-  type: string;
+  var_type: string;
   value: string;
+  read_only: boolean;
 }
 
 interface ResolvedVariables {
@@ -168,14 +169,12 @@ export class AppComponent implements OnDestroy {
     this.requiredFieldsFormGroup = new FormGroup<RequiredFieldsForm>({});
     return invoke<{ [key: string]: RequiredField }>('get_required_variables')
       .then((requiredVariables) => {
+        this.requiredFields = requiredVariables;
         for (const name in requiredVariables) {
-          this.requiredFields[name] = {
-            label: requiredVariables[name].label,
-            type: name.startsWith('path:') ? 'path' : 'text',
-            value: requiredVariables[name].value || ''
-          };
-          const formControl = new FormControl(this.requiredFields[name].value);
-          this.requiredFieldsFormGroup.addControl(name, formControl);
+          if (!requiredVariables[name].read_only) {
+            const formControl = new FormControl(this.requiredFields[name].value);
+            this.requiredFieldsFormGroup.addControl(name, formControl);
+          }
         }
         this.setupFormValueChangeListener();
       });

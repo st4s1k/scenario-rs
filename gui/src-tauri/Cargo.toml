@@ -1,6 +1,6 @@
 [package]
 name = "scenario-rs-gui"
-version = "0.3.0"
+version = "0.4.0"
 description = "Rust SSH automation tool"
 authors = ["st4s1k"]
 edition = "2021"

@@ -1,14 +1,14 @@
 pub mod required;
 
+
 use crate::{
-    config::{SpecialVariablesConfig, VariablesConfig},
+    config::VariablesConfig,
     scenario::{
         errors::PlaceholderResolutionError, utils::HasPlaceholders,
         variables::required::RequiredVariables,
     },
 };
-use chrono::Local;
-use std::{collections::HashMap, ops::Deref, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, ops::Deref};
 
 #[derive(Clone, Debug)]
 pub struct Variables {
@@ -27,27 +27,10 @@ impl Default for Variables {
 
 impl From<&VariablesConfig> for Variables {
     fn from(config: &VariablesConfig) -> Self {
-        let mut variables_map = HashMap::<String, String>::new();
-        variables_map.extend(config.defined.deref().clone());
-
-        for (key, value) in &variables_map.clone() {
-            if key.starts_with("path:") {
-                PathBuf::from_str(value.as_str())
-                    .ok()
-                    .and_then(|path| path.file_name().map(|file_name| file_name.to_owned()))
-                    .and_then(|file_name| file_name.to_str().map(|s| s.to_string()))
-                    .map(|file_name| {
-                        let basename_key = key.replace("path:", "basename:");
-                        variables_map.insert(basename_key, file_name.to_string());
-                    });
-            }
-        }
-        let mut variables = Variables {
+        Variables {
             required: RequiredVariables::from(&config.required),
-            defined: variables_map,
-        };
-        variables._resolve_special_variables(&config.special);
-        variables
+            defined: config.defined.deref().clone(),
+        }
     }
 }
 
@@ -87,7 +70,7 @@ impl Variables {
         loop {
             let previous = output.clone();
 
-            for (key, value) in &variables {
+            for (key, value) in dbg!(&variables) {
                 let placeholder = format!("{{{}}}", key);
                 output = output.replace(&placeholder, value);
             }
@@ -101,13 +84,6 @@ impl Variables {
                     output,
                 ));
             }
-        }
-    }
-
-    fn _resolve_special_variables(&mut self, config: &SpecialVariablesConfig) {
-        if let Some(timestamp_format) = &config.get("timestamp") {
-            let timestamp: String = Local::now().format(timestamp_format).to_string();
-            self.defined.insert("timestamp".to_string(), timestamp);
         }
     }
 
