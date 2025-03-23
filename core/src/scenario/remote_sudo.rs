@@ -7,16 +7,33 @@ use crate::{
 
 use super::events::Event;
 
+/// Represents a remote command to be executed with sudo privileges
+///
+/// This struct holds a command string to be executed on a remote session
+/// with elevated permissions.
 #[derive(Debug, Clone)]
 pub struct RemoteSudo {
     pub(crate) command: String,
 }
 
 impl RemoteSudo {
+    /// Returns a reference to the command string
     pub fn command(&self) -> &str {
         &self.command
     }
 
+    /// Executes the sudo command on the remote session
+    ///
+    /// # Arguments
+    ///
+    /// * `session` - The session to execute the command on
+    /// * `variables` - Variables to resolve placeholders in the command
+    /// * `tx` - Channel to send events during execution
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the command executed successfully with exit code 0,
+    /// otherwise an appropriate `RemoteSudoError`
     pub(crate) fn execute(
         &self,
         session: &Session,
