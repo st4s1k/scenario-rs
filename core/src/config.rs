@@ -194,7 +194,7 @@ pub struct StepConfig {
 }
 
 #[derive(Deserialize, Clone, Debug)]
-pub struct OnFailStepsConfig(Vec<String>);
+pub struct OnFailStepsConfig(pub(crate) Vec<String>);
 
 impl Deref for OnFailStepsConfig {
     type Target = Vec<String>;
