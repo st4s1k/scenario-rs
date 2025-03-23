@@ -70,7 +70,7 @@ impl Variables {
         loop {
             let previous = output.clone();
 
-            for (key, value) in dbg!(&variables) {
+            for (key, value) in &variables {
                 let placeholder = format!("{{{}}}", key);
                 output = output.replace(&placeholder, value);
             }
