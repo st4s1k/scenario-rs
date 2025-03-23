@@ -3,12 +3,17 @@ use crate::{
     scenario::{errors::ExecuteError, steps::Steps, tasks::Tasks},
 };
 
+/// Represents the executable part of a scenario, containing ordered steps to be executed.
+///
+/// An `Execute` instance holds the sequence of steps that define the execution flow
+/// of a scenario.
 #[derive(Clone, Debug)]
 pub struct Execute {
     pub(crate) steps: Steps,
 }
 
 impl Default for Execute {
+    /// Creates a default `Execute` instance with no steps.
     fn default() -> Self {
         Execute {
             steps: Steps::default(),
@@ -19,6 +24,15 @@ impl Default for Execute {
 impl TryFrom<(&Tasks, &ExecuteConfig)> for Execute {
     type Error = ExecuteError;
 
+    /// Attempts to create an `Execute` instance from a combination of tasks and execution configuration.
+    ///
+    /// This conversion will validate that all task references in the configuration exist in the provided tasks.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `ExecuteError::CannotCreateStepsFromConfig` if:
+    /// - A task referenced in the configuration doesn't exist in the tasks collection
+    /// - Other validation errors occur during steps creation
     fn try_from((tasks, config): (&Tasks, &ExecuteConfig)) -> Result<Self, Self::Error> {
         let steps = Steps::try_from((tasks, &config.steps))
             .map_err(ExecuteError::CannotCreateStepsFromConfig)?;
@@ -33,6 +47,19 @@ mod tests {
     use crate::scenario::errors::ExecuteError;
     use crate::scenario::task::Task;
     use std::collections::HashMap;
+
+    #[test]
+    fn test_execute_default() {
+        // Given & When
+        let execute = Execute::default();
+
+        // Then
+        assert_eq!(
+            execute.steps.len(),
+            0,
+            "Default Execute should have 0 steps"
+        );
+    }
 
     #[test]
     fn test_execute_try_from_success() {
@@ -69,14 +96,9 @@ mod tests {
             result.is_err(),
             "Execute::try_from should fail with invalid input"
         );
-
         if let Err(ExecuteError::CannotCreateStepsFromConfig(err_msg)) = result {
             let error_string = format!("{:?}", err_msg);
-            assert!(
-                error_string.contains("non_existent_task"),
-                "Error message should contain the invalid task name: {}",
-                error_string
-            );
+            assert!(error_string.contains("non_existent_task"));
         }
     }
 
@@ -127,6 +149,26 @@ mod tests {
         );
         let execute = result.unwrap();
         assert_eq!(execute.steps.len(), 2, "Execute should contain 2 steps");
+    }
+
+    #[test]
+    fn test_execute_try_from_empty_tasks() {
+        // Given
+        let tasks = Tasks(HashMap::new());
+        let config = create_valid_execute_config();
+
+        // When
+        let result = Execute::try_from((&tasks, &config));
+
+        // Then
+        assert!(
+            result.is_err(),
+            "Execute::try_from should fail with empty tasks"
+        );
+        if let Err(ExecuteError::CannotCreateStepsFromConfig(err_msg)) = result {
+            let error_string = format!("{:?}", err_msg);
+            assert!(error_string.contains("task1"));
+        }
     }
 
     fn create_test_tasks() -> Tasks {
