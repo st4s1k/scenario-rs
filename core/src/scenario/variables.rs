@@ -35,9 +35,6 @@ impl From<&VariablesConfig> for Variables {
 }
 
 impl Variables {
-    pub fn resolved(&self) -> Result<HashMap<String, String>, PlaceholderResolutionError> {
-        Ok(self._resolve_placeholders()?)
-    }
 
     pub fn required(&self) -> &RequiredVariables {
         &self.required
@@ -87,7 +84,7 @@ impl Variables {
         }
     }
 
-    fn _resolve_placeholders(&self) -> Result<HashMap<String, String>, PlaceholderResolutionError> {
+    pub fn resolved(&self) -> Result<HashMap<String, String>, PlaceholderResolutionError> {
         let mut resolved_variables = self.defined.clone();
         self.required.iter().for_each(|(name, required_variable)| {
             resolved_variables.insert(name.clone(), required_variable.value.clone());
