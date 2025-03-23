@@ -7,7 +7,7 @@ password = "my_password_service_two" # if not provided, will use the ssh-agent
 
 [server]
 host = "service-two.example.com" # required
-port = "24" # optional, default is 22
+port = 24 # optional, default is 22
 
 [variables.defined]
 service_name = "service-two"

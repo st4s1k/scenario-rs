@@ -5,7 +5,7 @@ password = "my_password_parent" # if not provided, will use the ssh-agent
 
 [server]
 host = "parent.example.com" # required
-port = "22" # optional, default is 22
+port = 22 # optional, default is 22
 
 [execute]
 steps = [

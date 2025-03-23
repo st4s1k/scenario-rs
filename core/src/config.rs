@@ -163,7 +163,7 @@ pub struct CredentialsConfig {
 #[derive(Deserialize, Clone, Debug)]
 pub struct ServerConfig {
     pub host: String,
-    pub port: Option<String>,
+    pub port: Option<u16>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
