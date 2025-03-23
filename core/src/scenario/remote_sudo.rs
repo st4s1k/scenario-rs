@@ -46,16 +46,20 @@ impl RemoteSudo {
 
         tx.send_event(Event::RemoteSudoBefore(command.clone()));
 
-        let mut channel = session
+        let channel = session
             .channel_session()
             .map_err(RemoteSudoError::CannotEstablishSessionChannel)?;
 
         channel
+            .lock()
+            .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)?
             .exec(&command)
             .map_err(RemoteSudoError::CannotExecuteRemoteCommand)?;
 
         let mut output = String::new();
         channel
+            .lock()
+            .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)?
             .read_to_string(&mut output)
             .map_err(RemoteSudoError::CannotReadChannelOutput)?;
 
@@ -64,6 +68,8 @@ impl RemoteSudo {
         tx.send_event(Event::RemoteSudoChannelOutput(truncated_output));
 
         let exit_status = channel
+            .lock()
+            .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)?
             .exit_status()
             .map_err(RemoteSudoError::CannotObtainRemoteCommandExitStatus)?;
 

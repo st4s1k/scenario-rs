@@ -107,6 +107,8 @@ pub enum RemoteSudoError {
     RemoteCommandFailedWithStatusCode(i32),
     #[error("Cannot resolve placeholders in command: {0}")]
     CannotResolveCommandPlaceholders(#[source] PlaceholderResolutionError),
+    #[error("Cannot get a lock on channel")]
+    CannotGetALockOnChannel,
 }
 
 #[derive(Error, Debug)]
@@ -125,6 +127,8 @@ pub enum SftpCopyError {
     CannotResolveSourcePathPlaceholders(#[source] PlaceholderResolutionError),
     #[error("Cannot resolve placeholders in destination file: {0}")]
     CannotResolveDestinationPathPlaceholders(#[source] PlaceholderResolutionError),
+    #[error("Cannot get a lock on SFTP channel")]
+    CannotGetALockOnSftpChannel,
 }
 
 #[derive(Error, Debug)]

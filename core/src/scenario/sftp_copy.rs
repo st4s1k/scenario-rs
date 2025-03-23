@@ -45,7 +45,8 @@ impl SftpCopy {
             .sftp()
             .map_err(SftpCopyError::CannotOpenChannelAndInitializeSftp)?;
 
-        let mut destination_file = sftp
+        let mut destination_file = sftp.lock()
+            .map_err(|_| SftpCopyError::CannotGetALockOnSftpChannel)?
             .create(Path::new(&resolved_destination))
             .map_err(SftpCopyError::CannotCreateDestinationFile)?;
 
