@@ -1,5 +1,5 @@
 [package]
-name = "cli"
+name = "scenario-rs-cli"
 version = "0.4.0"
 edition = "2021"
 
@@ -9,7 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.5.32", features = ["derive"] }
-scenario-rs = { package = "core", path = "../core" }
+scenario-rs = { package = "scenario-rs-core", path = "../core" }
 colored = "3.0.0"
 chrono = "0.4.40"
 tracing = "0.1.41"

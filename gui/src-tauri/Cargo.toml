@@ -14,7 +14,7 @@ tauri-build = { version = "2", features = ["config-toml"] }
 tauri = { version = "2", features = ["config-toml"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-scenario-rs = { package = "core", path = "../../core" }
+scenario-rs = { package = "scenario-rs-core", path = "../../core" }
 tauri-plugin-dialog = "2"
 tauri-plugin-shell = "2"
 
