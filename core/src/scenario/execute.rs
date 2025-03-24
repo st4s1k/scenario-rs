@@ -1,5 +1,5 @@
 use crate::{
-    config::ExecuteConfig,
+    config::execute::ExecuteConfig,
     scenario::{errors::ExecuteError, steps::Steps, tasks::Tasks},
 };
 
@@ -42,10 +42,16 @@ impl TryFrom<(&Tasks, &ExecuteConfig)> for Execute {
 
 #[cfg(test)]
 mod tests {
+    use crate::{
+        config::{
+            step::StepConfig,
+            steps::StepsConfig,
+            task::{TaskConfig, TaskType},
+        },
+        scenario::task::Task,
+    };
+
     use super::*;
-    use crate::config::{StepConfig, StepsConfig, TaskConfig, TaskType};
-    use crate::scenario::errors::ExecuteError;
-    use crate::scenario::task::Task;
     use std::collections::HashMap;
 
     #[test]

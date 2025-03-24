@@ -1,4 +1,4 @@
-use crate::config::ServerConfig;
+use crate::config::server::ServerConfig;
 
 #[derive(Clone, Debug)]
 pub struct Server {

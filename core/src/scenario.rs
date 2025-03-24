@@ -1,5 +1,5 @@
 use crate::{
-    config::ScenarioConfig,
+    config::scenario::ScenarioConfig,
     scenario::{execute::Execute, tasks::Tasks},
     session::Session,
 };
@@ -61,7 +61,9 @@ impl TryFrom<ScenarioConfig> for Scenario {
 
         // Insert the username into defined variables
         let mut variables_config = config.variables.clone();
-        variables_config.defined.insert("username".to_string(), credentials.username.clone());
+        variables_config
+            .defined
+            .insert("username".to_string(), credentials.username.clone());
 
         let variables = Variables::from(&variables_config);
 

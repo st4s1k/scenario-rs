@@ -1,8 +1,7 @@
 pub mod required;
 
-
 use crate::{
-    config::VariablesConfig,
+    config::variables::VariablesConfig,
     scenario::{
         errors::PlaceholderResolutionError, utils::HasPlaceholders,
         variables::required::RequiredVariables,
@@ -35,7 +34,6 @@ impl From<&VariablesConfig> for Variables {
 }
 
 impl Variables {
-
     pub fn required(&self) -> &RequiredVariables {
         &self.required
     }

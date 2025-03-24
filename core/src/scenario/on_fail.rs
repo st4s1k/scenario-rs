@@ -1,5 +1,5 @@
 use crate::{
-    config::OnFailStepsConfig,
+    config::on_fail::OnFailStepsConfig,
     scenario::{
         errors::OnFailError, task::Task, tasks::Tasks, utils::SendEvent, variables::Variables,
     },
@@ -103,7 +103,7 @@ impl OnFailSteps {
 mod tests {
     use super::*;
     use crate::{
-        config::{OnFailStepsConfig, TaskConfig, TaskType},
+        config::task::{TaskConfig, TaskType},
         scenario::sftp_copy::SftpCopy,
     };
     use std::{collections::HashMap, sync::mpsc};

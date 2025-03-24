@@ -1,4 +1,4 @@
-use crate::{config::TasksConfig, scenario::task::Task};
+use crate::{config::tasks::TasksConfig, scenario::task::Task};
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},

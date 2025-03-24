@@ -1,5 +1,5 @@
 use crate::{
-    config::StepsConfig,
+    config::steps::StepsConfig,
     scenario::{
         errors::StepsError, step::Step, task::Task, tasks::Tasks, utils::SendEvent,
         variables::Variables,

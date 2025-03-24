@@ -1,4 +1,4 @@
-use crate::config::CredentialsConfig;
+use crate::config::credentials::CredentialsConfig;
 
 /// Represents authentication credentials used for scenarios.
 ///

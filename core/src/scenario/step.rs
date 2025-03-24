@@ -1,7 +1,7 @@
 use std::sync::mpsc::Sender;
 
 use crate::{
-    config::StepConfig,
+    config::step::StepConfig,
     scenario::{
         errors::StepError, on_fail::OnFailSteps, task::Task, tasks::Tasks, variables::Variables,
     },

@@ -1,20 +1,21 @@
 //! Defines required variables for scenarios.
-//! 
+//!
 //! This module provides types and implementations for managing required variables
 //! that are used within scenarios, including different variable types and their
 //! transformations.
 
 use chrono::Local;
 
-use crate::config::{RequiredVariablesConfig, VariableTypeConfig};
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
     path::PathBuf,
 };
 
+use crate::config::variables::required::{RequiredVariablesConfig, VariableTypeConfig};
+
 /// A collection of required variables for a scenario.
-/// 
+///
 /// This struct wraps a HashMap of variable names to `RequiredVariable` instances,
 /// providing methods for managing these variables.
 #[derive(Clone, Debug)]
@@ -38,7 +39,7 @@ impl DerefMut for RequiredVariables {
 
 impl From<&RequiredVariablesConfig> for RequiredVariables {
     /// Creates a `RequiredVariables` collection from a configuration.
-    /// 
+    ///
     /// Initializes variables with appropriate types and default values based on
     /// the configuration. Timestamp variables are initialized with the current time.
     fn from(config: &RequiredVariablesConfig) -> Self {
@@ -80,7 +81,7 @@ impl Default for RequiredVariables {
 
 impl RequiredVariables {
     /// Updates existing variables with new values and adds derived variables.
-    /// 
+    ///
     /// For path variables, automatically creates basename variables when the path
     /// points to a file. These basename variables are read-only and have the format
     /// "basename:{original_variable_name}".
@@ -155,11 +156,11 @@ impl RequiredVariable {
 pub enum VariableType {
     /// A simple string variable.
     String,
-    
+
     /// A file or directory path.
     /// Path variables can generate basename variables when they point to files.
     Path,
-    
+
     /// A timestamp with a specific format.
     /// Initialized with the current time when created.
     Timestamp { format: String },
@@ -167,8 +168,9 @@ pub enum VariableType {
 
 #[cfg(test)]
 mod tests {
+    use crate::config::variables::required::RequiredVariableConfig;
+
     use super::*;
-    use crate::config::{RequiredVariableConfig, RequiredVariablesConfig, VariableTypeConfig};
     use std::collections::HashMap;
 
     #[test]
