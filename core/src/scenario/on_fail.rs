@@ -225,8 +225,8 @@ mod tests {
     fn test_on_fail_steps_execute_sftp_copy_error() {
         // Given
         let sftp_copy = SftpCopy {
-            source_path: "/non/existent/source".to_string(),
-            destination_path: "/non/existent/dest".to_string(),
+            source_path: "{non-existent-var}".to_string(),
+            destination_path: "/test/dest".to_string(),
         };
 
         let failing_task = Task::SftpCopy {
