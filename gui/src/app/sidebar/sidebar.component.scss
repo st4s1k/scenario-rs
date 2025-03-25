@@ -17,6 +17,7 @@
 
   &.resizing {
     transition: none;
+    -webkit-user-select: none;
     user-select: none;
   }
 
@@ -84,8 +85,6 @@
             border-bottom: 1px solid styles.$secondary-color-lighter-10;
             padding-bottom: styles.$gap-5;
 
-            .expandable-container {
-            }
             .expandable-title:hover+.expandable .expandable-content {
               border-left: 1px solid styles.$primary-color-lighter-40;
             }
