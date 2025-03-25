@@ -80,6 +80,13 @@ impl Default for RequiredVariables {
 }
 
 impl RequiredVariables {
+
+    pub fn value_map(&self) -> HashMap<String, String> {
+        self.iter()
+            .map(|(key, var)| (key.clone(), var.value.clone()))
+            .collect()
+    }
+
     /// Updates existing variables with new values and adds derived variables.
     ///
     /// For path variables, automatically creates basename variables when the path
@@ -127,6 +134,15 @@ pub struct RequiredVariable {
     pub(crate) var_type: VariableType,
     pub(crate) value: String,
     pub(crate) read_only: bool,
+}
+
+impl Deref for RequiredVariable {
+    type Target = String;
+
+    /// Dereferences to the underlying value of the variable.
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
 }
 
 impl RequiredVariable {

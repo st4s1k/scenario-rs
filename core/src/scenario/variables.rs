@@ -1,4 +1,9 @@
+pub mod defined;
 pub mod required;
+pub mod resolved;
+
+use defined::DefinedVariables;
+use resolved::ResolvedVariables;
 
 use crate::{
     config::variables::VariablesConfig,
@@ -12,14 +17,14 @@ use std::{collections::HashMap, ops::Deref};
 #[derive(Clone, Debug)]
 pub struct Variables {
     required: RequiredVariables,
-    defined: HashMap<String, String>,
+    defined: DefinedVariables,
 }
 
 impl Default for Variables {
     fn default() -> Self {
         Variables {
             required: RequiredVariables::default(),
-            defined: HashMap::new(),
+            defined: DefinedVariables::default(),
         }
     }
 }
@@ -28,7 +33,7 @@ impl From<&VariablesConfig> for Variables {
     fn from(config: &VariablesConfig) -> Self {
         Variables {
             required: RequiredVariables::from(&config.required),
-            defined: config.defined.deref().clone(),
+            defined: DefinedVariables::from(&config.defined),
         }
     }
 }
@@ -82,39 +87,41 @@ impl Variables {
         }
     }
 
-    pub fn resolved(&self) -> Result<HashMap<String, String>, PlaceholderResolutionError> {
-        let mut resolved_variables = self.defined.clone();
-        self.required.iter().for_each(|(name, required_variable)| {
-            resolved_variables.insert(name.clone(), required_variable.value.clone());
-        });
+    pub fn resolved(&self) -> Result<ResolvedVariables, PlaceholderResolutionError> {
+        let mut all_variables = HashMap::new();
+
+        all_variables.extend(self.defined.deref().clone());
+        all_variables.extend(self.required.value_map());
 
         loop {
-            let mut changes = false;
-            for key in &resolved_variables.keys().cloned().collect::<Vec<String>>() {
-                let value = &resolved_variables[key];
+            let mut resolved_variables = HashMap::new();
+
+            for (variable_name, value) in all_variables.iter() {
                 let new_value = self.resolve_placeholders(value)?;
-                if new_value != resolved_variables[key] {
-                    resolved_variables.insert(key.to_string(), new_value);
-                    changes = true;
+                if new_value != *value {
+                    resolved_variables.insert(variable_name.clone(), new_value);
                 }
             }
-            if !changes {
+
+            if resolved_variables.is_empty() {
                 break;
             }
+
+            all_variables.extend(resolved_variables);
         }
 
-        let unresolved_keys = resolved_variables
+        let unresolved_variable_names: Vec<String> = all_variables
             .iter()
             .filter(|(_, value)| value.has_placeholders())
-            .map(|(key, _)| key.to_owned())
-            .collect::<Vec<String>>();
+            .map(|(name, _)| name.clone())
+            .collect();
 
-        if !unresolved_keys.is_empty() {
+        if !unresolved_variable_names.is_empty() {
             return Err(
-                PlaceholderResolutionError::CannotResolveVariablesPlaceholders(unresolved_keys),
+                PlaceholderResolutionError::CannotResolveVariablesPlaceholders(unresolved_variable_names),
             );
         }
 
-        Ok(resolved_variables)
+        Ok(ResolvedVariables(all_variables))
     }
 }
