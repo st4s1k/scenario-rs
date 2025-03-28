@@ -8,7 +8,7 @@ name = "scenario-rs-cli"
 path = "src/main.rs"
 
 [dependencies]
-clap = { version = "4.5.32", features = ["derive"] }
+clap = { version = "4.5.34", features = ["derive"] }
 scenario-rs = { package = "scenario-rs-core", path = "../core" }
 colored = "3.0.0"
 chrono = "0.4.40"
