@@ -120,7 +120,7 @@ env_name = { type = "String", label = "Environment Name" }
 app_version = "1.0.0"  # Adds new variable while keeping app_name from parent
 ```
 
-## GUI Interface
+## GUI
 
 The GUI provides an intuitive interface to:
 - Load scenario configurations
@@ -129,7 +129,7 @@ The GUI provides an intuitive interface to:
 - View logs
 - Save state between runs
 
-## CLI Interface
+## CLI
 
 For automation scripts or CI/CD pipelines:
 
@@ -139,9 +139,18 @@ scenario-rs-cli --config-path ./your-scenario.toml
 
 ## Screenshots
 
-![screenshot](screenshots/screenshot_1.png)
+![screenshot](screenshots/screenshot_0.png)
 
-![screenshot](screenshots/screenshot_2.png)
+<details>
+  <summary><b>❗click here to view more screenshots❗<b></summary>
+
+  ![screenshot](screenshots/screenshot_1.png)
+
+  ![screenshot](screenshots/screenshot_2.png)
+
+  ![screenshot](screenshots/screenshot_3.png)
+
+</details>
 
 ## DIY
 
