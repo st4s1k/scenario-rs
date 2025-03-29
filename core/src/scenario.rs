@@ -47,6 +47,10 @@ impl Scenario {
     pub fn tasks(&self) -> &Tasks {
         &self.tasks
     }
+    
+    pub fn steps(&self) -> &steps::Steps {
+        &self.execute.steps
+    }
 }
 
 impl TryFrom<ScenarioConfig> for Scenario {

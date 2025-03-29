@@ -15,6 +15,11 @@ interface Task {
   destination_path?: string;
 }
 
+interface Step {
+  task: Task;
+  on_fail_steps: Task[];
+}
+
 @Component({
   selector: 'app-sidebar',
   imports: [CommonModule],
@@ -24,6 +29,7 @@ interface Task {
 export class SidebarComponent implements OnChanges {
   @Input() resolvedVariables: { [key: string]: string } = {};
   @Input() tasks: { [key: string]: Task } = {};
+  @Input() steps: Step[] = [];
 
   activeTab: string = 'variables';
   sidebarWidth = 30;
@@ -31,8 +37,9 @@ export class SidebarComponent implements OnChanges {
   isCollapsed = true;
 
   tabsConfig: TabConfig[] = [
-    { id: 'variables', title: 'Variables' },
-    { id: 'tasks', title: 'Tasks' }
+    { id: 'steps', title: 'Steps' },
+    { id: 'tasks', title: 'Tasks' },
+    { id: 'variables', title: 'Variables' }
   ];
 
   private readonly minSidebarWidth = 40;
@@ -159,7 +166,7 @@ export class SidebarComponent implements OnChanges {
     // Switch tabs with Alt+1, Alt+2, Alt+3 etc.
     if (event.altKey && !isNaN(Number(event.key))) {
       const tabIndex = Number(event.key) - 1;
-      const tabIds = ['variables', 'tasks'];
+      const tabIds = this.tabsConfig.map(tab => tab.id);
       if (tabIndex >= 0 && tabIndex < tabIds.length) {
         const tabId = tabIds[tabIndex];
         this.toggleTab(tabId);

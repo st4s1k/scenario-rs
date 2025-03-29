@@ -1,5 +1,6 @@
 use crate::{lifecycle::LifecycleHandler, shared::SEPARATOR};
 use scenario_rs::scenario::{
+    step::Step,
     task::Task,
     variables::required::{RequiredVariable, VariableType},
     Scenario,
@@ -103,6 +104,27 @@ pub struct TaskDTO {
     command: Option<String>,
     source_path: Option<String>,
     destination_path: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct StepDTO {
+    task: TaskDTO,
+    on_fail_steps: Vec<TaskDTO>,
+}
+
+impl From<&Step> for StepDTO {
+    fn from(step: &Step) -> Self {
+        let on_fail_tasks: Vec<TaskDTO> = step
+            .on_fail_steps()
+            .iter()
+            .map(|task| TaskDTO::from(task))
+            .collect();
+        
+        Self {
+            task: TaskDTO::from(step.task()),
+            on_fail_steps: on_fail_tasks,
+        }
+    }
 }
 
 impl From<&Task> for TaskDTO {
@@ -315,6 +337,18 @@ impl ScenarioAppState {
             }
         } else {
             BTreeMap::new()
+        }
+    }
+
+    pub fn get_steps(&self) -> Vec<StepDTO> {
+        if let Some(scenario) = self.scenario.as_ref() {
+            scenario
+                .steps()
+                .iter()
+                .map(|step| StepDTO::from(step))
+                .collect()
+        } else {
+            Vec::new()
         }
     }
 

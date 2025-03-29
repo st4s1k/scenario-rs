@@ -85,7 +85,7 @@
             border-bottom: 1px solid styles.$secondary-color-lighter-10;
             padding-bottom: styles.$gap-5;
 
-            .expandable-title:hover+.expandable .expandable-content {
+            .expandable-title:hover+.expandable>.expandable-content {
               border-left: 1px solid styles.$primary-color-lighter-40;
             }
 

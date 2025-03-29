@@ -1,4 +1,4 @@
-use crate::app::{RequiredVariableDTO, ScenarioAppState, TaskDTO};
+use crate::app::{RequiredVariableDTO, ScenarioAppState, TaskDTO, StepDTO};
 use std::sync::atomic::Ordering;
 use std::sync::{MutexGuard, PoisonError};
 use std::{
@@ -88,6 +88,12 @@ pub fn clear_state(state: State<'_, Mutex<ScenarioAppState>>) -> Result<(), Stri
 pub fn get_tasks(state: State<'_, Mutex<ScenarioAppState>>) -> BTreeMap<String, TaskDTO> {
     let state = safe_get_state(state.lock());
     state.get_tasks()
+}
+
+#[tauri::command(async)]
+pub fn get_steps(state: State<'_, Mutex<ScenarioAppState>>) -> Vec<StepDTO> {
+    let state = safe_get_state(state.lock());
+    state.get_steps()
 }
 
 fn safe_get_state<'a, T>(

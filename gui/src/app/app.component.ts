@@ -34,6 +34,11 @@ interface Task {
   destination_path?: string;
 }
 
+interface Step {
+  task: Task;
+  on_fail_steps: Task[];
+}
+
 @Component({
   selector: 'app-root',
   imports: [
@@ -59,6 +64,7 @@ export class AppComponent implements OnDestroy {
   private formValueChangesSubscription?: Subscription;
   resolvedVariables: ResolvedVariables = {};
   tasks: { [key: string]: Task } = {};
+  steps: Step[] = [];
 
   unlistenLogUpdates?: UnlistenFn;
   unlistenExecutionStatus?: UnlistenFn;
@@ -70,7 +76,8 @@ export class AppComponent implements OnDestroy {
       .then(() => Promise.all([
         this.getRequiredVariables(),
         this.getResolvedVariables(),
-        this.getTasks()
+        this.getTasks(),
+        this.getSteps()
       ]));
 
     this.setupFormValueChangeListener();
@@ -162,6 +169,7 @@ export class AppComponent implements OnDestroy {
     }
     await invoke('load_config', { configPath });
     await this.getTasks();
+    await this.getSteps();
   }
 
   private async getRequiredVariables(): Promise<void> {
@@ -191,6 +199,13 @@ export class AppComponent implements OnDestroy {
     return invoke<{ [key: string]: Task }>('get_tasks')
       .then((tasks) => {
         this.tasks = tasks || {};
+      });
+  }
+
+  private async getSteps(): Promise<void> {
+    return invoke<Step[]>('get_steps')
+      .then((steps) => {
+        this.steps = steps || [];
       });
   }
 
