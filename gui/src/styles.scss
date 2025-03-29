@@ -42,6 +42,7 @@ html {
 // Global styles for specific states
 .resizing-sidebar {
     cursor: ew-resize !important;
+    -webkit-user-select: none;
     user-select: none;
 
     * {
