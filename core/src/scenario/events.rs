@@ -1,6 +1,6 @@
 // events.rs
 #[derive(Clone, Debug)]
-pub enum Event {
+pub enum ScenarioEvent {
     // Scenario-level events
     ScenarioStarted,
     ScenarioCompleted,

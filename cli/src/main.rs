@@ -1,7 +1,7 @@
 use clap::Parser;
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
-use scenario_rs::scenario::{events::Event, Scenario};
+use scenario_rs::scenario::{events::ScenarioEvent, Scenario};
 use std::sync::mpsc::channel;
 use std::{path::PathBuf, process};
 use tracing::{debug, error, info};
@@ -42,10 +42,10 @@ fn main() {
 
     for event in rx {
         match event {
-            Event::ScenarioStarted => {
+            ScenarioEvent::ScenarioStarted => {
                 info!("Scenario started...");
             }
-            Event::StepStarted {
+            ScenarioEvent::StepStarted {
                 index,
                 total_steps,
                 description,
@@ -56,11 +56,11 @@ fn main() {
                     format!("[{}/{}] {}", index + 1, total_steps, description).purple()
                 );
             }
-            Event::RemoteSudoBefore(cmd) => {
+            ScenarioEvent::RemoteSudoBefore(cmd) => {
                 info!("{}", "Executing:".yellow());
                 info!("{}", cmd.bold());
             }
-            Event::RemoteSudoChannelOutput(output) => {
+            ScenarioEvent::RemoteSudoChannelOutput(output) => {
                 let trimmed = output.trim();
                 info!("{}", trimmed.chars().take(1000).collect::<String>().trim());
                 if trimmed.len() > 1000 {
@@ -68,10 +68,10 @@ fn main() {
                     info!("...output truncated...");
                 }
             }
-            Event::RemoteSudoAfter => {
+            ScenarioEvent::RemoteSudoAfter => {
                 info!("Remote sudo command completed");
             }
-            Event::SftpCopyBefore {
+            ScenarioEvent::SftpCopyBefore {
                 source,
                 destination,
             } => {
@@ -92,7 +92,7 @@ fn main() {
 
                 active_progress_bar = Some(pb);
             }
-            Event::SftpCopyProgress { current, total } => {
+            ScenarioEvent::SftpCopyProgress { current, total } => {
                 if let Some(pb) = &active_progress_bar {
                     match pb.length() {
                         Some(len) => {
@@ -107,17 +107,17 @@ fn main() {
                     pb.set_position(current);
                 }
             }
-            Event::SftpCopyAfter => {
+            ScenarioEvent::SftpCopyAfter => {
                 if let Some(pb) = active_progress_bar.take() {
                     pb.finish_with_message("SFTP copy completed");
                 }
                 info!("SFTP copy finished");
             }
-            Event::OnFailStepsStarted => {
+            ScenarioEvent::OnFailStepsStarted => {
                 info!("{}", SEPARATOR);
                 info!("On-fail steps started");
             }
-            Event::OnFailStepStarted {
+            ScenarioEvent::OnFailStepStarted {
                 index,
                 total_steps,
                 description,
@@ -128,22 +128,22 @@ fn main() {
                     format!("[on-fail] [{}/{}] {}", index + 1, total_steps, description).purple()
                 );
             }
-            Event::OnFailStepCompleted => {
+            ScenarioEvent::OnFailStepCompleted => {
                 info!("On-fail step completed");
             }
-            Event::OnFailStepsCompleted => {
+            ScenarioEvent::OnFailStepsCompleted => {
                 info!("{}", SEPARATOR);
                 info!("On-fail steps completed");
             }
-            Event::StepCompleted => {
+            ScenarioEvent::StepCompleted => {
                 info!("Step completed");
             }
-            Event::ScenarioCompleted => {
+            ScenarioEvent::ScenarioCompleted => {
                 info!("{}", SEPARATOR);
                 info!("{}", "Scenario completed successfully!".cyan());
                 info!("{}", SEPARATOR);
             }
-            Event::ScenarioError(msg) => {
+            ScenarioEvent::ScenarioError(msg) => {
                 // Make sure to clean up any active progress bar before showing error
                 if let Some(pb) = active_progress_bar.take() {
                     pb.finish_and_clear();

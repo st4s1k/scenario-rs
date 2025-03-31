@@ -2,7 +2,7 @@ use std::sync::mpsc::Sender;
 
 use regex::Regex;
 
-use super::events::Event;
+use super::events::ScenarioEvent;
 
 pub(crate) trait HasPlaceholders
 where
@@ -23,8 +23,8 @@ pub (crate) trait SendEvent<T> {
     fn send_event(&self, event: T);
 }
 
-impl SendEvent<Event> for Sender<Event> {
-    fn send_event(&self, event: Event) {
+impl SendEvent<ScenarioEvent> for Sender<ScenarioEvent> {
+    fn send_event(&self, event: ScenarioEvent) {
         if self.send(event.clone()).is_err() {
             eprintln!("Warning: Could not send event, channel may be closed");
             dbg!(event);

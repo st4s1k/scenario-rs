@@ -5,7 +5,7 @@ use crate::{
 };
 use credentials::Credentials;
 use errors::ScenarioError;
-use events::Event;
+use events::ScenarioEvent;
 use server::Server;
 use std::{path::PathBuf, sync::mpsc::Sender};
 use utils::SendEvent;
@@ -102,14 +102,14 @@ impl TryFrom<&str> for Scenario {
 }
 
 impl Scenario {
-    pub fn execute(&self, tx: Sender<Event>) {
+    pub fn execute(&self, tx: Sender<ScenarioEvent>) {
         if let Err(error) = self._execute(tx.clone()) {
-            tx.send_event(Event::ScenarioError(format!("{error}")));
+            tx.send_event(ScenarioEvent::ScenarioError(format!("{error}")));
         }
     }
 
-    pub fn _execute(&self, tx: Sender<Event>) -> Result<(), ScenarioError> {
-        tx.send_event(Event::ScenarioStarted);
+    pub fn _execute(&self, tx: Sender<ScenarioEvent>) -> Result<(), ScenarioError> {
+        tx.send_event(ScenarioEvent::ScenarioStarted);
 
         let session = Session::new(&self.server, &self.credentials)
             .map_err(ScenarioError::CannotCreateANewSession)?;
@@ -119,7 +119,7 @@ impl Scenario {
             .execute(&session, &self.variables, &tx)
             .map_err(ScenarioError::CannotExecuteSteps)?;
 
-        tx.send_event(Event::ScenarioCompleted);
+        tx.send_event(ScenarioEvent::ScenarioCompleted);
         Ok(())
     }
 }

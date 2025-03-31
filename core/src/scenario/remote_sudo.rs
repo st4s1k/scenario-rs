@@ -5,7 +5,7 @@ use crate::{
     session::Session,
 };
 
-use super::events::Event;
+use super::events::ScenarioEvent;
 
 /// Represents a remote command to be executed with sudo privileges
 ///
@@ -38,13 +38,13 @@ impl RemoteSudo {
         &self,
         session: &Session,
         variables: &Variables,
-        tx: &Sender<Event>,
+        tx: &Sender<ScenarioEvent>,
     ) -> Result<(), RemoteSudoError> {
         let command = variables
             .resolve_placeholders(&self.command)
             .map_err(RemoteSudoError::CannotResolveCommandPlaceholders)?;
 
-        tx.send_event(Event::RemoteSudoBefore(command.clone()));
+        tx.send_event(ScenarioEvent::RemoteSudoBefore(command.clone()));
 
         let channel = session
             .channel_session()
@@ -65,7 +65,7 @@ impl RemoteSudo {
 
         let truncated_output: String = output.chars().take(1000).collect();
 
-        tx.send_event(Event::RemoteSudoChannelOutput(truncated_output));
+        tx.send_event(ScenarioEvent::RemoteSudoChannelOutput(truncated_output));
 
         let exit_status = channel
             .lock()
@@ -171,14 +171,14 @@ mod tests {
         // Then
         assert!(result.is_ok());
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert_eq!(events.len(), 2);
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::RemoteSudoBefore(_))));
+            .any(|e| matches!(e, ScenarioEvent::RemoteSudoBefore(_))));
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::RemoteSudoChannelOutput(_))));
+            .any(|e| matches!(e, ScenarioEvent::RemoteSudoChannelOutput(_))));
     }
 
     #[test]
@@ -205,7 +205,7 @@ mod tests {
             Err(RemoteSudoError::CannotResolveCommandPlaceholders(_))
         ));
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert!(events.is_empty());
     }
 
@@ -246,11 +246,11 @@ mod tests {
             Err(RemoteSudoError::CannotExecuteRemoteCommand(_))
         ));
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert_eq!(events.len(), 1);
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::RemoteSudoBefore(_))));
+            .any(|e| matches!(e, ScenarioEvent::RemoteSudoBefore(_))));
     }
 
     #[test]
@@ -291,14 +291,14 @@ mod tests {
             Err(RemoteSudoError::RemoteCommandFailedWithStatusCode(1))
         ));
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert_eq!(events.len(), 2);
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::RemoteSudoBefore(_))));
+            .any(|e| matches!(e, ScenarioEvent::RemoteSudoBefore(_))));
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::RemoteSudoChannelOutput(_))));
+            .any(|e| matches!(e, ScenarioEvent::RemoteSudoChannelOutput(_))));
     }
 
     #[test]
@@ -338,11 +338,11 @@ mod tests {
             Err(RemoteSudoError::CannotReadChannelOutput(_))
         ));
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert_eq!(events.len(), 1);
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::RemoteSudoBefore(_))));
+            .any(|e| matches!(e, ScenarioEvent::RemoteSudoBefore(_))));
     }
 
     #[test]
@@ -382,14 +382,14 @@ mod tests {
             Err(RemoteSudoError::CannotObtainRemoteCommandExitStatus(_))
         ));
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert_eq!(events.len(), 2);
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::RemoteSudoBefore(_))));
+            .any(|e| matches!(e, ScenarioEvent::RemoteSudoBefore(_))));
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::RemoteSudoChannelOutput(_))));
+            .any(|e| matches!(e, ScenarioEvent::RemoteSudoChannelOutput(_))));
     }
 
     #[test]
@@ -431,10 +431,10 @@ mod tests {
             Err(RemoteSudoError::CannotGetALockOnChannel)
         ));
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert_eq!(events.len(), 1);
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::RemoteSudoBefore(_))));
+            .any(|e| matches!(e, ScenarioEvent::RemoteSudoBefore(_))));
     }
 }

@@ -1,7 +1,7 @@
 use thiserror::Error;
 use std::sync::mpsc::SendError;
 
-use super::events::Event;
+use super::events::ScenarioEvent;
 
 #[derive(Error, Debug)]
 pub enum ScenarioConfigError {
@@ -42,7 +42,7 @@ pub enum ScenarioError {
     #[error("Cannot execute steps: {0}")]
     CannotExecuteSteps(#[source] StepsError),
     #[error("Cannot send scenario started event: {0}")]
-    CannotSendScenarioStartedEvent(#[from] SendError<Event>),
+    CannotSendScenarioStartedEvent(#[from] SendError<ScenarioEvent>),
     #[error("Cannot send scenario completed event: {0}")]
     CannotSendScenarioCompletedEvent(String),
 }

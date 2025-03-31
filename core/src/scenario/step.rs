@@ -8,7 +8,7 @@ use crate::{
     session::Session,
 };
 
-use super::events::Event;
+use super::events::ScenarioEvent;
 
 #[derive(Clone, Debug)]
 pub struct Step {
@@ -47,7 +47,7 @@ impl Step {
         &self,
         session: &Session,
         variables: &Variables,
-        tx: &Sender<Event>,
+        tx: &Sender<ScenarioEvent>,
     ) -> Result<(), StepError> {
         self.on_fail_steps
             .execute(session, variables, tx)

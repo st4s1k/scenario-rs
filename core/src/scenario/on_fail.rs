@@ -10,7 +10,7 @@ use std::{
     sync::mpsc::Sender,
 };
 
-use super::events::Event;
+use super::events::ScenarioEvent;
 
 /// Represents a collection of tasks that will be executed when a scenario fails.
 ///
@@ -75,12 +75,12 @@ impl OnFailSteps {
         &self,
         session: &Session,
         variables: &Variables,
-        tx: &Sender<Event>,
+        tx: &Sender<ScenarioEvent>,
     ) -> Result<(), OnFailError> {
-        tx.send_event(Event::OnFailStepsStarted);
+        tx.send_event(ScenarioEvent::OnFailStepsStarted);
 
         for (index, on_fail_task) in self.iter().enumerate() {
-            tx.send_event(Event::OnFailStepStarted {
+            tx.send_event(ScenarioEvent::OnFailStepStarted {
                 index,
                 total_steps: self.len(),
                 description: on_fail_task.description().to_string(),

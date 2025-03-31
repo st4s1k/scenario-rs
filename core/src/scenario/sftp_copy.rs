@@ -10,7 +10,7 @@ use std::fs::File;
 #[cfg(test)]
 use tests::TestFile as File;
 
-use super::events::Event;
+use super::events::ScenarioEvent;
 
 /// Represents an SFTP copy operation from a local file to a remote destination
 ///
@@ -48,7 +48,7 @@ impl SftpCopy {
         &self,
         session: &Session,
         variables: &Variables,
-        tx: &Sender<Event>,
+        tx: &Sender<ScenarioEvent>,
     ) -> Result<(), SftpCopyError> {
         let resolved_source = variables
             .resolve_placeholders(&self.source_path)
@@ -57,7 +57,7 @@ impl SftpCopy {
             .resolve_placeholders(&self.destination_path)
             .map_err(SftpCopyError::CannotResolveDestinationPathPlaceholders)?;
 
-        tx.send_event(Event::SftpCopyBefore {
+        tx.send_event(ScenarioEvent::SftpCopyBefore {
             source: resolved_source.clone(),
             destination: resolved_destination.clone(),
         });
@@ -96,13 +96,13 @@ impl SftpCopy {
 
             current_bytes += bytes_read as u64;
 
-            tx.send_event(Event::SftpCopyProgress {
+            tx.send_event(ScenarioEvent::SftpCopyProgress {
                 current: current_bytes,
                 total: total_bytes,
             });
         }
 
-        tx.send_event(Event::SftpCopyAfter);
+        tx.send_event(ScenarioEvent::SftpCopyAfter);
 
         Ok(())
     }
@@ -276,15 +276,15 @@ mod tests {
         // Then
         assert!(result.is_ok());
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert_eq!(events.len(), 3);
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::SftpCopyBefore { .. })));
+            .any(|e| matches!(e, ScenarioEvent::SftpCopyBefore { .. })));
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::SftpCopyProgress { .. })));
-        assert!(events.iter().any(|e| matches!(e, Event::SftpCopyAfter)));
+            .any(|e| matches!(e, ScenarioEvent::SftpCopyProgress { .. })));
+        assert!(events.iter().any(|e| matches!(e, ScenarioEvent::SftpCopyAfter)));
     }
 
     #[test]
@@ -307,7 +307,7 @@ mod tests {
             Err(SftpCopyError::CannotResolveSourcePathPlaceholders(_))
         ));
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert!(events.is_empty());
     }
 
@@ -331,7 +331,7 @@ mod tests {
             Err(SftpCopyError::CannotResolveDestinationPathPlaceholders(_))
         ));
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert!(events.is_empty());
     }
 
@@ -382,11 +382,11 @@ mod tests {
             Err(SftpCopyError::CannotGetALockOnSftpChannel)
         ));
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert_eq!(events.len(), 1);
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::SftpCopyBefore { .. })));
+            .any(|e| matches!(e, ScenarioEvent::SftpCopyBefore { .. })));
     }
 
     #[test]
@@ -421,11 +421,11 @@ mod tests {
             Err(SftpCopyError::CannotCreateDestinationFile(_))
         ));
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert_eq!(events.len(), 1);
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::SftpCopyBefore { .. })));
+            .any(|e| matches!(e, ScenarioEvent::SftpCopyBefore { .. })));
     }
 
     #[test]
@@ -467,11 +467,11 @@ mod tests {
             Err(SftpCopyError::CannotWriteDestinationFile(_))
         ));
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert_eq!(events.len(), 1);
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::SftpCopyBefore { .. })));
+            .any(|e| matches!(e, ScenarioEvent::SftpCopyBefore { .. })));
     }
 
     #[test]
@@ -494,11 +494,11 @@ mod tests {
             Err(SftpCopyError::CannotOpenSourceFile(_))
         ));
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert_eq!(events.len(), 1);
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::SftpCopyBefore { .. })));
+            .any(|e| matches!(e, ScenarioEvent::SftpCopyBefore { .. })));
     }
 
     #[test]
@@ -521,11 +521,11 @@ mod tests {
             Err(SftpCopyError::CannotReadSourceFile(_))
         ));
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert_eq!(events.len(), 1);
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::SftpCopyBefore { .. })));
+            .any(|e| matches!(e, ScenarioEvent::SftpCopyBefore { .. })));
     }
 
     #[test]
@@ -548,10 +548,10 @@ mod tests {
             Err(SftpCopyError::CannotReadSourceFile(_))
         ));
 
-        let events: Vec<Event> = rx.try_iter().collect();
+        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
         assert_eq!(events.len(), 1);
         assert!(events
             .iter()
-            .any(|e| matches!(e, Event::SftpCopyBefore { .. })));
+            .any(|e| matches!(e, ScenarioEvent::SftpCopyBefore { .. })));
     }
 }

@@ -11,7 +11,7 @@ use std::{
     sync::mpsc::Sender,
 };
 
-use super::events::Event;
+use super::events::ScenarioEvent;
 
 #[derive(Clone, Debug)]
 pub struct Steps(Vec<Step>);
@@ -54,10 +54,10 @@ impl Steps {
         &self,
         session: &Session,
         variables: &Variables,
-        tx: &Sender<Event>,
+        tx: &Sender<ScenarioEvent>,
     ) -> Result<(), StepsError> {
         for (index, step) in self.iter().enumerate() {
-            tx.send_event(Event::StepStarted {
+            tx.send_event(ScenarioEvent::StepStarted {
                 index,
                 total_steps: self.len(),
                 description: step.task.description().to_string(),
@@ -79,7 +79,7 @@ impl Steps {
             };
 
             if let Err(err) = task_result {
-                tx.send_event(Event::ScenarioError(format!("Step error: {}", err)));
+                tx.send_event(ScenarioEvent::ScenarioError(format!("Step error: {}", err)));
                 step.on_fail_with_events(session, variables, tx)
                     .map_err(StepsError::CannotExecuteOnFailSteps)?;
                 return Err(err);
