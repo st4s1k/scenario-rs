@@ -79,6 +79,7 @@
         .tasks {
           display: grid;
           grid-auto-rows: min-content;
+          min-width: max-content;
 
           .task {
             display: grid;
