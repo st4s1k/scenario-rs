@@ -12,7 +12,7 @@ use tauri::Manager;
 
 mod app;
 mod commands;
-mod lifecycle;
+mod event_handler;
 mod shared;
 
 fn main() {

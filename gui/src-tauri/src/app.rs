@@ -1,4 +1,4 @@
-use crate::{lifecycle::LifecycleHandler, shared::SEPARATOR};
+use crate::{event_handler, shared::SEPARATOR};
 use scenario_rs::scenario::{
     step::Step,
     task::Task,
@@ -119,7 +119,7 @@ impl From<&Step> for StepDTO {
             .iter()
             .map(|task| TaskDTO::from(task))
             .collect();
-        
+
         Self {
             task: TaskDTO::from(step.task()),
             on_fail_steps: on_fail_tasks,
@@ -277,10 +277,8 @@ impl ScenarioAppState {
     pub fn execute_scenario(&mut self) {
         if let Some(scenario) = self.scenario.as_ref().cloned() {
             let app_handle = self.app_handle.clone();
-            let tx = LifecycleHandler::try_initialize(app_handle);
-
+            let tx = event_handler::new_channel(app_handle);
             let is_executing = self.is_executing.clone();
-
             tauri::async_runtime::spawn(async move {
                 is_executing.store(true, Ordering::SeqCst);
                 scenario.execute(tx);
