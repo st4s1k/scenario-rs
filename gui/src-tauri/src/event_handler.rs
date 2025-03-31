@@ -23,7 +23,7 @@ pub fn new_channel(app_handle: AppHandle) -> Sender<Event> {
 fn handle_event(app_handle: &AppHandle, event: &Event) {
     match event {
         Event::ScenarioStarted => {
-            log_message(app_handle, "Scenario started...\n".to_string());
+            log_message(app_handle, "Scenario started...\n");
             let _ = app_handle.emit("execution-status", true);
         }
         Event::StepStarted {
@@ -50,7 +50,7 @@ fn handle_event(app_handle: &AppHandle, event: &Event) {
                 .to_string();
             log_message(app_handle, format!("{truncated_output}\n"));
             if output.len() > 1000 {
-                log_message(app_handle, "...output truncated...\n".to_string());
+                log_message(app_handle, "...output truncated...\n");
             }
         }
         Event::SftpCopyBefore {
@@ -98,16 +98,16 @@ fn handle_event(app_handle: &AppHandle, event: &Event) {
             let _ = app_handle.emit("execution-status", false);
         }
         Event::StepCompleted => {
-            log_message(app_handle, "Step completed\n".to_string());
+            log_message(app_handle, "Step completed\n");
         }
         Event::RemoteSudoAfter => {
-            log_message(app_handle, "Remote sudo command completed\n".to_string());
+            log_message(app_handle, "Remote sudo command completed\n");
         }
         Event::SftpCopyAfter => {
-            log_message(app_handle, "SFTP copy finished\n".to_string());
+            log_message(app_handle, "SFTP copy finished\n");
         }
         Event::OnFailStepCompleted => {
-            log_message(app_handle, "On-fail step completed\n".to_string());
+            log_message(app_handle, "On-fail step completed\n");
         }
         Event::OnFailStepsCompleted => {
             log_message(
@@ -118,9 +118,9 @@ fn handle_event(app_handle: &AppHandle, event: &Event) {
     }
 }
 
-fn log_message(app_handle: &AppHandle, message: String) {
+fn log_message(app_handle: &AppHandle, message: impl AsRef<str>) {
     let state = app_handle.state::<Mutex<ScenarioAppState>>();
     let mut state = state.lock().unwrap();
-    state.output_log.push_str(&message);
+    state.output_log.push_str(message.as_ref());
     let _ = app_handle.emit("log-update", ());
 }
