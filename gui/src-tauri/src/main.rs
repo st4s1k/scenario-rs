@@ -7,22 +7,28 @@ use commands::{
     get_resolved_variables, get_steps, get_tasks, load_config, save_state,
     update_required_variables,
 };
+use utils::SafeLock;
 use std::sync::Mutex;
 use tauri::Manager;
 
 mod app;
+mod app_event;
 mod commands;
-mod event_handler;
+mod event;
+mod scenario_event;
 mod shared;
+mod utils;
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            let mut state = ScenarioAppState::new(app.handle().clone());
-            state.load_state();
-            app.manage(Mutex::new(state));
+            let app_state = ScenarioAppState::new(app.handle());
+            app.manage(Mutex::new(app_state));
+            let state = app.handle().state::<Mutex<ScenarioAppState>>();
+            let mut app_state = state.safe_lock();
+            app_state.init();
             Ok(())
         })
         .on_window_event(on_window_event)

@@ -1,5 +1,6 @@
+use crate::app::ScenarioAppState;
 use std::sync::{Mutex, MutexGuard};
-use tauri::State;
+use tauri::{AppHandle, Emitter, Manager, State};
 
 pub trait SafeLock<T: Send> {
     fn safe_lock(&self) -> MutexGuard<'_, T>;
@@ -17,5 +18,18 @@ impl<'a, T: Send> SafeLock<T> for State<'a, Mutex<T>> {
                 poison_error.into_inner()
             }
         }
+    }
+}
+
+pub trait LogMessage {
+    fn log_message(&self, message: impl AsRef<str>);
+}
+
+impl LogMessage for AppHandle {
+    fn log_message(&self, message: impl AsRef<str>) {
+        let state = self.state::<Mutex<ScenarioAppState>>();
+        let mut state = state.safe_lock();
+        state.output_log.push_str(message.as_ref());
+        let _ = self.emit("log-update", ());
     }
 }

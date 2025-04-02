@@ -1,9 +1,10 @@
-use crate::{event_handler, shared::SEPARATOR};
+use crate::{
+    app_event::{AppEvent, AppEventChannel},
+    scenario_event::ScenarioEventChannel,
+    shared::SEPARATOR,
+};
 use scenario_rs::scenario::{
-    step::Step,
-    task::Task,
-    variables::required::{RequiredVariable, VariableType},
-    Scenario,
+    step::Step, task::Task, utils::SendEvent, variables::required::{RequiredVariable, VariableType}, Scenario
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -14,7 +15,7 @@ use std::{
         Arc,
     },
 };
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigPathData {
@@ -68,6 +69,7 @@ pub struct ScenarioAppState {
     pub(crate) config_path: String,
     pub(crate) output_log: String,
     pub(crate) app_handle: AppHandle,
+    pub(crate) event_channel: Option<AppEventChannel>,
     pub(crate) scenario: Option<Scenario>,
     pub(crate) is_executing: Arc<AtomicBool>,
 }
@@ -161,14 +163,25 @@ impl From<&Task> for TaskDTO {
 impl ScenarioAppState {
     const STATE_FILE_PATH: &'static str = "scenario-app-state.json";
 
-    pub fn new(app: AppHandle) -> Self {
+    pub fn new(app_handle: &AppHandle) -> Self {
         Self {
             config_path: String::new(),
             output_log: String::new(),
-            app_handle: app,
+            app_handle: app_handle.clone(),
+            event_channel: None,
             scenario: None,
             is_executing: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    pub fn init(&mut self) {
+        self.init_event_channel();
+        self.load_state();
+    }
+
+    pub fn init_event_channel(&mut self) {
+        let event_channel = AppEventChannel::new(&self.app_handle);
+        self.event_channel = Some(event_channel);
     }
 
     pub fn load_state(&mut self) {
@@ -220,9 +233,9 @@ impl ScenarioAppState {
                     existing_state
                 }
                 Err(error) => {
-                    self.log_message(format!(
+                    self.send_event(AppEvent::LogMessage(format!(
                         "{SEPARATOR}\nFailed to parse existing state: {error}\n{SEPARATOR}\n"
-                    ));
+                    )));
                     current_state
                 }
             },
@@ -232,20 +245,20 @@ impl ScenarioAppState {
         match serde_json::to_string_pretty(&final_state) {
             Ok(json) => match std::fs::write(Self::STATE_FILE_PATH, json) {
                 Ok(_) => {
-                    self.log_message(format!(
+                    self.send_event(AppEvent::LogMessage(format!(
                         "{SEPARATOR}\nApplication state saved\n{SEPARATOR}\n"
-                    ));
+                    )));
                 }
                 Err(error) => {
-                    self.log_message(format!(
+                    self.send_event(AppEvent::LogMessage(format!(
                         "{SEPARATOR}\nFailed to save state: {error}\n{SEPARATOR}\n"
-                    ));
+                    )));
                 }
             },
             Err(error) => {
-                self.log_message(format!(
+                self.send_event(AppEvent::LogMessage(format!(
                     "{SEPARATOR}\nFailed to serialize state: {error}\n{SEPARATOR}\n"
-                ));
+                )));
             }
         }
     }
@@ -254,13 +267,15 @@ impl ScenarioAppState {
         self.config_path = config_path.to_string();
         self.scenario = match Scenario::try_from(config_path) {
             Ok(scenario) => {
-                self.log_message(format!("{SEPARATOR}\nScenario loaded\n{SEPARATOR}\n"));
+                self.send_event(AppEvent::LogMessage(format!(
+                    "{SEPARATOR}\nScenario loaded\n{SEPARATOR}\n"
+                )));
                 Some(scenario)
             }
             Err(e) => {
-                self.log_message(format!(
+                self.send_event(AppEvent::LogMessage(format!(
                     "{SEPARATOR}\nFailed to load scenario: {e}\n{SEPARATOR}\n"
-                ));
+                )));
                 None
             }
         };
@@ -276,8 +291,8 @@ impl ScenarioAppState {
 
     pub fn execute_scenario(&mut self) {
         if let Some(scenario) = self.scenario.as_ref().cloned() {
-            let app_handle = self.app_handle.clone();
-            let tx = event_handler::new_channel(app_handle);
+            let event_channel = ScenarioEventChannel::new(&self.app_handle);
+            let tx = event_channel.sender().clone();
             let is_executing = self.is_executing.clone();
             tauri::async_runtime::spawn(async move {
                 is_executing.store(true, Ordering::SeqCst);
@@ -285,7 +300,9 @@ impl ScenarioAppState {
                 is_executing.store(false, Ordering::SeqCst);
             });
         } else {
-            self.log_message(format!("{SEPARATOR}\nNo scenario loaded\n{SEPARATOR}\n"));
+            self.send_event(AppEvent::LogMessage(format!(
+                "{SEPARATOR}\nNo scenario loaded\n{SEPARATOR}\n"
+            )));
         }
     }
 
@@ -327,9 +344,9 @@ impl ScenarioAppState {
                     .map(|(name, value)| (name.to_string(), value.to_string()))
                     .collect(),
                 Err(err) => {
-                    self.log_message(format!(
+                    self.send_event(AppEvent::LogMessage(format!(
                         "{SEPARATOR}\nFailed to get resolved variables: {err}\n{SEPARATOR}\n"
-                    ));
+                    )));
                     BTreeMap::new()
                 }
             }
@@ -350,14 +367,8 @@ impl ScenarioAppState {
         }
     }
 
-    fn log_message(&mut self, message: String) {
-        self.output_log.push_str(&message);
-        let _ = self.app_handle.emit("log-update", ());
-    }
-
     pub fn clear_log(&mut self) {
-        self.output_log.clear();
-        let _ = self.app_handle.emit("log-update", ());
+        self.send_event(AppEvent::ClearLog);
     }
 
     pub fn clear_state(&mut self) {
@@ -368,14 +379,22 @@ impl ScenarioAppState {
 
         if let Ok(json) = serde_json::to_string_pretty(&empty_state) {
             if let Err(error) = std::fs::write(Self::STATE_FILE_PATH, json) {
-                self.log_message(format!(
+                self.send_event(AppEvent::LogMessage(format!(
                     "{SEPARATOR}\nFailed to clear state file: {error}\n{SEPARATOR}\n"
-                ));
+                )));
             }
         }
 
-        self.log_message(format!(
+        self.send_event(AppEvent::LogMessage(format!(
             "{SEPARATOR}\nApplication state cleared\n{SEPARATOR}\n"
-        ));
+        )));
+    }
+
+    fn send_event(&self, event: AppEvent) {
+        if let Some(event_channel) = &self.event_channel {
+            event_channel.sender().send_event(event);
+        } else {
+            eprintln!("App event channel is not initialized: {:?}", event);
+        }
     }
 }

@@ -7,13 +7,12 @@ pub trait SendEvent<T> {
 
 impl<T: Clone + std::fmt::Debug> SendEvent<T> for Sender<T> {
     fn send_event(&self, event: T) {
-        if let Err(_) = self.send(event.clone()) {
+        if let Err(err) = self.send(event.clone()) {
             eprintln!(
-                "Warning: Failed to send {} event (channel closed)",
-                std::any::type_name::<T>()
+                "Failed to send event {:?} (channel closed): {:?}",
+                event,
+                err
             );
-            #[cfg(debug_assertions)]
-            eprintln!("  Event details: {:?}", event);
         }
     }
 }
