@@ -51,12 +51,7 @@ pub fn update_required_variables(
     state: State<'_, Mutex<ScenarioAppState>>,
 ) {
     let mut state = state.safe_lock();
-    if let Some(scenario) = state.scenario.as_mut() {
-        scenario
-            .variables_mut()
-            .required_mut()
-            .upsert(required_variables);
-    }
+    state.update_required_variables(required_variables);
 }
 
 #[tauri::command(async)]

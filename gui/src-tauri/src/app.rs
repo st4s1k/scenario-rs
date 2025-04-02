@@ -1,10 +1,13 @@
 use crate::{
     app_event::{AppEvent, AppEventChannel},
     scenario_event::ScenarioEventChannel,
-    shared::SEPARATOR,
 };
 use scenario_rs::scenario::{
-    step::Step, task::Task, utils::SendEvent, variables::required::{RequiredVariable, VariableType}, Scenario
+    step::Step,
+    task::Task,
+    utils::SendEvent,
+    variables::required::{RequiredVariable, VariableType},
+    Scenario,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -230,35 +233,31 @@ impl ScenarioAppState {
                     existing_state
                         .config_paths
                         .extend(current_state.config_paths.clone());
+                    self.send_event(AppEvent::StateLoaded);
                     existing_state
                 }
                 Err(error) => {
-                    self.send_event(AppEvent::LogMessage(format!(
-                        "{SEPARATOR}\nFailed to parse existing state: {error}\n{SEPARATOR}\n"
-                    )));
+                    self.send_event(AppEvent::FailedToDeserializeState(Arc::new(error)));
                     current_state
                 }
             },
-            Err(_) => current_state,
+            Err(error) => {
+                self.send_event(AppEvent::FailedToLoadState(Arc::new(error)));
+                current_state
+            }
         };
 
         match serde_json::to_string_pretty(&final_state) {
             Ok(json) => match std::fs::write(Self::STATE_FILE_PATH, json) {
                 Ok(_) => {
-                    self.send_event(AppEvent::LogMessage(format!(
-                        "{SEPARATOR}\nApplication state saved\n{SEPARATOR}\n"
-                    )));
+                    self.send_event(AppEvent::StateSuccessfullySaved);
                 }
                 Err(error) => {
-                    self.send_event(AppEvent::LogMessage(format!(
-                        "{SEPARATOR}\nFailed to save state: {error}\n{SEPARATOR}\n"
-                    )));
+                    self.send_event(AppEvent::FailedToSaveState(Arc::new(error)));
                 }
             },
             Err(error) => {
-                self.send_event(AppEvent::LogMessage(format!(
-                    "{SEPARATOR}\nFailed to serialize state: {error}\n{SEPARATOR}\n"
-                )));
+                self.send_event(AppEvent::FailedToSerializeState(Arc::new(error)));
             }
         }
     }
@@ -267,15 +266,11 @@ impl ScenarioAppState {
         self.config_path = config_path.to_string();
         self.scenario = match Scenario::try_from(config_path) {
             Ok(scenario) => {
-                self.send_event(AppEvent::LogMessage(format!(
-                    "{SEPARATOR}\nScenario loaded\n{SEPARATOR}\n"
-                )));
+                self.send_event(AppEvent::ConfigLoaded(config_path.to_string()));
                 Some(scenario)
             }
-            Err(e) => {
-                self.send_event(AppEvent::LogMessage(format!(
-                    "{SEPARATOR}\nFailed to load scenario: {e}\n{SEPARATOR}\n"
-                )));
+            Err(error) => {
+                self.send_event(AppEvent::FailedToLoadConfig(Arc::new(error)));
                 None
             }
         };
@@ -300,9 +295,7 @@ impl ScenarioAppState {
                 is_executing.store(false, Ordering::SeqCst);
             });
         } else {
-            self.send_event(AppEvent::LogMessage(format!(
-                "{SEPARATOR}\nNo scenario loaded\n{SEPARATOR}\n"
-            )));
+            self.send_event(AppEvent::NoScenarioLoaded);
         }
     }
 
@@ -321,6 +314,18 @@ impl ScenarioAppState {
                 .collect()
         } else {
             BTreeMap::new()
+        }
+    }
+
+    pub fn update_required_variables(&mut self, required_variables: HashMap<String, String>) {
+        if let Some(scenario) = self.scenario.as_mut() {
+            scenario
+                .variables_mut()
+                .required_mut()
+                .upsert(required_variables);
+            self.send_event(AppEvent::RequiredVariablesUpdated);
+        } else {
+            self.send_event(AppEvent::NoScenarioLoaded);
         }
     }
 
@@ -343,10 +348,8 @@ impl ScenarioAppState {
                     .iter()
                     .map(|(name, value)| (name.to_string(), value.to_string()))
                     .collect(),
-                Err(err) => {
-                    self.send_event(AppEvent::LogMessage(format!(
-                        "{SEPARATOR}\nFailed to get resolved variables: {err}\n{SEPARATOR}\n"
-                    )));
+                Err(error) => {
+                    self.send_event(AppEvent::FailedToGetResolvedVariables(Arc::new(error)));
                     BTreeMap::new()
                 }
             }
@@ -379,15 +382,11 @@ impl ScenarioAppState {
 
         if let Ok(json) = serde_json::to_string_pretty(&empty_state) {
             if let Err(error) = std::fs::write(Self::STATE_FILE_PATH, json) {
-                self.send_event(AppEvent::LogMessage(format!(
-                    "{SEPARATOR}\nFailed to clear state file: {error}\n{SEPARATOR}\n"
-                )));
+                self.send_event(AppEvent::FailedToClearState(Arc::new(error)));
             }
         }
 
-        self.send_event(AppEvent::LogMessage(format!(
-            "{SEPARATOR}\nApplication state cleared\n{SEPARATOR}\n"
-        )));
+        self.send_event(AppEvent::StateCleared);
     }
 
     fn send_event(&self, event: AppEvent) {
