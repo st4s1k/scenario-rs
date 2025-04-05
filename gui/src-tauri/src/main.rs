@@ -16,7 +16,6 @@ mod app_event;
 mod commands;
 mod event;
 mod scenario_event;
-mod shared;
 mod utils;
 
 fn main() {

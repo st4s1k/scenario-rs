@@ -1,7 +1,6 @@
 use crate::{
     app::ScenarioAppState,
     event::{EventChannel, EventHandler},
-    shared::SEPARATOR,
     utils::{LogMessage, SafeLock},
 };
 use scenario_rs::scenario::errors::{PlaceholderResolutionError, ScenarioError};
@@ -45,67 +44,43 @@ impl EventHandler<AppEvent> for AppEventHandler {
     fn handle(&self, event: &AppEvent, app_handle: &AppHandle) {
         match event {
             AppEvent::StateSuccessfullySaved => {
-                app_handle.log_message(format!(
-                    "{SEPARATOR}\nApplication state saved\n{SEPARATOR}\n"
-                ));
+                app_handle.log_message(format!("Application state saved"));
             }
             AppEvent::FailedToSaveState(error) => {
-                app_handle.log_message(format!(
-                    "{SEPARATOR}\nFailed to save state: {error}\n{SEPARATOR}\n"
-                ));
+                app_handle.log_message(format!("Failed to save state: {error}"));
             }
             AppEvent::FailedToSerializeState(error) => {
-                app_handle.log_message(format!(
-                    "{SEPARATOR}\nFailed to serialize state: {error}\n{SEPARATOR}\n"
-                ));
+                app_handle.log_message(format!("Failed to serialize state: {error}"));
             }
             AppEvent::StateLoaded => {
-                app_handle.log_message(format!(
-                    "{SEPARATOR}\nApplication state loaded\n{SEPARATOR}\n"
-                ));
+                app_handle.log_message(format!("Application state loaded"));
             }
             AppEvent::FailedToLoadState(error) => {
-                app_handle.log_message(format!(
-                    "{SEPARATOR}\nFailed to load state: {error}\n{SEPARATOR}\n"
-                ));
+                app_handle.log_message(format!("Failed to load state: {error}"));
             }
             AppEvent::FailedToDeserializeState(error) => {
-                app_handle.log_message(format!(
-                    "{SEPARATOR}\nFailed to deserialize state: {error}\n{SEPARATOR}\n"
-                ));
+                app_handle.log_message(format!("Failed to deserialize state: {error}"));
             }
             AppEvent::StateCleared => {
-                app_handle.log_message(format!(
-                    "{SEPARATOR}\nApplication state cleared\n{SEPARATOR}\n"
-                ));
+                app_handle.log_message(format!("Application state cleared"));
             }
             AppEvent::FailedToClearState(error) => {
-                app_handle.log_message(format!(
-                    "{SEPARATOR}\nFailed to clear state: {error}\n{SEPARATOR}\n"
-                ));
+                app_handle.log_message(format!("Failed to clear state: {error}"));
             }
             AppEvent::ConfigLoaded(path) => {
-                app_handle.log_message(format!(
-                    "{SEPARATOR}\nConfiguration loaded from {path}\n{SEPARATOR}\n"
-                ));
+                app_handle.log_message(format!("Configuration loaded from {path}"));
             }
             AppEvent::FailedToLoadConfig(error) => {
-                app_handle.log_message(format!(
-                    "{SEPARATOR}\nFailed to load configuration: {error}\n{SEPARATOR}\n"
-                ));
+                app_handle.log_message(format!("Failed to load configuration: {error}"));
             }
             AppEvent::RequiredVariablesUpdated => {
-                app_handle.log_message(format!(
-                    "{SEPARATOR}\nRequired variables updated\n{SEPARATOR}\n"
-                ));
+                app_handle.log_message(format!("Required variables updated"));
             }
             AppEvent::NoScenarioLoaded => {
-                app_handle.log_message(format!("{SEPARATOR}\nNo scenario loaded\n{SEPARATOR}\n"));
+                app_handle.log_message(format!("No scenario loaded"));
             }
             AppEvent::FailedToGetResolvedVariables(error) => {
-                app_handle.log_message(format!(
-                    "{SEPARATOR}\nFailed to get resolved variables: {error}\n{SEPARATOR}\n"
-                ));
+                app_handle.log_message(format!("Failed to get resolved variables: {error}"));
             }
             AppEvent::ClearLog => {
                 let state = app_handle.state::<Mutex<ScenarioAppState>>();
