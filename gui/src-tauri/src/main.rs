@@ -7,18 +7,29 @@ use commands::{
     get_resolved_variables, get_steps, get_tasks, load_config, save_state,
     update_required_variables,
 };
-use utils::SafeLock;
+use logging::{FrontendLogEventChannel, FrontendLogLayer};
 use std::sync::Mutex;
 use tauri::Manager;
+use tracing::Level;
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use utils::SafeLock;
 
 mod app;
-mod app_event;
 mod commands;
 mod event;
+mod logging;
 mod scenario_event;
 mod utils;
 
 fn main() {
+    let (frontend_tx, frontend_rx) = std::sync::mpsc::channel::<String>();
+
+    tracing_subscriber::registry()
+        .with(fmt::layer().with_target(false))
+        .with(EnvFilter::from_default_env().add_directive(Level::INFO.into()))
+        .with(FrontendLogLayer::from(frontend_tx))
+        .init();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -27,7 +38,7 @@ fn main() {
             app.manage(Mutex::new(app_state));
             let state = app.handle().state::<Mutex<ScenarioAppState>>();
             let mut app_state = state.safe_lock();
-            app_state.init();
+            app_state.init(frontend_rx);
             Ok(())
         })
         .on_window_event(on_window_event)

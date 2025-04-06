@@ -11,10 +11,21 @@ pub struct EventChannel<E: Send + 'static> {
 }
 
 impl<E: Send + 'static> EventChannel<E> {
-    pub fn new<H: EventHandler<E> + Send + Sync + 'static>(app_handle: &AppHandle, handler: H) -> Self {
+    pub fn new<H: EventHandler<E> + Send + Sync + 'static>(
+        app_handle: &AppHandle,
+        handler: H,
+    ) -> Self {
         let (tx, rx) = mpsc::channel::<E>();
-        let app_handle = app_handle.clone();
+        Self::listen(rx, app_handle, handler);
+        Self { tx }
+    }
 
+    pub(crate) fn listen<H: EventHandler<E> + Send + Sync + 'static>(
+        rx: mpsc::Receiver<E>,
+        app_handle: &AppHandle,
+        handler: H,
+    ) {
+        let app_handle = app_handle.clone();
         tauri::async_runtime::spawn(async move {
             for event in rx {
                 handler.handle(&event, &app_handle);
@@ -23,8 +34,6 @@ impl<E: Send + 'static> EventChannel<E> {
                 }
             }
         });
-
-        Self { tx }
     }
 
     pub fn sender(&self) -> &Sender<E> {

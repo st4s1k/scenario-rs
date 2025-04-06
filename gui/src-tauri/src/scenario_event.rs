@@ -1,10 +1,8 @@
-use crate::{
-    event::{EventChannel, EventHandler},
-    utils::LogMessage,
-};
+use crate::event::{EventChannel, EventHandler};
 use scenario_rs::scenario::events::ScenarioEvent;
 use std::sync::mpsc::Sender;
 use tauri::{AppHandle, Emitter};
+use tracing::info;
 
 struct ScenarioEventHandler;
 
@@ -19,7 +17,7 @@ impl EventHandler<ScenarioEvent> for ScenarioEventHandler {
     fn handle(&self, event: &ScenarioEvent, app_handle: &AppHandle) {
         match event {
             ScenarioEvent::ScenarioStarted => {
-                app_handle.log_message("Scenario started...");
+                info!("Scenario started...");
                 let _ = app_handle.emit("execution-status", true);
             }
             ScenarioEvent::StepStarted {
@@ -28,10 +26,10 @@ impl EventHandler<ScenarioEvent> for ScenarioEventHandler {
                 description,
             } => {
                 let task_number = index + 1;
-                app_handle.log_message(format!("[{task_number}/{total_steps}] {description}"));
+                info!("[{task_number}/{total_steps}] {description}");
             }
             ScenarioEvent::RemoteSudoBefore(command) => {
-                app_handle.log_message(format!("Executing: {command}"));
+                info!("Executing: {command}");
             }
             ScenarioEvent::RemoteSudoChannelOutput(output) => {
                 let output = output.trim();
@@ -41,24 +39,24 @@ impl EventHandler<ScenarioEvent> for ScenarioEventHandler {
                     .collect::<String>()
                     .trim()
                     .to_string();
-                app_handle.log_message(format!("{truncated_output}"));
+                info!("{truncated_output}");
                 if output.len() > 1000 {
-                    app_handle.log_message("...output truncated...");
+                    info!("...output truncated...");
                 }
             }
             ScenarioEvent::SftpCopyBefore {
                 source,
                 destination,
             } => {
-                app_handle.log_message(format!("Source: {source}"));
-                app_handle.log_message(format!("Destination: {destination}"));
+                info!("Source: {source}");
+                info!("Destination: {destination}");
             }
             ScenarioEvent::SftpCopyProgress { current, total } => {
                 let percentage = (*current as f64 / *total as f64) * 100.0;
-                app_handle.log_message(format!("Progress: {:.1}%", percentage));
+                info!("Progress: {:.1}%", percentage);
             }
             ScenarioEvent::OnFailStepsStarted => {
-                app_handle.log_message(format!("[on_fail] Starting failure recovery steps"));
+                info!("[on_fail] Starting failure recovery steps");
             }
             ScenarioEvent::OnFailStepStarted {
                 index,
@@ -66,32 +64,30 @@ impl EventHandler<ScenarioEvent> for ScenarioEventHandler {
                 description,
             } => {
                 let task_number = index + 1;
-                app_handle.log_message(format!(
-                    "[on_fail] [{task_number}/{total_steps}] {description}"
-                ));
+                info!("[on_fail] [{task_number}/{total_steps}] {description}");
             }
             ScenarioEvent::ScenarioCompleted => {
-                app_handle.log_message(format!("Scenario completed successfully!"));
+                info!("Scenario completed successfully!");
                 let _ = app_handle.emit("execution-status", false);
             }
             ScenarioEvent::ScenarioError(error) => {
-                app_handle.log_message(format!("Scenario execution failed: {error}"));
+                info!("Scenario execution failed: {error}");
                 let _ = app_handle.emit("execution-status", false);
             }
             ScenarioEvent::StepCompleted => {
-                app_handle.log_message("Step completed");
+                info!("Step completed");
             }
             ScenarioEvent::RemoteSudoAfter => {
-                app_handle.log_message("Remote sudo command completed");
+                info!("Remote sudo command completed");
             }
             ScenarioEvent::SftpCopyAfter => {
-                app_handle.log_message("SFTP copy finished");
+                info!("SFTP copy finished");
             }
             ScenarioEvent::OnFailStepCompleted => {
-                app_handle.log_message("On-fail step completed");
+                info!("On-fail step completed");
             }
             ScenarioEvent::OnFailStepsCompleted => {
-                app_handle.log_message(format!("On-fail steps completed"));
+                info!("On-fail steps completed");
             }
         }
     }

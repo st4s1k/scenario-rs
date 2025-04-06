@@ -1,11 +1,7 @@
-use crate::{
-    app_event::{AppEvent, AppEventChannel},
-    scenario_event::ScenarioEventChannel,
-};
+use crate::{scenario_event::ScenarioEventChannel, FrontendLogEventChannel};
 use scenario_rs::scenario::{
     step::Step,
     task::Task,
-    utils::SendEvent,
     variables::required::{RequiredVariable, VariableType},
     Scenario,
 };
@@ -15,10 +11,12 @@ use std::{
     ops::Deref,
     sync::{
         atomic::{AtomicBool, Ordering},
+        mpsc::Receiver,
         Arc,
     },
 };
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
+use tracing::{error, info, warn};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigPathData {
@@ -72,7 +70,6 @@ pub struct ScenarioAppState {
     pub(crate) config_path: String,
     pub(crate) output_log: String,
     pub(crate) app_handle: AppHandle,
-    pub(crate) event_channel: Option<AppEventChannel>,
     pub(crate) scenario: Option<Scenario>,
     pub(crate) is_executing: Arc<AtomicBool>,
 }
@@ -171,20 +168,14 @@ impl ScenarioAppState {
             config_path: String::new(),
             output_log: String::new(),
             app_handle: app_handle.clone(),
-            event_channel: None,
             scenario: None,
             is_executing: Arc::new(AtomicBool::new(false)),
         }
     }
 
-    pub fn init(&mut self) {
-        self.init_event_channel();
+    pub fn init(&mut self, frontend_rx: Receiver<String>) {
+        FrontendLogEventChannel::init(frontend_rx, &self.app_handle);
         self.load_state();
-    }
-
-    pub fn init_event_channel(&mut self) {
-        let event_channel = AppEventChannel::new(&self.app_handle);
-        self.event_channel = Some(event_channel);
     }
 
     pub fn load_state(&mut self) {
@@ -233,16 +224,16 @@ impl ScenarioAppState {
                     existing_state
                         .config_paths
                         .extend(current_state.config_paths.clone());
-                    self.send_event(AppEvent::StateLoaded);
+                    info!("Application state loaded");
                     existing_state
                 }
                 Err(error) => {
-                    self.send_event(AppEvent::FailedToDeserializeState(Arc::new(error)));
+                    error!("Failed to deserialize state: {}", error);
                     current_state
                 }
             },
             Err(error) => {
-                self.send_event(AppEvent::FailedToLoadState(Arc::new(error)));
+                warn!("Failed to load state: {}", error);
                 current_state
             }
         };
@@ -250,14 +241,14 @@ impl ScenarioAppState {
         match serde_json::to_string_pretty(&final_state) {
             Ok(json) => match std::fs::write(Self::STATE_FILE_PATH, json) {
                 Ok(_) => {
-                    self.send_event(AppEvent::StateSuccessfullySaved);
+                    info!("Application state saved successfully");
                 }
                 Err(error) => {
-                    self.send_event(AppEvent::FailedToSaveState(Arc::new(error)));
+                    error!("Failed to save state: {}", error);
                 }
             },
             Err(error) => {
-                self.send_event(AppEvent::FailedToSerializeState(Arc::new(error)));
+                error!("Failed to serialize state: {}", error);
             }
         }
     }
@@ -266,11 +257,11 @@ impl ScenarioAppState {
         self.config_path = config_path.to_string();
         self.scenario = match Scenario::try_from(config_path) {
             Ok(scenario) => {
-                self.send_event(AppEvent::ConfigLoaded(config_path.to_string()));
+                info!("Configuration loaded from {}", config_path);
                 Some(scenario)
             }
             Err(error) => {
-                self.send_event(AppEvent::FailedToLoadConfig(Arc::new(error)));
+                error!("Failed to load configuration: {}", error);
                 None
             }
         };
@@ -295,7 +286,7 @@ impl ScenarioAppState {
                 is_executing.store(false, Ordering::SeqCst);
             });
         } else {
-            self.send_event(AppEvent::NoScenarioLoaded);
+            info!("No scenario loaded");
         }
     }
 
@@ -323,9 +314,9 @@ impl ScenarioAppState {
                 .variables_mut()
                 .required_mut()
                 .upsert(required_variables);
-            self.send_event(AppEvent::RequiredVariablesUpdated);
+            info!("Required variables updated");
         } else {
-            self.send_event(AppEvent::NoScenarioLoaded);
+            info!("No scenario loaded");
         }
     }
 
@@ -349,7 +340,7 @@ impl ScenarioAppState {
                     .map(|(name, value)| (name.to_string(), value.to_string()))
                     .collect(),
                 Err(error) => {
-                    self.send_event(AppEvent::FailedToGetResolvedVariables(Arc::new(error)));
+                    error!("Failed to get resolved variables: {}", error);
                     BTreeMap::new()
                 }
             }
@@ -371,7 +362,9 @@ impl ScenarioAppState {
     }
 
     pub fn clear_log(&mut self) {
-        self.send_event(AppEvent::ClearLog);
+        info!("Log cleared");
+        self.output_log.clear();
+        let _ = self.app_handle.emit("log-update", ());
     }
 
     pub fn clear_state(&mut self) {
@@ -382,18 +375,10 @@ impl ScenarioAppState {
 
         if let Ok(json) = serde_json::to_string_pretty(&empty_state) {
             if let Err(error) = std::fs::write(Self::STATE_FILE_PATH, json) {
-                self.send_event(AppEvent::FailedToClearState(Arc::new(error)));
+                error!("Failed to clear state: {}", error);
             }
         }
 
-        self.send_event(AppEvent::StateCleared);
-    }
-
-    fn send_event(&self, event: AppEvent) {
-        if let Some(event_channel) = &self.event_channel {
-            event_channel.sender().send_event(event);
-        } else {
-            eprintln!("App event channel is not initialized: {:?}", event);
-        }
+        info!("State cleared");
     }
 }
