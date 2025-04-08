@@ -1,16 +1,15 @@
 use crate::{
-    scenario::{errors::SftpCopyError, utils::SendEvent, variables::Variables},
+    scenario::{errors::SftpCopyError, variables::Variables},
     session::Session,
 };
-use std::{io::Read, path::Path, sync::mpsc::Sender};
+use std::{io::Read, path::Path};
+use tracing::{debug, instrument};
 
 #[cfg(not(test))]
 use std::fs::File;
 
 #[cfg(test)]
 use tests::TestFile as File;
-
-use super::events::ScenarioEvent;
 
 /// Represents an SFTP copy operation from a local file to a remote destination
 ///
@@ -39,45 +38,73 @@ impl SftpCopy {
     ///
     /// * `session` - The SSH session to use for SFTP operations
     /// * `variables` - Variables to resolve placeholders in paths
-    /// * `tx` - Channel to send progress and status events
     ///
     /// # Returns
     ///
     /// `Ok(())` if the copy completed successfully, otherwise an appropriate `SftpCopyError`
+    #[instrument(skip_all, name = "sftp_copy")]
     pub(crate) fn execute(
         &self,
         session: &Session,
         variables: &Variables,
-        tx: &Sender<ScenarioEvent>,
     ) -> Result<(), SftpCopyError> {
         let resolved_source = variables
             .resolve_placeholders(&self.source_path)
-            .map_err(SftpCopyError::CannotResolveSourcePathPlaceholders)?;
+            .map_err(SftpCopyError::CannotResolveSourcePathPlaceholders)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?;
         let resolved_destination = variables
             .resolve_placeholders(&self.destination_path)
-            .map_err(SftpCopyError::CannotResolveDestinationPathPlaceholders)?;
+            .map_err(SftpCopyError::CannotResolveDestinationPathPlaceholders)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?;
 
-        tx.send_event(ScenarioEvent::SftpCopyBefore {
-            source: resolved_source.clone(),
-            destination: resolved_destination.clone(),
-        });
+        debug!(
+            event = "sftp_copy_started",
+            source = %resolved_source,
+            destination = %resolved_destination
+        );
 
-        let mut source_file =
-            File::open(&resolved_source).map_err(SftpCopyError::CannotOpenSourceFile)?;
+        let mut source_file = File::open(&resolved_source)
+            .map_err(SftpCopyError::CannotOpenSourceFile)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?;
 
         let sftp = session
             .sftp()
-            .map_err(SftpCopyError::CannotOpenChannelAndInitializeSftp)?;
+            .map_err(SftpCopyError::CannotOpenChannelAndInitializeSftp)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?;
 
         let mut destination_file = sftp
             .lock()
-            .map_err(|_| SftpCopyError::CannotGetALockOnSftpChannel)?
+            .map_err(|_| SftpCopyError::CannotGetALockOnSftpChannel)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?
             .create(Path::new(&resolved_destination))
-            .map_err(SftpCopyError::CannotCreateDestinationFile)?;
+            .map_err(SftpCopyError::CannotCreateDestinationFile)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?;
 
         let total_bytes = source_file
             .metadata()
-            .map_err(SftpCopyError::CannotReadSourceFile)?
+            .map_err(SftpCopyError::CannotReadSourceFile)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?
             .len();
 
         let mut current_bytes = 0u64;
@@ -85,24 +112,33 @@ impl SftpCopy {
         loop {
             let bytes_read = source_file
                 .read(&mut buffer)
-                .map_err(SftpCopyError::CannotReadSourceFile)?;
+                .map_err(SftpCopyError::CannotReadSourceFile)
+                .map_err(|error| {
+                    debug!(event = "error", error = %error);
+                    error
+                })?;
             if bytes_read == 0 {
                 break;
             }
 
             destination_file
                 .write_all(&buffer[..bytes_read])
-                .map_err(SftpCopyError::CannotWriteDestinationFile)?;
+                .map_err(SftpCopyError::CannotWriteDestinationFile)
+                .map_err(|error| {
+                    debug!(event = "error", error = %error);
+                    error
+                })?;
 
             current_bytes += bytes_read as u64;
 
-            tx.send_event(ScenarioEvent::SftpCopyProgress {
-                current: current_bytes,
-                total: total_bytes,
-            });
+            debug!(
+                event = "sftp_copy_progress",
+                current = current_bytes,
+                total = total_bytes
+            );
         }
 
-        tx.send_event(ScenarioEvent::SftpCopyAfter);
+        debug!(event = "sftp_copy_completed", source = %resolved_source, destination = %resolved_destination);
 
         Ok(())
     }
@@ -117,7 +153,7 @@ mod tests {
     };
     use std::{
         io, panic,
-        sync::{mpsc, Arc, Mutex},
+        sync::{Arc, Mutex},
     };
 
     enum ReadBehavior {
@@ -268,23 +304,12 @@ mod tests {
         };
         let session = create_successful_test_session();
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = sftp_copy.execute(&session, &variables, &tx);
+        let result = sftp_copy.execute(&session, &variables);
 
         // Then
         assert!(result.is_ok());
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert_eq!(events.len(), 3);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::SftpCopyBefore { .. })));
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::SftpCopyProgress { .. })));
-        assert!(events.iter().any(|e| matches!(e, ScenarioEvent::SftpCopyAfter)));
     }
 
     #[test]
@@ -296,19 +321,15 @@ mod tests {
         };
         let session = create_successful_test_session();
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = sftp_copy.execute(&session, &variables, &tx);
+        let result = sftp_copy.execute(&session, &variables);
 
         // Then
         assert!(matches!(
             result,
             Err(SftpCopyError::CannotResolveSourcePathPlaceholders(_))
         ));
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert!(events.is_empty());
     }
 
     #[test]
@@ -320,19 +341,15 @@ mod tests {
         };
         let session = create_successful_test_session();
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = sftp_copy.execute(&session, &variables, &tx);
+        let result = sftp_copy.execute(&session, &variables);
 
         // Then
         assert!(matches!(
             result,
             Err(SftpCopyError::CannotResolveDestinationPathPlaceholders(_))
         ));
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert!(events.is_empty());
     }
 
     #[test]
@@ -371,22 +388,15 @@ mod tests {
             },
         };
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = sftp_copy.execute(&session, &variables, &tx);
+        let result = sftp_copy.execute(&session, &variables);
 
         // Then
         assert!(matches!(
             result,
             Err(SftpCopyError::CannotGetALockOnSftpChannel)
         ));
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert_eq!(events.len(), 1);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::SftpCopyBefore { .. })));
     }
 
     #[test]
@@ -410,22 +420,15 @@ mod tests {
             },
         };
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = sftp_copy.execute(&session, &variables, &tx);
+        let result = sftp_copy.execute(&session, &variables);
 
         // Then
         assert!(matches!(
             result,
             Err(SftpCopyError::CannotCreateDestinationFile(_))
         ));
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert_eq!(events.len(), 1);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::SftpCopyBefore { .. })));
     }
 
     #[test]
@@ -456,22 +459,15 @@ mod tests {
             },
         };
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = sftp_copy.execute(&session, &variables, &tx);
+        let result = sftp_copy.execute(&session, &variables);
 
         // Then
         assert!(matches!(
             result,
             Err(SftpCopyError::CannotWriteDestinationFile(_))
         ));
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert_eq!(events.len(), 1);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::SftpCopyBefore { .. })));
     }
 
     #[test]
@@ -483,22 +479,15 @@ mod tests {
         };
         let session = create_successful_test_session();
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = sftp_copy.execute(&session, &variables, &tx);
+        let result = sftp_copy.execute(&session, &variables);
 
         // Then
         assert!(matches!(
             result,
             Err(SftpCopyError::CannotOpenSourceFile(_))
         ));
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert_eq!(events.len(), 1);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::SftpCopyBefore { .. })));
     }
 
     #[test]
@@ -510,22 +499,15 @@ mod tests {
         };
         let session = create_successful_test_session();
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = sftp_copy.execute(&session, &variables, &tx);
+        let result = sftp_copy.execute(&session, &variables);
 
         // Then
         assert!(matches!(
             result,
             Err(SftpCopyError::CannotReadSourceFile(_))
         ));
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert_eq!(events.len(), 1);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::SftpCopyBefore { .. })));
     }
 
     #[test]
@@ -537,21 +519,14 @@ mod tests {
         };
         let session = create_successful_test_session();
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = sftp_copy.execute(&session, &variables, &tx);
+        let result = sftp_copy.execute(&session, &variables);
 
         // Then
         assert!(matches!(
             result,
             Err(SftpCopyError::CannotReadSourceFile(_))
         ));
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert_eq!(events.len(), 1);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::SftpCopyBefore { .. })));
     }
 }

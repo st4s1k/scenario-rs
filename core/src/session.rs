@@ -1,12 +1,13 @@
+use crate::{
+    scenario::{credentials::Credentials, server::Server},
+    session::mock::{MockChannel, MockSftp},
+};
 use std::{
     net::TcpStream,
     path::Path,
     sync::{Arc, Mutex},
 };
-
-use mock::{MockChannel, MockSftp};
-
-use crate::scenario::{credentials::Credentials, server::Server};
+use tracing::debug;
 
 /// Defines operations for executing commands on a remote server via SSH.
 pub trait Channel {
@@ -100,7 +101,7 @@ impl Session {
         if cfg!(debug_assertions) {
             Self::create_mock_session(server, credentials)
         } else {
-            Self::create_real_session(server, credentials)
+            Self::create_session(server, credentials)
         }
     }
 
@@ -142,7 +143,7 @@ impl Session {
         }
     }
 
-    /// Creates a real SSH session to the specified server.
+    /// Creates an SSH session to the specified server.
     ///
     /// # Arguments
     /// * `server` - The server connection information
@@ -151,27 +152,50 @@ impl Session {
     /// # Returns
     /// * `Ok(Session)` if the connection was established successfully
     /// * `Err` if there was an error connecting or authenticating
-    fn create_real_session(
-        server: &Server,
-        credentials: &Credentials,
-    ) -> Result<Session, ssh2::Error> {
+    fn create_session(server: &Server, credentials: &Credentials) -> Result<Session, ssh2::Error> {
         let host = &server.host;
         let port = &server.port;
 
-        let tcp = TcpStream::connect(&format!("{host}:{port}"))
-            .map_err(|_| ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))?;
+        debug!(
+            event = "create_session_started",
+            host = host,
+            port = port,
+            username = credentials.username,
+            password = credentials.password.as_deref().unwrap_or("<ssh-agent>")
+        );
 
-        let mut real_session = ssh2::Session::new()?;
+        let tcp = TcpStream::connect(&format!("{host}:{port}")).map_err(|error| {
+            debug!(event = "error", error = %error);
+            ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO))
+        })?;
+
+        let mut real_session = ssh2::Session::new().map_err(|error| {
+            debug!(event = "error", error = %error);
+            error
+        })?;
         real_session.set_tcp_stream(tcp);
-        real_session.handshake()?;
+        real_session.handshake().map_err(|error| {
+            debug!(event = "error", error = %error);
+            error
+        })?;
 
         let username = &credentials.username;
         let password = &credentials.password.as_deref();
 
         match password {
-            Some(pwd) => real_session.userauth_password(username, pwd)?,
-            None => real_session.userauth_agent(username)?,
+            Some(pwd) => real_session
+                .userauth_password(username, pwd)
+                .map_err(|error| {
+                    debug!(event = "error", error = %error);
+                    error
+                })?,
+            None => real_session.userauth_agent(username).map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?,
         }
+
+        debug!(event = "create_session_completed");
 
         Ok(Session {
             inner: SessionType::Real(real_session),
@@ -193,14 +217,12 @@ impl Session {
         server: &Server,
         credentials: &Credentials,
     ) -> Result<Session, ssh2::Error> {
-        let host = &server.host;
-        let port = &server.port;
-        let username = &credentials.username;
-        let password = &credentials.password.as_deref();
-
-        println!(
-            "Connecting to {host}:{port} as {username} with password {}",
-            password.unwrap_or("<ssh-agent>")
+        debug!(
+            event = "created_mock_session",
+            host = server.host,
+            port = server.port,
+            username = credentials.username,
+            password = credentials.password.as_deref().unwrap_or("<ssh-agent>")
         );
 
         std::thread::sleep(std::time::Duration::from_millis(100));
@@ -628,7 +650,7 @@ mod tests {
         let credentials = test_credentials(false);
 
         // When
-        let result = Session::create_real_session(&invalid_server, &credentials);
+        let result = Session::create_session(&invalid_server, &credentials);
 
         // Then
         assert!(

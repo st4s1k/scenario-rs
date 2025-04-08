@@ -1,9 +1,8 @@
+use crate::scenario::variables::{defined::DefinedVariables, resolved::ResolvedVariables};
+
 pub mod defined;
 pub mod required;
 pub mod resolved;
-
-use defined::DefinedVariables;
-use resolved::ResolvedVariables;
 
 use crate::{
     config::variables::VariablesConfig,
@@ -118,7 +117,9 @@ impl Variables {
 
         if !unresolved_variable_names.is_empty() {
             return Err(
-                PlaceholderResolutionError::CannotResolveVariablesPlaceholders(unresolved_variable_names),
+                PlaceholderResolutionError::CannotResolveVariablesPlaceholders(
+                    unresolved_variable_names,
+                ),
             );
         }
 

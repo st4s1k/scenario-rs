@@ -1,11 +1,8 @@
-use std::sync::mpsc::Sender;
-
 use crate::{
-    scenario::{errors::RemoteSudoError, utils::SendEvent, variables::Variables},
+    scenario::{errors::RemoteSudoError, variables::Variables},
     session::Session,
 };
-
-use super::events::ScenarioEvent;
+use tracing::{debug, instrument};
 
 /// Represents a remote command to be executed with sudo privileges
 ///
@@ -28,56 +25,97 @@ impl RemoteSudo {
     ///
     /// * `session` - The session to execute the command on
     /// * `variables` - Variables to resolve placeholders in the command
-    /// * `tx` - Channel to send events during execution
     ///
     /// # Returns
     ///
     /// `Ok(())` if the command executed successfully with exit code 0,
     /// otherwise an appropriate `RemoteSudoError`
+    #[instrument(skip_all, name = "remote_sudo")]
     pub(crate) fn execute(
         &self,
         session: &Session,
         variables: &Variables,
-        tx: &Sender<ScenarioEvent>,
     ) -> Result<(), RemoteSudoError> {
         let command = variables
             .resolve_placeholders(&self.command)
-            .map_err(RemoteSudoError::CannotResolveCommandPlaceholders)?;
+            .map_err(RemoteSudoError::CannotResolveCommandPlaceholders)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?;
 
-        tx.send_event(ScenarioEvent::RemoteSudoBefore(command.clone()));
+        debug!(event = "remote_sudo_started", command = command);
 
         let channel = session
             .channel_session()
-            .map_err(RemoteSudoError::CannotEstablishSessionChannel)?;
+            .map_err(RemoteSudoError::CannotEstablishSessionChannel)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?;
 
         channel
             .lock()
-            .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)?
+            .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?
             .exec(&command)
-            .map_err(RemoteSudoError::CannotExecuteRemoteCommand)?;
+            .map_err(RemoteSudoError::CannotExecuteRemoteCommand)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?;
 
         let mut output = String::new();
         channel
             .lock()
-            .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)?
+            .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?
             .read_to_string(&mut output)
-            .map_err(RemoteSudoError::CannotReadChannelOutput)?;
+            .map_err(RemoteSudoError::CannotReadChannelOutput)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?;
 
         let truncated_output: String = output.chars().take(1000).collect();
 
-        tx.send_event(ScenarioEvent::RemoteSudoChannelOutput(truncated_output));
+        debug!(
+            event = "remote_sudo_channel_output",
+            output = truncated_output
+        );
 
         let exit_status = channel
             .lock()
-            .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)?
+            .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?
             .exit_status()
-            .map_err(RemoteSudoError::CannotObtainRemoteCommandExitStatus)?;
+            .map_err(RemoteSudoError::CannotObtainRemoteCommandExitStatus)
+            .map_err(|error| {
+                debug!(event = "error", error = %error);
+                error
+            })?;
 
         if exit_status != 0 {
+            debug!(
+                event = "error",
+                error = "Remote command failed with non-zero exit status",
+                status = exit_status
+            );
             return Err(RemoteSudoError::RemoteCommandFailedWithStatusCode(
                 exit_status,
             ));
         }
+
+        debug!(event = "remote_sudo_completed");
 
         Ok(())
     }
@@ -92,7 +130,7 @@ mod tests {
     };
     use std::{
         panic,
-        sync::{mpsc, Arc, Mutex},
+        sync::{Arc, Mutex},
     };
 
     struct TestWrite;
@@ -163,22 +201,12 @@ mod tests {
             },
         };
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = remote_sudo.execute(&session, &variables, &tx);
+        let result = remote_sudo.execute(&session, &variables);
 
         // Then
         assert!(result.is_ok());
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert_eq!(events.len(), 2);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::RemoteSudoBefore(_))));
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::RemoteSudoChannelOutput(_))));
     }
 
     #[test]
@@ -194,19 +222,15 @@ mod tests {
             },
         };
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = remote_sudo.execute(&session, &variables, &tx);
+        let result = remote_sudo.execute(&session, &variables);
 
         // Then
         assert!(matches!(
             result,
             Err(RemoteSudoError::CannotResolveCommandPlaceholders(_))
         ));
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert!(events.is_empty());
     }
 
     #[test]
@@ -235,22 +259,15 @@ mod tests {
             },
         };
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = remote_sudo.execute(&session, &variables, &tx);
+        let result = remote_sudo.execute(&session, &variables);
 
         // Then
         assert!(matches!(
             result,
             Err(RemoteSudoError::CannotExecuteRemoteCommand(_))
         ));
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert_eq!(events.len(), 1);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::RemoteSudoBefore(_))));
     }
 
     #[test]
@@ -280,25 +297,15 @@ mod tests {
             },
         };
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = remote_sudo.execute(&session, &variables, &tx);
+        let result = remote_sudo.execute(&session, &variables);
 
         // Then
         assert!(matches!(
             result,
             Err(RemoteSudoError::RemoteCommandFailedWithStatusCode(1))
         ));
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert_eq!(events.len(), 2);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::RemoteSudoBefore(_))));
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::RemoteSudoChannelOutput(_))));
     }
 
     #[test]
@@ -327,22 +334,15 @@ mod tests {
             },
         };
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = remote_sudo.execute(&session, &variables, &tx);
+        let result = remote_sudo.execute(&session, &variables);
 
         // Then
         assert!(matches!(
             result,
             Err(RemoteSudoError::CannotReadChannelOutput(_))
         ));
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert_eq!(events.len(), 1);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::RemoteSudoBefore(_))));
     }
 
     #[test]
@@ -371,25 +371,15 @@ mod tests {
             },
         };
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = remote_sudo.execute(&session, &variables, &tx);
+        let result = remote_sudo.execute(&session, &variables);
 
         // Then
         assert!(matches!(
             result,
             Err(RemoteSudoError::CannotObtainRemoteCommandExitStatus(_))
         ));
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert_eq!(events.len(), 2);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::RemoteSudoBefore(_))));
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::RemoteSudoChannelOutput(_))));
     }
 
     #[test]
@@ -420,21 +410,14 @@ mod tests {
         };
 
         let variables = Variables::default();
-        let (tx, rx) = mpsc::channel();
 
         // When
-        let result = remote_sudo.execute(&session, &variables, &tx);
+        let result = remote_sudo.execute(&session, &variables);
 
         // Then
         assert!(matches!(
             result,
             Err(RemoteSudoError::CannotGetALockOnChannel)
         ));
-
-        let events: Vec<ScenarioEvent> = rx.try_iter().collect();
-        assert_eq!(events.len(), 1);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, ScenarioEvent::RemoteSudoBefore(_))));
     }
 }

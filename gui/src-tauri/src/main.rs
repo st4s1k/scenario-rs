@@ -1,33 +1,39 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use crate::app::ScenarioAppState;
-use commands::{
-    clear_log, clear_state, execute_scenario, get_config_path, get_log, get_required_variables,
-    get_resolved_variables, get_steps, get_tasks, load_config, save_state,
-    update_required_variables,
+use crate::{
+    app::ScenarioAppState,
+    commands::{
+        clear_log, clear_state, execute_scenario, get_config_path, get_log, get_required_variables,
+        get_resolved_variables, get_steps, get_tasks, load_config, save_state,
+        update_required_variables,
+    },
+    trace::{AppEvent, FrontendLayer},
+    utils::SafeLock,
 };
-use logging::{FrontendLogEventChannel, FrontendLogLayer};
+use ::tracing::Level;
 use std::sync::Mutex;
 use tauri::Manager;
-use tracing::Level;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
-use utils::SafeLock;
 
 mod app;
 mod commands;
-mod event;
-mod logging;
-mod scenario_event;
+mod trace;
 mod utils;
 
 fn main() {
-    let (frontend_tx, frontend_rx) = std::sync::mpsc::channel::<String>();
+    let (frontend_tx, frontend_rx) = std::sync::mpsc::channel::<AppEvent>();
 
     tracing_subscriber::registry()
-        .with(fmt::layer().with_target(false))
-        .with(EnvFilter::from_default_env().add_directive(Level::INFO.into()))
-        .with(FrontendLogLayer::from(frontend_tx))
+        .with(fmt::layer().compact().with_target(false).without_time())
+        .with(
+            EnvFilter::from_default_env().add_directive(if cfg!(debug_assertions) {
+                Level::TRACE.into()
+            } else {
+                Level::INFO.into()
+            }),
+        )
+        .with(FrontendLayer::from(frontend_tx))
         .init();
 
     tauri::Builder::default()

@@ -1,5 +1,3 @@
-use std::sync::mpsc::Sender;
-
 use crate::{
     config::step::StepConfig,
     scenario::{
@@ -7,8 +5,6 @@ use crate::{
     },
     session::Session,
 };
-
-use super::events::ScenarioEvent;
 
 #[derive(Clone, Debug)]
 pub struct Step {
@@ -24,7 +20,7 @@ impl TryFrom<(&Tasks, &StepConfig)> for Step {
                 .map_err(StepError::CannotCreateOnFailStepsFromConfig)?,
             None => OnFailSteps::default(),
         };
-        
+
         Ok(Step {
             task: tasks.get(&step_config.task).cloned().ok_or_else(|| {
                 StepError::CannotCreateTaskFromConfig(step_config.task.to_string())
@@ -43,14 +39,13 @@ impl Step {
         &self.on_fail_steps
     }
 
-    pub(crate) fn on_fail_with_events(
+    pub(crate) fn execute_on_fail_steps(
         &self,
         session: &Session,
         variables: &Variables,
-        tx: &Sender<ScenarioEvent>,
     ) -> Result<(), StepError> {
         self.on_fail_steps
-            .execute(session, variables, tx)
+            .execute(session, variables)
             .map_err(StepError::CannotExecuteOnFailSteps)
     }
 }

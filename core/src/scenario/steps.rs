@@ -1,17 +1,10 @@
 use crate::{
     config::steps::StepsConfig,
-    scenario::{
-        errors::StepsError, step::Step, task::Task, tasks::Tasks, utils::SendEvent,
-        variables::Variables,
-    },
+    scenario::{errors::StepsError, step::Step, task::Task, tasks::Tasks, variables::Variables},
     session::Session,
 };
-use std::{
-    ops::{Deref, DerefMut},
-    sync::mpsc::Sender,
-};
-
-use super::events::ScenarioEvent;
+use std::ops::{Deref, DerefMut};
+use tracing::{debug, instrument};
 
 #[derive(Clone, Debug)]
 pub struct Steps(Vec<Step>);
@@ -50,41 +43,66 @@ impl Default for Steps {
 }
 
 impl Steps {
+    #[instrument(skip_all, name = "steps")]
     pub(crate) fn execute(
         &self,
         session: &Session,
         variables: &Variables,
-        tx: &Sender<ScenarioEvent>,
     ) -> Result<(), StepsError> {
+        if self.is_empty() {
+            return Ok(());
+        }
+
+        debug!(event = "steps_started");
+
         for (index, step) in self.iter().enumerate() {
-            tx.send_event(ScenarioEvent::StepStarted {
-                index,
-                total_steps: self.len(),
-                description: step.task.description().to_string(),
-            });
+            let total_steps = self.len();
+            let description = step.task.description().to_string();
+
+            debug!(
+                event = "step_started",
+                index = index,
+                total_steps = total_steps,
+                description = description
+            );
 
             let error_message = step.task.error_message().to_string();
 
             let task_result = match &step.task {
-                Task::RemoteSudo { remote_sudo, .. } => {
-                    remote_sudo.execute(session, variables, tx).map_err(|e| {
-                        StepsError::CannotExecuteRemoteSudoCommand(e, error_message.clone())
+                Task::RemoteSudo { remote_sudo, .. } => remote_sudo
+                    .execute(session, variables)
+                    .map_err(|error| {
+                        StepsError::CannotExecuteRemoteSudoCommand(error, error_message.clone())
                     })
-                }
-                Task::SftpCopy { sftp_copy, .. } => {
-                    sftp_copy.execute(session, variables, tx).map_err(|e| {
-                        StepsError::CannotExecuteSftpCopyCommand(e, error_message.clone())
+                    .map_err(|error| {
+                        debug!(event = "error", error = %error);
+                        error
+                    }),
+                Task::SftpCopy { sftp_copy, .. } => sftp_copy
+                    .execute(session, variables)
+                    .map_err(|error| {
+                        StepsError::CannotExecuteSftpCopyCommand(error, error_message.clone())
                     })
-                }
+                    .map_err(|error| {
+                        debug!(event = "error", error = %error);
+                        error
+                    }),
             };
 
-            if let Err(err) = task_result {
-                tx.send_event(ScenarioEvent::ScenarioError(format!("Step error: {}", err)));
-                step.on_fail_with_events(session, variables, tx)
-                    .map_err(StepsError::CannotExecuteOnFailSteps)?;
-                return Err(err);
+            if let Err(error) = task_result {
+                step.execute_on_fail_steps(session, &variables)
+                    .map_err(StepsError::CannotExecuteOnFailSteps)
+                    .map_err(|error| {
+                        debug!(event = "error", error = %error);
+                        error
+                    })?;
+                return Err(error);
             }
+
+            debug!(event = "step_completed");
         }
+
+        debug!(event = "steps_completed");
         Ok(())
     }
 }

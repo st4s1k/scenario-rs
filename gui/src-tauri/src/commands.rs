@@ -1,11 +1,13 @@
-use crate::app::{RequiredVariableDTO, ScenarioAppState, TaskDTO, StepDTO};
-use crate::utils::SafeLock;
-use std::sync::atomic::Ordering;
+use crate::{
+    app::{RequiredVariableDTO, ScenarioAppState, StepDTO, TaskDTO},
+    utils::SafeLock,
+};
 use std::{
     collections::{BTreeMap, HashMap},
-    sync::Mutex,
+    sync::{atomic::Ordering, Mutex},
 };
 use tauri::State;
+use tracing::warn;
 
 #[tauri::command(async)]
 pub fn save_state(state: State<'_, Mutex<ScenarioAppState>>) {
@@ -58,7 +60,7 @@ pub fn update_required_variables(
 pub fn execute_scenario(state: State<'_, Mutex<ScenarioAppState>>) {
     let mut state = state.safe_lock();
     if state.is_executing.load(Ordering::SeqCst) {
-        eprintln!("Execution already in progress. Ignoring request.");
+        warn!("Execution already in progress. Ignoring request.");
         return;
     }
     state.execute_scenario();

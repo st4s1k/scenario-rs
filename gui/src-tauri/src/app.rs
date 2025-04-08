@@ -1,4 +1,5 @@
-use crate::{scenario_event::ScenarioEventChannel, FrontendLogEventChannel};
+use crate::trace::{self, AppEvent, FrontendEventHandler};
+use ::tracing::{debug, error, info, instrument, warn};
 use scenario_rs::scenario::{
     step::Step,
     task::Task,
@@ -15,13 +16,11 @@ use std::{
         Arc,
     },
 };
-use tauri::{AppHandle, Emitter};
-use tracing::{error, info, warn};
+use tauri::AppHandle;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigPathData {
     required_variables: HashMap<String, String>,
-    output_log: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -49,10 +48,7 @@ impl From<&ScenarioAppState> for ScenarioAppStateConfig {
                     .collect();
 
                 if !required_variables.is_empty() || !state.output_log.is_empty() {
-                    let config_data = ConfigPathData {
-                        required_variables,
-                        output_log: state.output_log.clone(),
-                    };
+                    let config_data = ConfigPathData { required_variables };
 
                     config_paths.insert(state.config_path.clone(), config_data);
                 }
@@ -173,11 +169,12 @@ impl ScenarioAppState {
         }
     }
 
-    pub fn init(&mut self, frontend_rx: Receiver<String>) {
-        FrontendLogEventChannel::init(frontend_rx, &self.app_handle);
+    pub fn init(&mut self, frontend_rx: Receiver<AppEvent>) {
+        trace::listen(frontend_rx, &self.app_handle, FrontendEventHandler);
         self.load_state();
     }
 
+    #[instrument(skip_all)]
     pub fn load_state(&mut self) {
         if let Ok(json) = std::fs::read_to_string(Self::STATE_FILE_PATH) {
             if let Ok(loaded_state) = serde_json::from_str::<ScenarioAppStateConfig>(&json) {
@@ -199,12 +196,9 @@ impl ScenarioAppState {
         }
     }
 
+    #[instrument(skip_all)]
     fn load_config_data_from_state(&mut self, state_config: &ScenarioAppStateConfig) {
         if let Some(config_data) = state_config.config_paths.get(&self.config_path) {
-            if !config_data.output_log.is_empty() {
-                self.output_log = config_data.output_log.clone();
-            }
-
             if let Some(scenario) = self.scenario.as_mut() {
                 scenario
                     .variables_mut()
@@ -214,6 +208,7 @@ impl ScenarioAppState {
         }
     }
 
+    #[instrument(skip_all)]
     pub fn save_state(&mut self) {
         let current_state = ScenarioAppStateConfig::from(self.deref());
 
@@ -253,6 +248,7 @@ impl ScenarioAppState {
         }
     }
 
+    #[instrument(skip_all)]
     pub fn load_config(&mut self, config_path: &str) {
         self.config_path = config_path.to_string();
         self.scenario = match Scenario::try_from(config_path) {
@@ -275,14 +271,13 @@ impl ScenarioAppState {
         }
     }
 
+    #[instrument(skip_all)]
     pub fn execute_scenario(&mut self) {
         if let Some(scenario) = self.scenario.as_ref().cloned() {
-            let event_channel = ScenarioEventChannel::new(&self.app_handle);
-            let tx = event_channel.sender().clone();
             let is_executing = self.is_executing.clone();
             tauri::async_runtime::spawn(async move {
                 is_executing.store(true, Ordering::SeqCst);
-                scenario.execute(tx);
+                scenario.execute();
                 is_executing.store(false, Ordering::SeqCst);
             });
         } else {
@@ -290,6 +285,7 @@ impl ScenarioAppState {
         }
     }
 
+    #[instrument(skip_all)]
     pub fn get_required_variables(&self) -> BTreeMap<String, RequiredVariableDTO> {
         if let Some(scenario) = self.scenario.as_ref() {
             scenario
@@ -308,6 +304,7 @@ impl ScenarioAppState {
         }
     }
 
+    #[instrument(skip_all)]
     pub fn update_required_variables(&mut self, required_variables: HashMap<String, String>) {
         if let Some(scenario) = self.scenario.as_mut() {
             scenario
@@ -320,6 +317,7 @@ impl ScenarioAppState {
         }
     }
 
+    #[instrument(skip_all)]
     pub fn get_tasks(&self) -> BTreeMap<String, TaskDTO> {
         if let Some(scenario) = self.scenario.as_ref() {
             scenario
@@ -332,6 +330,7 @@ impl ScenarioAppState {
         }
     }
 
+    #[instrument(skip_all)]
     pub fn get_resolved_variables(&mut self) -> BTreeMap<String, String> {
         if let Some(scenario) = &self.scenario {
             match scenario.variables().resolved() {
@@ -349,6 +348,7 @@ impl ScenarioAppState {
         }
     }
 
+    #[instrument(skip_all)]
     pub fn get_steps(&self) -> Vec<StepDTO> {
         if let Some(scenario) = self.scenario.as_ref() {
             scenario
@@ -361,12 +361,12 @@ impl ScenarioAppState {
         }
     }
 
+    #[instrument(skip_all)]
     pub fn clear_log(&mut self) {
-        info!("Log cleared");
-        self.output_log.clear();
-        let _ = self.app_handle.emit("log-update", ());
+        debug!(event = "clear_log");
     }
 
+    #[instrument(skip_all)]
     pub fn clear_state(&mut self) {
         let empty_state = ScenarioAppStateConfig {
             last_config_path: String::new(),

@@ -10,8 +10,7 @@ impl<T: Clone + std::fmt::Debug> SendEvent<T> for Sender<T> {
         if let Err(err) = self.send(event.clone()) {
             eprintln!(
                 "Failed to send event {:?} (channel closed): {:?}",
-                event,
-                err
+                event, err
             );
         }
     }

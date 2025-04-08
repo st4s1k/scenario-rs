@@ -1,7 +1,4 @@
 use thiserror::Error;
-use std::sync::mpsc::SendError;
-
-use super::events::ScenarioEvent;
 
 #[derive(Error, Debug)]
 pub enum ScenarioConfigError {
@@ -29,22 +26,6 @@ pub enum ScenarioError {
     CannotCreateScenarioFromConfig(#[source] ScenarioConfigError),
     #[error("Cannot create Execute from config: {0}")]
     CannotCreateExecuteFromConfig(#[source] ExecuteError),
-    #[error("Cannot connect to remote server: {0}")]
-    CannotConnectToRemoteServer(#[source] std::io::Error),
-    #[error("Cannot create a new session: {0}")]
-    CannotCreateANewSession(#[source] ssh2::Error),
-    #[error("Cannot initiate the SSH handshake: {0}")]
-    CannotInitiateTheSshHandshake(#[source] ssh2::Error),
-    #[error("Cannot authenticate with password: {0}")]
-    CannotAuthenticateWithPassword(#[source] ssh2::Error),
-    #[error("Cannot authenticate with ssh-agent: {0}")]
-    CannotAuthenticateWithAgent(#[source] ssh2::Error),
-    #[error("Cannot execute steps: {0}")]
-    CannotExecuteSteps(#[source] StepsError),
-    #[error("Cannot send scenario started event: {0}")]
-    CannotSendScenarioStartedEvent(#[from] SendError<ScenarioEvent>),
-    #[error("Cannot send scenario completed event: {0}")]
-    CannotSendScenarioCompletedEvent(String),
 }
 
 #[derive(Error, Debug)]
@@ -83,14 +64,6 @@ pub enum OnFailError {
     CannotOnFailRemoteSudo(#[source] RemoteSudoError),
     #[error("Cannot execute on-fail steps for SftpCopy task: {0}")]
     CannotOnFailSftpCopy(#[source] SftpCopyError),
-}
-
-#[derive(Error, Debug)]
-pub enum TaskError {
-    #[error("Cannot create RemoteSudo task from config: {0}")]
-    CannotCreateRemoteSudoTaskFromConfig(#[source] RemoteSudoError),
-    #[error("Cannot create SftpCopy task from config: {0}")]
-    CannotCreateSftpCopyTaskFromConfig(#[source] SftpCopyError),
 }
 
 #[derive(Error, Debug)]

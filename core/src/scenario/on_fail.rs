@@ -1,16 +1,10 @@
 use crate::{
     config::on_fail::OnFailStepsConfig,
-    scenario::{
-        errors::OnFailError, task::Task, tasks::Tasks, utils::SendEvent, variables::Variables,
-    },
+    scenario::{errors::OnFailError, task::Task, tasks::Tasks, variables::Variables},
     session::Session,
 };
-use std::{
-    ops::{Deref, DerefMut},
-    sync::mpsc::Sender,
-};
-
-use super::events::ScenarioEvent;
+use std::ops::{Deref, DerefMut};
+use tracing::{debug, instrument};
 
 /// Represents a collection of tasks that will be executed when a scenario fails.
 ///
@@ -42,7 +36,11 @@ impl TryFrom<(&Tasks, &OnFailStepsConfig)> for OnFailSteps {
             let task: Task = tasks
                 .get(config_step)
                 .cloned()
-                .ok_or_else(|| OnFailError::InvalidOnFailStep(config_step.clone()))?;
+                .ok_or_else(|| OnFailError::InvalidOnFailStep(config_step.clone()))
+                .map_err(|error| {
+                    debug!(event = "error", error = %error);
+                    error
+                })?;
             on_fail_tasks.push(task);
         }
         Ok(OnFailSteps(on_fail_tasks))
@@ -65,36 +63,53 @@ impl OnFailSteps {
     ///
     /// * `session` - The current SSH session
     /// * `variables` - Variables available for substitution in commands
-    /// * `tx` - Event sender for reporting execution progress
     ///
     /// # Returns
     ///
     /// * `Ok(())` if all on-fail tasks executed successfully
     /// * `Err(OnFailError)` if any on-fail task failed to execute
+    #[instrument(skip_all, name = "on_fail_steps")]
     pub(crate) fn execute(
         &self,
         session: &Session,
         variables: &Variables,
-        tx: &Sender<ScenarioEvent>,
     ) -> Result<(), OnFailError> {
-        tx.send_event(ScenarioEvent::OnFailStepsStarted);
+        if self.is_empty() {
+            return Ok(());
+        }
+
+        debug!(event = "on_fail_steps_started");
 
         for (index, on_fail_task) in self.iter().enumerate() {
-            tx.send_event(ScenarioEvent::OnFailStepStarted {
+            debug!(
+                event = "on_fail_step_started",
                 index,
-                total_steps: self.len(),
-                description: on_fail_task.description().to_string(),
-            });
+                total_steps = self.len(),
+                description = on_fail_task.description()
+            );
 
             match on_fail_task {
                 Task::RemoteSudo { remote_sudo, .. } => remote_sudo
-                    .execute(session, variables, tx)
-                    .map_err(OnFailError::CannotOnFailRemoteSudo)?,
+                    .execute(session, variables)
+                    .map_err(OnFailError::CannotOnFailRemoteSudo)
+                    .map_err(|error| {
+                        debug!(event = "error", error = %error);
+                        error
+                    })?,
                 Task::SftpCopy { sftp_copy, .. } => sftp_copy
-                    .execute(session, variables, tx)
-                    .map_err(OnFailError::CannotOnFailSftpCopy)?,
+                    .execute(session, variables)
+                    .map_err(OnFailError::CannotOnFailSftpCopy)
+                    .map_err(|error| {
+                        debug!(event = "error", error = %error);
+                        error
+                    })?,
             }
+
+            debug!(event = "on_fail_step_completed");
         }
+
+        debug!(event = "on_fail_steps_completed");
+
         Ok(())
     }
 }
@@ -106,7 +121,7 @@ mod tests {
         config::task::{TaskConfig, TaskType},
         scenario::sftp_copy::SftpCopy,
     };
-    use std::{collections::HashMap, sync::mpsc};
+    use std::collections::HashMap;
 
     #[test]
     fn test_on_fail_steps_default() {
@@ -238,10 +253,9 @@ mod tests {
         let on_fail_steps = OnFailSteps(vec![failing_task]);
         let session = Session::default();
         let variables = Variables::default();
-        let (tx, _rx) = mpsc::channel();
 
         // When
-        let result = on_fail_steps.execute(&session, &variables, &tx);
+        let result = on_fail_steps.execute(&session, &variables);
 
         // Then
         assert!(result.is_err(), "Execute should fail with sftp copy error");
