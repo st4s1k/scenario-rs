@@ -188,9 +188,15 @@ scenario-rs-cli -c ./example_configs/example-scenario.toml -l debug
 <details>
   <summary><b>❗click here to view more screenshots❗<b></summary>
 
+  <h2>Variables</h2>
+
   ![screenshot](screenshots/screenshot_1.png)
 
+  <h2>Tasks</h2>
+
   ![screenshot](screenshots/screenshot_2.png)
+
+  <h2>Steps</h2>
 
   ![screenshot](screenshots/screenshot_3.png)
 
