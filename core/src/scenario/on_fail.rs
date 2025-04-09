@@ -129,9 +129,8 @@ mod tests {
         let on_fail_steps = OnFailSteps::default();
 
         // Then
-        assert_eq!(
-            on_fail_steps.len(),
-            0,
+        assert!(
+            on_fail_steps.is_empty(),
             "Default OnFailSteps should be empty"
         );
     }
@@ -229,9 +228,8 @@ mod tests {
             result.is_ok(),
             "OnFailSteps::try_from should succeed with empty config"
         );
-        assert_eq!(
-            result.unwrap().len(),
-            0,
+        assert!(
+            result.unwrap().is_empty(),
             "OnFailSteps should be empty with empty config"
         );
     }

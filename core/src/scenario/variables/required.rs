@@ -357,8 +357,8 @@ mod tests {
         let default_vars = RequiredVariables::default();
 
         // Then
-        assert_eq!(empty_vars.len(), 0);
-        assert_eq!(default_vars.len(), 0);
+        assert!(empty_vars.is_empty());
+        assert!(default_vars.is_empty());
     }
 
     #[test]

@@ -60,10 +60,9 @@ mod tests {
         let execute = Execute::default();
 
         // Then
-        assert_eq!(
-            execute.steps.len(),
-            0,
-            "Default Execute should have 0 steps"
+        assert!(
+            execute.steps.is_empty(),
+            "Default Execute should have no steps"
         );
     }
 
@@ -125,7 +124,7 @@ mod tests {
             "Execute::try_from should succeed with empty steps"
         );
         let execute = result.unwrap();
-        assert_eq!(execute.steps.len(), 0, "Execute should contain 0 steps");
+        assert!(execute.steps.is_empty(), "Execute should contain no steps");
     }
 
     #[test]
