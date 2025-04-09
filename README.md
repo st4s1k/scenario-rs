@@ -122,19 +122,63 @@ app_version = "1.0.0"  # Adds new variable while keeping app_name from parent
 
 ## GUI
 
-The GUI provides an intuitive interface to:
-- Load scenario configurations
-- Set required variables
-- Monitor execution progress
-- View logs
-- Save state between runs
+The GUI provides a modern Tauri-based interface for managing and executing scenarios:
+
+### Features
+
+- **Configuration Management**: Load, validate, and execute scenario configurations
+- **Variable Management**: Set and update required variables with type-specific controls
+- **Real-time Execution**: Monitor scenario execution with step-by-step progress
+- **State Persistence**: Save and restore application state between sessions
+- **Task & Step Visualization**: Visual representation of scenario tasks and steps
+- **Detailed Logging**: View detailed execution logs with filtering options
+- **Variable Resolution**: See how variables are resolved during execution
+
+### Interface Components
+
+- **Configuration Loader**: Open dialog for selecting TOML configuration files
+- **Variable Editor**: Type-appropriate input fields for required variables
+- **Execution Panel**: Control execution and view real-time progress
+- **Log Viewer**: Structured view of execution events and messages
+- **Task Explorer**: Hierarchical view of tasks and their relationships
+- **Variables Inspector**: View all defined and resolved variables
 
 ## CLI
 
-For automation scripts or CI/CD pipelines:
+For automation scripts or CI/CD pipelines, use the command-line interface:
 
 ```
-scenario-rs-cli --config-path ./your-scenario.toml
+scenario-rs-cli --config-path <path-to-config.toml> [options]
+```
+
+### Command Line Arguments:
+
+```
+Usage: scenario-rs-cli [OPTIONS] --config-path <TOML_FILE>
+
+Options:
+  -c, --config-path <TOML_FILE>                Path to the TOML file containing the scenario configuration
+  -l, --log-level <LOG_LEVEL>                  Log level for the application [default: INFO]
+  -r, --required-variables <REQUIRED_VARIABLES>  Required variables in the format KEY=VALUE
+  -h, --help                                   Print help
+  -V, --version                                Print version
+```
+
+#### Examples
+
+Basic execution:
+```
+scenario-rs-cli -c ./example_configs/example-scenario.toml
+```
+
+With required variables:
+```
+scenario-rs-cli -c ./example_configs/deploy-scenario.toml -r app_version=1.2.3 -r env=production
+```
+
+With custom log level:
+```
+scenario-rs-cli -c ./example_configs/example-scenario.toml -l debug
 ```
 
 ## Screenshots
@@ -209,7 +253,7 @@ npm run tauri build
 ▶️ **run:**
 
 ```
-cargo run -- -c ./example-scenario.toml
+cargo run -- -c ./example_configs/example-scenario.toml
 ```
 
 🛠️ **build:**
@@ -221,13 +265,13 @@ cargo build
 ⚡ **run executable:**
 
 ```
-<cloned-dir>/scenario-rs/target/debug/scenario-rs-cli.exe --config-path ./example-scenario.toml
+<cloned-dir>/scenario-rs/target/debug/scenario-rs-cli.exe --config-path ./example_configs/example-scenario.toml
 ```
 
 or
 
 ```
-<cloned-dir>/scenario-rs/target/debug/scenario-rs-cli.exe -c ./example-scenario.toml
+<cloned-dir>/scenario-rs/target/debug/scenario-rs-cli.exe -c ./example_configs/example-scenario.toml
 ```
 
 ### 📟 [cli.release] 🎁
@@ -241,11 +285,11 @@ cargo build --release
 ⚡ **run executable:**
 
 ```
-<cloned-dir>/scenario-rs/target/release/scenario-rs-cli.exe --config-path ./example-scenario.toml
+<cloned-dir>/scenario-rs/target/release/scenario-rs-cli.exe --config-path ./example_configs/example-scenario.toml
 ```
 
 or
 
 ```
-<cloned-dir>/scenario-rs/target/release/scenario-rs-cli.exe -c ./example-scenario.toml
+<cloned-dir>/scenario-rs/target/release/scenario-rs-cli.exe -c ./example_configs/example-scenario.toml
 ```
