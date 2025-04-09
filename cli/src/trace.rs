@@ -9,17 +9,37 @@ use std::{
 use tracing::{error, info, warn, Subscriber};
 use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 
+/// A tracing layer for handling and displaying scenario execution events.
+///
+/// This layer intercepts tracing events from the scenario execution and displays
+/// them to the user in a user-friendly way, including colored text output and
+/// progress bars for long-running operations.
 pub struct ScenarioEventLayer {
+    /// Progress bars for tracking operations, keyed by operation ID
     progress_bars: Arc<Mutex<HashMap<String, ProgressBar>>>,
 }
 
 impl ScenarioEventLayer {
+    /// Creates a new ScenarioEventLayer.
+    ///
+    /// # Returns
+    ///
+    /// A new ScenarioEventLayer instance ready to be added to a tracing subscriber.
     pub fn new() -> Self {
         ScenarioEventLayer {
             progress_bars: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
+    /// Gets an existing progress bar or creates a new one if it doesn't exist.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The identifier for the progress bar
+    ///
+    /// # Returns
+    ///
+    /// A progress bar instance configured with appropriate styling.
     fn get_or_create_progress_bar(&self, id: &str) -> ProgressBar {
         let mut bars = self.progress_bars.lock().unwrap();
 
@@ -42,6 +62,12 @@ impl ScenarioEventLayer {
         pb
     }
 
+    /// Completes a progress bar with a final message and removes it.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The identifier for the progress bar to complete
+    /// * `message` - The message to display when the progress bar completes
     fn finish_progress_bar(&self, id: &str, message: &str) {
         let mut bars = self.progress_bars.lock().unwrap();
         if let Some(bar) = bars.remove(id) {
@@ -54,6 +80,11 @@ impl<S> Layer<S> for ScenarioEventLayer
 where
     S: Subscriber + for<'a> LookupSpan<'a> + Send + Sync + 'static,
 {
+    /// Processes tracing events and formats them for user display.
+    ///
+    /// This method intercepts events with an "event" field and formats them
+    /// appropriately based on their type, including creating progress bars
+    /// for file transfers, displaying command outputs, and formatting errors.
     fn on_event(&self, event: &tracing::Event<'_>, _ctx: Context<'_, S>) {
         if !event
             .metadata()
