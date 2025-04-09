@@ -1,5 +1,5 @@
 use regex::Regex;
-use std::sync::mpsc::Sender;
+use std::{collections::HashMap, sync::mpsc::Sender};
 
 pub trait SendEvent<T> {
     fn send_event(&self, event: T);
@@ -30,3 +30,39 @@ where
 
 impl HasPlaceholders for String {}
 impl HasPlaceholders for &str {}
+
+pub trait IsNotEmpty {
+    fn is_not_empty(&self) -> bool;
+}
+
+impl<K, V> IsNotEmpty for HashMap<K, V> {
+    fn is_not_empty(&self) -> bool {
+        !self.is_empty()
+    }
+}
+
+impl<T> IsNotEmpty for Vec<T> {
+    fn is_not_empty(&self) -> bool {
+        !self.is_empty()
+    }
+}
+
+pub trait IsBlank {
+    fn is_blank(&self) -> bool;
+}
+
+impl<T: AsRef<str>> IsBlank for T {
+    fn is_blank(&self) -> bool {
+        self.as_ref().trim().is_empty()
+    }
+}
+
+pub trait HasText {
+    fn has_text(&self) -> bool;
+}
+
+impl<T: IsBlank> HasText for T {
+    fn has_text(&self) -> bool {
+        !self.is_blank()
+    }
+}

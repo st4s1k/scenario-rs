@@ -332,7 +332,7 @@ pub mod mock {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scenario::{credentials::Credentials, server::Server};
+    use crate::scenario::{credentials::Credentials, server::Server, utils::HasText};
     use std::path::Path;
 
     // Test fixtures
@@ -495,7 +495,7 @@ mod tests {
 
         // Then
         assert!(result.is_ok());
-        assert!(!output.is_empty());
+        assert!(output.has_text());
         assert_eq!(output, "Mock command output\nLine 1\nLine 2\nLine 3\n");
     }
 

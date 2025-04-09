@@ -80,7 +80,6 @@ impl Default for RequiredVariables {
 }
 
 impl RequiredVariables {
-
     pub fn value_map(&self) -> HashMap<String, String> {
         self.iter()
             .map(|(key, var)| (key.clone(), var.value.clone()))
@@ -165,6 +164,10 @@ impl RequiredVariable {
     pub fn read_only(&self) -> bool {
         self.read_only
     }
+
+    pub fn not_read_only(&self) -> bool {
+        !self.read_only
+    }
 }
 
 /// Defines the possible types for required variables.
@@ -184,7 +187,7 @@ pub enum VariableType {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::variables::required::RequiredVariableConfig;
+    use crate::{config::variables::required::RequiredVariableConfig, scenario::utils::HasText};
 
     use super::*;
     use std::collections::HashMap;
@@ -306,7 +309,7 @@ mod tests {
             _ => panic!("Expected Timestamp variable type"),
         }
         assert_eq!(time_var.label(), "Time Variable");
-        assert!(!time_var.value().is_empty());
+        assert!(time_var.value().has_text());
 
         let unlabeled_var = required_vars.get("unlabeled_var").unwrap();
         assert_eq!(unlabeled_var.label(), "unlabeled_var");

@@ -3,6 +3,7 @@ use ::tracing::{debug, error, info, instrument, warn};
 use scenario_rs::scenario::{
     step::Step,
     task::Task,
+    utils::{IsNotEmpty, HasText},
     variables::required::{RequiredVariable, VariableType},
     Scenario,
 };
@@ -34,23 +35,25 @@ impl From<&ScenarioAppState> for ScenarioAppStateConfig {
         let mut config_paths = HashMap::new();
 
         if let Some(scenario) = &state.scenario {
-            if !state.config_path.is_empty() {
+            if state.config_path.has_text() {
                 let required_variables: HashMap<String, String> = scenario
                     .variables()
                     .required()
                     .iter()
                     .filter(|(_, required_variable)| {
-                        !required_variable.value().is_empty() && !required_variable.read_only()
+                        required_variable.value().has_text()
+                            && required_variable.not_read_only()
                     })
                     .map(|(name, required_variable)| {
                         (name.to_string(), required_variable.value().to_string())
                     })
                     .collect();
 
-                if !required_variables.is_empty() || !state.output_log.is_empty() {
-                    let config_data = ConfigPathData { required_variables };
-
-                    config_paths.insert(state.config_path.clone(), config_data);
+                if required_variables.is_not_empty() {
+                    config_paths.insert(
+                        state.config_path.clone(),
+                        ConfigPathData { required_variables },
+                    );
                 }
             }
         }

@@ -11,6 +11,8 @@ use crate::{
 use std::{collections::HashMap, ops::Deref};
 use tracing::debug;
 
+use super::utils::{IsBlank, IsNotEmpty, HasText};
+
 pub mod defined;
 pub mod required;
 pub mod resolved;
@@ -68,7 +70,7 @@ impl Variables {
 
         variables = variables
             .iter()
-            .filter(|(_, value)| !value.trim().is_empty())
+            .filter(|(_, value)| value.has_text())
             .map(|(key, value)| (*key, *value))
             .collect::<HashMap<&str, &str>>();
 
@@ -102,7 +104,7 @@ impl Variables {
 
         all_variables
             .iter()
-            .filter(|(_, value)| value.trim().is_empty())
+            .filter(|(_, value)| value.is_blank())
             .for_each(|(key, _)| {
                 debug!(
                     event = "error",
@@ -134,7 +136,7 @@ impl Variables {
             .map(|(name, _)| name.clone())
             .collect();
 
-        if !unresolved_variable_names.is_empty() {
+        if unresolved_variable_names.is_not_empty() {
             return Err(
                 PlaceholderResolutionError::CannotResolveVariablesPlaceholders(
                     unresolved_variable_names,
