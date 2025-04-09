@@ -1,5 +1,5 @@
 product-name = "scenario-rs-gui"
-version = "0.5.0"
+version = "0.5.1"
 identifier = "com.st4s1k.scenario-rs.app"
 
 [build]
