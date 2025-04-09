@@ -1,17 +1,33 @@
 use std::fmt;
 use tracing::field::{Field, Visit};
 
+/// A visitor struct for tracing events in scenarios.
+///
+/// This struct collects event fields from tracing spans and events,
+/// providing structured access to various event properties such as
+/// event type, descriptions, progress information, and error details.
 pub struct ScenarioEventVisitor {
+    /// Type of the scenario event (e.g., "step_started", "task_completed")
     pub event_type: Option<String>,
+    /// Human-readable description of the event
     pub description: Option<String>,
+    /// Current step/task index in a sequence
     pub index: Option<usize>,
+    /// Total number of steps in the current operation
     pub total_steps: Option<usize>,
+    /// Command being executed, if applicable
     pub command: Option<String>,
+    /// Output from command execution
     pub output: Option<String>,
+    /// Error message if an error occurred
     pub error: Option<String>,
+    /// Source path for file transfer operations
     pub source: Option<String>,
+    /// Destination path for file transfer operations
     pub destination: Option<String>,
+    /// Current progress value (e.g., bytes transferred)
     pub current: Option<u64>,
+    /// Total expected progress value
     pub total: Option<u64>,
 }
 

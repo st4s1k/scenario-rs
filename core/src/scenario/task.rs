@@ -3,16 +3,29 @@ use crate::{
     scenario::{remote_sudo::RemoteSudo, sftp_copy::SftpCopy},
 };
 
+/// Represents a task that can be executed as part of a scenario.
+///
+/// Tasks are the building blocks of scenarios and can perform various operations
+/// such as executing remote commands with sudo privileges or transferring files 
+/// via SFTP.
 #[derive(Debug, Clone)]
 pub enum Task {
+    /// A task that executes a command with sudo privileges on a remote server.
     RemoteSudo {
+        /// Human-readable description of what this task does
         description: String,
+        /// Error message to display if this task fails
         error_message: String,
+        /// The remote sudo command execution details
         remote_sudo: RemoteSudo,
     },
+    /// A task that copies a file from the local system to a remote server via SFTP.
     SftpCopy {
+        /// Human-readable description of what this task does
         description: String,
+        /// Error message to display if this task fails
         error_message: String,
+        /// The SFTP copy operation details
         sftp_copy: SftpCopy,
     },
 }
@@ -43,6 +56,7 @@ impl From<&TaskConfig> for Task {
 }
 
 impl Task {
+    /// Returns the human-readable description of the task.
     pub fn description(&self) -> &str {
         match self {
             Task::RemoteSudo { description, .. } => description,
@@ -50,6 +64,7 @@ impl Task {
         }
     }
 
+    /// Returns the error message to display if the task fails.
     pub fn error_message(&self) -> &str {
         match self {
             Task::RemoteSudo { error_message, .. } => error_message,

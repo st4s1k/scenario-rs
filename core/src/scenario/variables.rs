@@ -1,3 +1,8 @@
+//! Variable management for scenarios.
+//!
+//! This module provides functionality for managing and resolving variables in scenarios,
+//! including variable placeholder substitution and handling different variable types.
+
 use crate::{
     config::variables::VariablesConfig,
     scenario::{
@@ -17,9 +22,32 @@ pub mod defined;
 pub mod required;
 pub mod resolved;
 
+/// Central manager for scenario variables.
+///
+/// This struct coordinates both required and defined variables, and provides
+/// functionality for resolving variable placeholders in strings. Required variables
+/// are those that must be provided at runtime, while defined variables are
+/// predefined in the scenario configuration.
+///
+/// # Example
+///
+/// ```no_run
+/// # use scenario_rs::config::variables::VariablesConfig;
+/// # use std::collections::HashMap;
+/// # use scenario_rs::scenario::variables::Variables;
+/// # 
+/// // Create a Variables instance from a configuration
+/// let mut vars = Variables::default();
+///
+/// // Resolve placeholders in a string
+/// let resolved = vars.resolve_placeholders("Hello, {username}!")
+///     .expect("Failed to resolve placeholders");
+/// ```
 #[derive(Clone, Debug)]
 pub struct Variables {
+    /// Variables that must be provided at runtime
     required: RequiredVariables,
+    /// Variables predefined in the scenario configuration
     defined: DefinedVariables,
 }
 
@@ -42,14 +70,39 @@ impl From<&VariablesConfig> for Variables {
 }
 
 impl Variables {
+    /// Returns a reference to the required variables.
     pub fn required(&self) -> &RequiredVariables {
         &self.required
     }
 
+    /// Returns a mutable reference to the required variables.
     pub fn required_mut(&mut self) -> &mut RequiredVariables {
         &mut self.required
     }
 
+    /// Resolves all variable placeholders in a string.
+    ///
+    /// This method replaces occurrences of `{variable_name}` in the input string
+    /// with the corresponding variable value. It supports nested variables, where
+    /// a variable's value may itself contain placeholders that need resolving.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The string containing placeholders to resolve
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(String)` - The input string with all placeholders replaced
+    /// * `Err(PlaceholderResolutionError)` - If placeholders can't be resolved
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use scenario_rs::scenario::variables::Variables;
+    /// # 
+    /// let vars = Variables::default();
+    /// let result = vars.resolve_placeholders("Hello, {name}!");
+    /// ```
     pub(crate) fn resolve_placeholders(
         &self,
         input: &str,
@@ -96,6 +149,16 @@ impl Variables {
         }
     }
 
+    /// Creates a fully resolved view of all variables.
+    ///
+    /// This method attempts to resolve all placeholders in all variables until
+    /// no more resolutions are possible. It returns a ResolvedVariables instance
+    /// containing the fully resolved values.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(ResolvedVariables)` - All variables successfully resolved
+    /// * `Err(PlaceholderResolutionError)` - If some placeholders can't be resolved
     pub fn resolved(&self) -> Result<ResolvedVariables, PlaceholderResolutionError> {
         let mut all_variables = HashMap::new();
 

@@ -23,6 +23,26 @@ pub mod tasks;
 pub mod utils;
 pub mod variables;
 
+/// A complete deployment scenario that can be executed on a remote server.
+///
+/// A Scenario represents a collection of tasks, steps, and variables organized for
+/// executing a specific deployment workflow. It encapsulates all necessary information
+/// including server details, credentials, variables, and the sequence of operations
+/// to perform.
+///
+/// # Example
+///
+/// ```no_run
+/// use std::path::PathBuf;
+/// use scenario_rs::scenario::Scenario;
+///
+/// // Create a scenario from a TOML configuration file
+/// let scenario_path = "path/to/scenario.toml";
+/// let scenario = Scenario::try_from(scenario_path).expect("Failed to load scenario");
+///
+/// // Execute the scenario
+/// scenario.execute();
+/// ```
 #[derive(Clone, Debug)]
 pub struct Scenario {
     pub(crate) server: Server,
@@ -33,18 +53,22 @@ pub struct Scenario {
 }
 
 impl Scenario {
+    /// Returns a reference to the scenario's variables.
     pub fn variables(&self) -> &Variables {
         &self.variables
     }
 
+    /// Returns a mutable reference to the scenario's variables.
     pub fn variables_mut(&mut self) -> &mut Variables {
         &mut self.variables
     }
 
+    /// Returns a reference to the scenario's tasks.
     pub fn tasks(&self) -> &Tasks {
         &self.tasks
     }
 
+    /// Returns a reference to the scenario's steps.
     pub fn steps(&self) -> &steps::Steps {
         &self.execute.steps
     }
@@ -53,6 +77,11 @@ impl Scenario {
 impl TryFrom<ScenarioConfig> for Scenario {
     type Error = ScenarioError;
 
+    /// Attempts to create a Scenario from a configuration.
+    ///
+    /// This converts a configuration structure into a fully initialized Scenario
+    /// ready for execution. It sets up all necessary components including server
+    /// connection details, credentials, tasks, and variables.
     fn try_from(config: ScenarioConfig) -> Result<Self, Self::Error> {
         let server = Server::from(&config.server);
         let credentials = Credentials::from(&config.credentials);
@@ -86,6 +115,10 @@ impl TryFrom<ScenarioConfig> for Scenario {
 impl TryFrom<PathBuf> for Scenario {
     type Error = ScenarioError;
 
+    /// Creates a Scenario from a configuration file path.
+    ///
+    /// Loads and parses the configuration file at the given path, then
+    /// initializes a Scenario from it.
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         let config = ScenarioConfig::try_from(path)
             .map_err(ScenarioError::CannotCreateScenarioFromConfig)
@@ -100,6 +133,10 @@ impl TryFrom<PathBuf> for Scenario {
 impl TryFrom<&str> for Scenario {
     type Error = ScenarioError;
 
+    /// Creates a Scenario from a configuration file path string.
+    ///
+    /// Convenience method that converts the string to a PathBuf and loads
+    /// the scenario from that path.
     fn try_from(path: &str) -> Result<Self, Self::Error> {
         let path = PathBuf::from(path);
         Scenario::try_from(path)
@@ -107,6 +144,14 @@ impl TryFrom<&str> for Scenario {
 }
 
 impl Scenario {
+    /// Executes the scenario on the remote server.
+    ///
+    /// This method:
+    /// 1. Creates an SSH session to the target server
+    /// 2. Executes all steps in the defined order
+    /// 3. Logs progress via the tracing system
+    ///
+    /// If any step fails, execution is stopped and an error is logged.
     #[instrument(skip_all, name = "scenario")]
     pub fn execute(&self) {
         debug!(event = "scenario_started");

@@ -12,17 +12,41 @@ use super::{
     variables::{PartialVariablesConfig, VariablesConfig},
 };
 
+/// A partial scenario configuration that supports inheritance.
+///
+/// This structure represents an incomplete scenario configuration that can be
+/// loaded from a TOML file. It allows for hierarchical configuration by
+/// specifying a parent configuration file to inherit from.
 #[derive(Deserialize, Clone, Debug)]
 pub struct PartialScenarioConfig {
+    /// Path to the parent configuration file, if any
     pub parent: Option<String>,
+    /// Authentication credentials for the target server
     pub credentials: Option<CredentialsConfig>,
+    /// Server connection details
     pub server: Option<ServerConfig>,
+    /// Execution configuration, including steps to run
     pub execute: Option<ExecuteConfig>,
+    /// Definition of variables used in the scenario
     pub variables: Option<PartialVariablesConfig>,
+    /// Tasks that can be executed as part of the scenario
     pub tasks: Option<TasksConfig>,
 }
 
 impl PartialScenarioConfig {
+    /// Merges this configuration with another, with other's fields taking precedence.
+    ///
+    /// For most fields, if the other config has a value, it's used; otherwise,
+    /// this config's value is used. For variables, the two configurations are
+    /// merged recursively.
+    ///
+    /// # Arguments
+    ///
+    /// * `other` - The configuration to merge with this one
+    ///
+    /// # Returns
+    ///
+    /// A new configuration that combines both configurations
     pub fn merge(&self, other: &PartialScenarioConfig) -> PartialScenarioConfig {
         PartialScenarioConfig {
             parent: other.parent.clone().or_else(|| self.parent.clone()),
@@ -43,18 +67,37 @@ impl PartialScenarioConfig {
     }
 }
 
+/// A complete scenario configuration.
+///
+/// This represents a fully resolved scenario configuration with all required fields
+/// present. It can be created by converting from a PartialScenarioConfig after
+/// all inheritance has been resolved.
 #[derive(Deserialize, Clone, Debug)]
 pub struct ScenarioConfig {
+    /// Authentication credentials for the target server
     pub credentials: CredentialsConfig,
+    /// Server connection details
     pub server: ServerConfig,
+    /// Execution configuration, including steps to run
     pub execute: ExecuteConfig,
+    /// Definition of variables used in the scenario
     pub variables: VariablesConfig,
+    /// Tasks that can be executed as part of the scenario
     pub tasks: TasksConfig,
 }
 
 impl TryFrom<PartialScenarioConfig> for ScenarioConfig {
     type Error = ScenarioConfigError;
 
+    /// Converts a partial configuration into a complete configuration.
+    ///
+    /// Ensures all required fields are present and converts any partial
+    /// sub-configurations into their complete versions.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(ScenarioConfig)` if all required fields are present
+    /// * `Err` if any required field is missing
     fn try_from(partial: PartialScenarioConfig) -> Result<Self, Self::Error> {
         Ok(ScenarioConfig {
             credentials: partial
@@ -72,6 +115,20 @@ impl TryFrom<PartialScenarioConfig> for ScenarioConfig {
 }
 
 impl ScenarioConfig {
+    /// Resolves the inheritance chain for a scenario configuration.
+    ///
+    /// Follows the parent references in each configuration file, loading them
+    /// recursively until a configuration without a parent is found. Detects
+    /// circular dependencies.
+    ///
+    /// # Arguments
+    ///
+    /// * `initial_path` - Path to the starting configuration file
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Vec<PartialScenarioConfig>)` if all configuration files were loaded successfully
+    /// * `Err` if there was an error loading any configuration or a circular dependency was detected
     fn resolve_config_imports(
         initial_path: PathBuf,
     ) -> Result<Vec<PartialScenarioConfig>, ScenarioConfigError> {
@@ -107,12 +164,36 @@ impl ScenarioConfig {
         Ok(config_chain)
     }
 
+    /// Loads a configuration file from disk.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the configuration file to load
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(PartialScenarioConfig)` if the file was loaded and parsed successfully
+    /// * `Err` if there was an error reading or parsing the file
     fn load_config_file(path: &PathBuf) -> Result<PartialScenarioConfig, ScenarioConfigError> {
         let config_string =
             std::fs::read_to_string(path).map_err(ScenarioConfigError::CannotOpenConfig)?;
         toml::from_str(&config_string).map_err(ScenarioConfigError::CannotReadConfig)
     }
 
+    /// Resolves a relative or absolute import path.
+    ///
+    /// If the path is absolute, it's used as-is. If it's relative, it's
+    /// interpreted relative to the directory containing the current config file.
+    ///
+    /// # Arguments
+    ///
+    /// * `current_config_path` - Path to the current configuration file
+    /// * `import_path_str` - Path to the imported configuration file
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(PathBuf)` with the resolved path if the file exists
+    /// * `Err` if the file doesn't exist
     fn resolve_import_path(
         current_config_path: &PathBuf,
         import_path_str: &str,
@@ -140,6 +221,19 @@ impl ScenarioConfig {
 impl TryFrom<PathBuf> for ScenarioConfig {
     type Error = ScenarioConfigError;
 
+    /// Creates a ScenarioConfig from a file path.
+    ///
+    /// Loads the configuration file and all its parent configurations,
+    /// then merges them into a complete configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `config_path` - Path to the configuration file
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(ScenarioConfig)` if the configuration was loaded and merged successfully
+    /// * `Err` if there was an error loading or merging the configurations
     fn try_from(config_path: PathBuf) -> Result<Self, Self::Error> {
         let configs_to_merge = Self::resolve_config_imports(config_path)?;
 

@@ -1,3 +1,8 @@
+//! Step execution management for scenarios.
+//!
+//! This module provides functionality for executing a sequence of steps
+//! in a scenario, handling failures and executing fallback steps when needed.
+
 use crate::{
     config::steps::StepsConfig,
     scenario::{errors::StepsError, step::Step, task::Task, tasks::Tasks, variables::Variables},
@@ -6,17 +11,25 @@ use crate::{
 use std::ops::{Deref, DerefMut};
 use tracing::{debug, instrument};
 
+/// A sequence of steps to be executed as part of a scenario.
+///
+/// This struct represents an ordered collection of steps that define the execution flow
+/// of a scenario. Each step executes a task, and the execution sequence continues
+/// until all steps complete successfully or one step fails.
 #[derive(Clone, Debug)]
 pub struct Steps(Vec<Step>);
 
 impl Deref for Steps {
     type Target = Vec<Step>;
+    
+    /// Dereferences to the underlying vector of steps.
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
 impl DerefMut for Steps {
+    /// Provides mutable access to the underlying vector of steps.
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -24,6 +37,21 @@ impl DerefMut for Steps {
 
 impl TryFrom<(&Tasks, &StepsConfig)> for Steps {
     type Error = StepsError;
+    
+    /// Attempts to create a Steps instance from tasks and steps configuration.
+    ///
+    /// This conversion will validate that all task references in the steps configuration
+    /// exist in the provided tasks collection.
+    ///
+    /// # Arguments
+    ///
+    /// * `tasks` - Collection of available tasks
+    /// * `config` - Configuration of steps to create
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Steps)` - If all referenced tasks exist and all steps were successfully created
+    /// * `Err(StepsError)` - If any referenced task doesn't exist or other validation errors occur
     fn try_from((tasks, config): (&Tasks, &StepsConfig)) -> Result<Self, Self::Error> {
         let mut steps = Vec::new();
         for step_config in config.deref() {
@@ -37,12 +65,28 @@ impl TryFrom<(&Tasks, &StepsConfig)> for Steps {
 }
 
 impl Default for Steps {
+    /// Creates an empty collection of steps.
     fn default() -> Self {
         Steps(Vec::new())
     }
 }
 
 impl Steps {
+    /// Executes all steps in sequence, handling failures with on-fail steps.
+    ///
+    /// This method executes each step in order until all complete successfully or one fails.
+    /// If a step fails, its on-fail steps (if any) are executed, and then execution stops
+    /// with an error.
+    ///
+    /// # Arguments
+    ///
+    /// * `session` - The SSH session for executing remote operations
+    /// * `variables` - Variables to use for placeholder resolution
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - If all steps executed successfully
+    /// * `Err(StepsError)` - If any step failed to execute
     #[instrument(skip_all, name = "steps")]
     pub(crate) fn execute(
         &self,

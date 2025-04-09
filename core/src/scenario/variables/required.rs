@@ -17,7 +17,34 @@ use crate::config::variables::required::{RequiredVariablesConfig, VariableTypeCo
 /// A collection of required variables for a scenario.
 ///
 /// This struct wraps a HashMap of variable names to `RequiredVariable` instances,
-/// providing methods for managing these variables.
+/// providing methods for managing these variables and handling derived variables.
+///
+/// # Examples
+///
+/// ```
+/// use scenario_rs::config::variables::required::{RequiredVariablesConfig, RequiredVariableConfig, VariableTypeConfig};
+/// use scenario_rs::scenario::variables::required::RequiredVariables;
+/// use std::collections::HashMap;
+///
+/// // Create a configuration with one string variable
+/// let mut config_map = HashMap::new();
+/// config_map.insert(
+///     "username".to_string(),
+///     RequiredVariableConfig {
+///         label: Some("Username".to_string()),
+///         var_type: VariableTypeConfig::String,
+///         read_only: false,
+///     }
+/// );
+/// let config = RequiredVariablesConfig(config_map);
+///
+/// // Create RequiredVariables from the config
+/// let variables = RequiredVariables::from(&config);
+/// 
+/// // Access the variable
+/// let username = variables.get("username").unwrap();
+/// assert_eq!(username.label(), "Username");
+/// ```
 #[derive(Clone, Debug)]
 pub struct RequiredVariables(HashMap<String, RequiredVariable>);
 
@@ -80,6 +107,13 @@ impl Default for RequiredVariables {
 }
 
 impl RequiredVariables {
+    /// Creates a map of variable names to their values.
+    ///
+    /// This is useful when you need only the values without the additional metadata.
+    ///
+    /// # Returns
+    ///
+    /// A HashMap where keys are variable names and values are the corresponding variable values.
     pub fn value_map(&self) -> HashMap<String, String> {
         self.iter()
             .map(|(key, var)| (key.clone(), var.value.clone()))
@@ -91,6 +125,33 @@ impl RequiredVariables {
     /// For path variables, automatically creates basename variables when the path
     /// points to a file. These basename variables are read-only and have the format
     /// "basename:{original_variable_name}".
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use scenario_rs::scenario::variables::required::{RequiredVariables, RequiredVariable, VariableType};
+    /// # use std::collections::HashMap;
+    /// 
+    /// let mut variables = RequiredVariables::default();
+    /// variables.insert(
+    ///     "file_path".to_string(), 
+    ///     RequiredVariable {
+    ///         label: "File Path".to_string(),
+    ///         var_type: VariableType::Path,
+    ///         value: String::new(),
+    ///         read_only: false,
+    ///     }
+    /// );
+    ///
+    /// // Update the file path variable
+    /// let mut updates = HashMap::new();
+    /// updates.insert("file_path".to_string(), "/temp/data.txt".to_string());
+    /// variables.upsert(updates);
+    ///
+    /// // A derived basename variable should be created
+    /// assert!(variables.contains_key("basename:file_path"));
+    /// assert_eq!(variables.get("basename:file_path").unwrap().value(), "data.txt");
+    /// ```
     pub fn upsert(&mut self, variables: HashMap<String, String>) {
         let mut new_variables = HashMap::new();
 
