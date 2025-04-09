@@ -34,9 +34,7 @@ impl EventLayer for AppEventLayer {
                     self.sender.send_event(AppEvent::ClearLog);
                     self.send_event(format!("{}Log cleared!", APP_PREFIX));
                 }
-                _ => {
-                    // Unrecognized event type, do nothing
-                }
+                _ => {}
             }
         } else {
             if let Some(message) = &visitor.message {

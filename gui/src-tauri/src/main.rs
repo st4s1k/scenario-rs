@@ -25,7 +25,7 @@ fn main() {
     let (frontend_tx, frontend_rx) = std::sync::mpsc::channel::<AppEvent>();
 
     tracing_subscriber::registry()
-        .with(fmt::layer().compact().with_target(false).without_time())
+        .with(fmt::layer().compact().with_target(false))
         .with(
             EnvFilter::from_default_env().add_directive(if cfg!(debug_assertions) {
                 Level::TRACE.into()

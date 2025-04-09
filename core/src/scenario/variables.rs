@@ -1,17 +1,19 @@
-use crate::scenario::variables::{defined::DefinedVariables, resolved::ResolvedVariables};
+use crate::{
+    config::variables::VariablesConfig,
+    scenario::{
+        errors::PlaceholderResolutionError,
+        utils::HasPlaceholders,
+        variables::{
+            defined::DefinedVariables, required::RequiredVariables, resolved::ResolvedVariables,
+        },
+    },
+};
+use std::{collections::HashMap, ops::Deref};
+use tracing::debug;
 
 pub mod defined;
 pub mod required;
 pub mod resolved;
-
-use crate::{
-    config::variables::VariablesConfig,
-    scenario::{
-        errors::PlaceholderResolutionError, utils::HasPlaceholders,
-        variables::required::RequiredVariables,
-    },
-};
-use std::{collections::HashMap, ops::Deref};
 
 #[derive(Clone, Debug)]
 pub struct Variables {
@@ -64,6 +66,12 @@ impl Variables {
             variables.insert(name.as_str(), required_variable.value.as_str());
         });
 
+        variables = variables
+            .iter()
+            .filter(|(_, value)| !value.trim().is_empty())
+            .map(|(key, value)| (*key, *value))
+            .collect::<HashMap<&str, &str>>();
+
         let mut output = input.to_string();
 
         loop {
@@ -80,7 +88,7 @@ impl Variables {
 
             if output == previous {
                 return Err(PlaceholderResolutionError::CannotResolvePlaceholders(
-                    output,
+                    input.to_string(),
                 ));
             }
         }
@@ -92,14 +100,25 @@ impl Variables {
         all_variables.extend(self.defined.deref().clone());
         all_variables.extend(self.required.value_map());
 
+        all_variables
+            .iter()
+            .filter(|(_, value)| value.trim().is_empty())
+            .for_each(|(key, _)| {
+                debug!(
+                    event = "error",
+                    error = format!("Variable '{}' has a blank value", key)
+                );
+            });
+
         loop {
             let mut resolved_variables = HashMap::new();
 
             for (variable_name, value) in all_variables.iter() {
-                let new_value = self.resolve_placeholders(value)?;
-                if new_value != *value {
-                    resolved_variables.insert(variable_name.clone(), new_value);
-                }
+                if let Ok(new_value) = self.resolve_placeholders(value) {
+                    if new_value != *value {
+                        resolved_variables.insert(variable_name.clone(), new_value);
+                    }
+                };
             }
 
             if resolved_variables.is_empty() {

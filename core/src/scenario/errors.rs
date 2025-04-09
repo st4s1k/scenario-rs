@@ -108,6 +108,6 @@ pub enum SftpCopyError {
 pub enum PlaceholderResolutionError {
     #[error("Cannot resolve placeholders in variables: {0:?}")]
     CannotResolveVariablesPlaceholders(Vec<String>),
-    #[error("Cannot resolve placeholders in: {0}")]
+    #[error("Cannot resolve placeholders in this template: {0}")]
     CannotResolvePlaceholders(String),
 }

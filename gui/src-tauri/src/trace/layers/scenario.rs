@@ -38,7 +38,7 @@ impl EventLayer for ScenarioEventLayer {
                 "error" => {
                     if let Some(error) = &visitor.error {
                         self.sender.send_event(AppEvent::LogMessage(format!(
-                            "{}Scenario execution failed: {error}",
+                            "{}{error}",
                             SCENARIO_PREFIX
                         )));
                     } else {
