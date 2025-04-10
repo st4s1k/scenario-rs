@@ -20,7 +20,6 @@ pub mod step;
 pub mod steps;
 pub mod task;
 pub mod tasks;
-pub mod utils;
 pub mod variables;
 
 /// A complete deployment scenario that can be executed on a remote server.

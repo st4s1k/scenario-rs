@@ -1,8 +1,8 @@
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
 use scenario_rs::{
-    scenario::utils::{ArcMutex, Wrap},
     trace::ScenarioEventVisitor,
+    utils::{ArcMutex, Wrap},
 };
 use std::{collections::HashMap, fmt};
 use tracing::{error, info, warn, Subscriber};

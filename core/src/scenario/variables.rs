@@ -7,16 +7,14 @@ use crate::{
     config::variables::VariablesConfig,
     scenario::{
         errors::PlaceholderResolutionError,
-        utils::HasPlaceholders,
         variables::{
             defined::DefinedVariables, required::RequiredVariables, resolved::ResolvedVariables,
         },
     },
+    utils::{HasPlaceholders, HasText, IsBlank, IsNotEmpty},
 };
 use std::{collections::HashMap, ops::Deref};
 use tracing::debug;
-
-use super::utils::{IsBlank, IsNotEmpty, HasText};
 
 pub mod defined;
 pub mod required;
@@ -35,7 +33,7 @@ pub mod resolved;
 /// # use scenario_rs::config::variables::VariablesConfig;
 /// # use std::collections::HashMap;
 /// # use scenario_rs::scenario::variables::Variables;
-/// # 
+/// #
 /// // Create a Variables instance from a configuration
 /// let mut vars = Variables::default();
 ///
@@ -99,7 +97,7 @@ impl Variables {
     ///
     /// ```no_run
     /// # use scenario_rs::scenario::variables::Variables;
-    /// # 
+    /// #
     /// let vars = Variables::default();
     /// let result = vars.resolve_placeholders("Hello, {name}!");
     /// ```

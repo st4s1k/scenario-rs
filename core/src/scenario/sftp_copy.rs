@@ -148,11 +148,9 @@ impl SftpCopy {
 mod tests {
     use super::*;
     use crate::{
-        scenario::{
-            utils::{ArcMutex, Wrap},
-            variables::Variables,
-        },
+        scenario::variables::Variables,
         session::{Channel, SessionType, Sftp, Write},
+        utils::{ArcMutex, Wrap},
     };
     use std::{io, panic};
 

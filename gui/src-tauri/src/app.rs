@@ -1,11 +1,13 @@
 use crate::trace::{self, AppEvent, FrontendEventHandler};
 use ::tracing::{debug, error, info, instrument, warn};
-use scenario_rs::scenario::{
-    step::Step,
-    task::Task,
-    utils::{IsNotEmpty, HasText},
-    variables::required::{RequiredVariable, VariableType},
-    Scenario,
+use scenario_rs::{
+    scenario::{
+        step::Step,
+        task::Task,
+        variables::required::{RequiredVariable, VariableType},
+        Scenario,
+    },
+    utils::{HasText, IsNotEmpty},
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -41,8 +43,7 @@ impl From<&ScenarioAppState> for ScenarioAppStateConfig {
                     .required()
                     .iter()
                     .filter(|(_, required_variable)| {
-                        required_variable.value().has_text()
-                            && required_variable.not_read_only()
+                        required_variable.value().has_text() && required_variable.not_read_only()
                     })
                     .map(|(name, required_variable)| {
                         (name.to_string(), required_variable.value().to_string())

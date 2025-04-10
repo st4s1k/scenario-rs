@@ -91,7 +91,6 @@ impl<T> Wrap<T> for ArcMutex<T> {
     }
 }
 
-
 /// Trait for safely sending events through a channel.
 ///
 /// This trait provides a convenient wrapper around channel sending that handles
@@ -102,7 +101,7 @@ impl<T> Wrap<T> for ArcMutex<T> {
 /// ```
 /// # use std::sync::mpsc;
 /// # use scenario_rs::scenario::utils::SendEvent;
-/// 
+///
 /// let (tx, rx) = mpsc::channel();
 /// tx.send_event("Scenario started");
 /// assert_eq!(rx.recv().unwrap(), "Scenario started");
@@ -131,7 +130,7 @@ impl<T: Clone + std::fmt::Debug> SendEvent<T> for Sender<T> {
 ///
 /// ```
 /// # use scenario_rs::scenario::utils::HasPlaceholders;
-/// 
+///
 /// assert!(String::from("Hello, {name}!").has_placeholders());
 /// assert!(!"Hello, world!".has_placeholders());
 /// ```
@@ -159,11 +158,11 @@ impl HasPlaceholders for &str {}
 /// ```
 /// # use scenario_rs::scenario::utils::IsNotEmpty;
 /// # use std::collections::HashMap;
-/// 
+///
 /// let mut map = HashMap::new();
 /// map.insert("key", "value");
 /// assert!(map.is_not_empty());
-/// 
+///
 /// let vec = vec![1, 2, 3];
 /// assert!(vec.is_not_empty());
 /// ```

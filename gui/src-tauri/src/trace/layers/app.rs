@@ -1,5 +1,5 @@
 use crate::trace::{layers::EventLayer, visitors::AppEventVisitor, AppEvent};
-use scenario_rs::scenario::utils::SendEvent;
+use scenario_rs::utils::SendEvent;
 use std::sync::mpsc::Sender;
 use tracing::Event;
 

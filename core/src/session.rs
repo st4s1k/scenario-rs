@@ -1,10 +1,7 @@
 use crate::{
-    scenario::{
-        credentials::Credentials,
-        server::Server,
-        utils::{ArcMutex, Wrap},
-    },
+    scenario::{credentials::Credentials, server::Server},
     session::mock::{MockChannel, MockSftp},
+    utils::{ArcMutex, Wrap},
 };
 use std::{net::TcpStream, path::Path};
 use tracing::debug;
@@ -330,7 +327,10 @@ pub mod mock {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scenario::{credentials::Credentials, server::Server, utils::HasText};
+    use crate::{
+        scenario::{credentials::Credentials, server::Server},
+        utils::HasText,
+    };
     use std::path::Path;
 
     // Test fixtures

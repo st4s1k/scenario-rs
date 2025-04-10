@@ -40,7 +40,7 @@ use crate::config::variables::required::{RequiredVariablesConfig, VariableTypeCo
 ///
 /// // Create RequiredVariables from the config
 /// let variables = RequiredVariables::from(&config);
-/// 
+///
 /// // Access the variable
 /// let username = variables.get("username").unwrap();
 /// assert_eq!(username.label(), "Username");
@@ -131,10 +131,10 @@ impl RequiredVariables {
     /// ```
     /// # use scenario_rs::scenario::variables::required::{RequiredVariables, RequiredVariable, VariableType};
     /// # use std::collections::HashMap;
-    /// 
+    ///
     /// let mut variables = RequiredVariables::default();
     /// variables.insert(
-    ///     "file_path".to_string(), 
+    ///     "file_path".to_string(),
     ///     RequiredVariable {
     ///         label: "File Path".to_string(),
     ///         var_type: VariableType::Path,
@@ -248,7 +248,7 @@ pub enum VariableType {
 
 #[cfg(test)]
 mod tests {
-    use crate::{config::variables::required::RequiredVariableConfig, scenario::utils::HasText};
+    use crate::{config::variables::required::RequiredVariableConfig, utils::HasText};
 
     use super::*;
     use std::collections::HashMap;
