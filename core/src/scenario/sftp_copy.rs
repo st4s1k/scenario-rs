@@ -148,13 +148,13 @@ impl SftpCopy {
 mod tests {
     use super::*;
     use crate::{
-        scenario::variables::Variables,
+        scenario::{
+            utils::{ArcMutex, Wrap},
+            variables::Variables,
+        },
         session::{Channel, SessionType, Sftp, Write},
     };
-    use std::{
-        io, panic,
-        sync::{Arc, Mutex},
-    };
+    use std::{io, panic};
 
     enum ReadBehavior {
         Success,
@@ -276,8 +276,8 @@ mod tests {
 
         Session {
             inner: SessionType::Test {
-                channel: Arc::new(Mutex::new(MockSuccessfulChannel)),
-                sftp: Arc::new(Mutex::new(MockSuccessfulSftp)),
+                channel: ArcMutex::wrap(MockSuccessfulChannel),
+                sftp: ArcMutex::wrap(MockSuccessfulSftp),
             },
         }
     }
@@ -367,9 +367,9 @@ mod tests {
             destination_path: "dest.txt".into(),
         };
 
-        let sftp_mutex: Arc<Mutex<FailLockSftp>> = Arc::new(Mutex::new(FailLockSftp));
+        let sftp_mutex: ArcMutex<FailLockSftp> = ArcMutex::wrap(FailLockSftp);
 
-        let sftp_mutex_clone = Arc::clone(&sftp_mutex);
+        let sftp_mutex_clone = sftp_mutex.clone();
         let _ = std::thread::spawn(move || {
             panic::set_hook(Box::new(|_info| {
                 // do nothing
@@ -383,7 +383,7 @@ mod tests {
 
         let session = Session {
             inner: SessionType::Test {
-                channel: Arc::new(Mutex::new(MockSuccessfulChannel)),
+                channel: ArcMutex::wrap(MockSuccessfulChannel),
                 sftp: sftp_mutex,
             },
         };
@@ -415,8 +415,8 @@ mod tests {
         };
         let session = Session {
             inner: SessionType::Test {
-                channel: Arc::new(Mutex::new(MockSuccessfulChannel)),
-                sftp: Arc::new(Mutex::new(FailCreateSftp)),
+                channel: ArcMutex::wrap(MockSuccessfulChannel),
+                sftp: ArcMutex::wrap(FailCreateSftp),
             },
         };
         let variables = Variables::default();
@@ -454,8 +454,8 @@ mod tests {
         };
         let session = Session {
             inner: SessionType::Test {
-                channel: Arc::new(Mutex::new(MockSuccessfulChannel)),
-                sftp: Arc::new(Mutex::new(WriteFailSftp)),
+                channel: ArcMutex::wrap(MockSuccessfulChannel),
+                sftp: ArcMutex::wrap(WriteFailSftp),
             },
         };
         let variables = Variables::default();

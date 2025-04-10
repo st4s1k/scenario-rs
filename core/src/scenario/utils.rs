@@ -1,5 +1,96 @@
 use regex::Regex;
-use std::{collections::HashMap, sync::mpsc::Sender};
+use std::{
+    collections::HashMap,
+    sync::{mpsc::Sender, Arc, Mutex},
+};
+
+/// A convenience type alias for an `Arc<Mutex<T>>`.
+///
+/// This type combines atomic reference counting (`Arc`) with mutual exclusion (`Mutex`),
+/// allowing for shared mutable state across threads. It's particularly useful for:
+///
+/// - Safely sharing mutable data between tasks or components
+/// - Implementing thread-safe caching mechanisms
+/// - Managing concurrent access to resources like connections
+///
+/// # Examples
+///
+/// ```
+/// use scenario_rs::scenario::utils::{ArcMutex, Wrap};
+///
+/// // Create a thread-safe counter
+/// let counter = ArcMutex::wrap(0);
+///
+/// // Clone the reference to share between threads
+/// let counter_clone = counter.clone();
+///
+/// // Use in a separate thread
+/// std::thread::spawn(move || {
+///     let mut value = counter_clone.lock().unwrap();
+///     *value += 1;
+/// });
+///
+/// // Access the value in the main thread
+/// {
+///     let mut value = counter.lock().unwrap();
+///     *value += 1;
+/// }
+/// ```
+///
+/// # Thread Safety
+///
+/// `ArcMutex<T>` is both `Send` and `Sync` when `T` is `Send`, making it safe
+/// to share between threads.
+pub type ArcMutex<T> = Arc<Mutex<T>>;
+
+/// A trait for wrapping values in a container.
+///
+/// This trait provides a consistent way to wrap values in various container types.
+/// It's primarily used with `ArcMutex<T>` to simplify the creation of thread-safe
+/// mutable state.
+///
+/// # Examples
+///
+/// ```
+/// use scenario_rs::scenario::utils::{ArcMutex, Wrap};
+///
+/// // Create a shared counter
+/// let counter = ArcMutex::wrap(0);
+///
+/// // Create a shared string
+/// let message = ArcMutex::wrap(String::from("Hello"));
+/// ```
+pub trait Wrap<T> {
+    /// Wraps a value of type `T` in the implementing container type.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The value to wrap
+    ///
+    /// # Returns
+    ///
+    /// The wrapped value
+    fn wrap(data: T) -> Self;
+}
+
+impl<T> Wrap<T> for ArcMutex<T> {
+    /// Wraps a value in an `ArcMutex<T>`.
+    ///
+    /// This is a convenience method that combines `Arc::new` and `Mutex::new`
+    /// into a single operation.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The value to wrap in an `Arc<Mutex<T>>`
+    ///
+    /// # Returns
+    ///
+    /// An `ArcMutex<T>` containing the provided value
+    fn wrap(data: T) -> Self {
+        Arc::new(Mutex::new(data))
+    }
+}
+
 
 /// Trait for safely sending events through a channel.
 ///

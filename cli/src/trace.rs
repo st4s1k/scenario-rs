@@ -1,11 +1,10 @@
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
-use scenario_rs::trace::ScenarioEventVisitor;
-use std::{
-    collections::HashMap,
-    fmt,
-    sync::{Arc, Mutex},
+use scenario_rs::{
+    scenario::utils::{ArcMutex, Wrap},
+    trace::ScenarioEventVisitor,
 };
+use std::{collections::HashMap, fmt};
 use tracing::{error, info, warn, Subscriber};
 use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 
@@ -16,7 +15,7 @@ use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 /// progress bars for long-running operations.
 pub struct ScenarioEventLayer {
     /// Progress bars for tracking operations, keyed by operation ID
-    progress_bars: Arc<Mutex<HashMap<String, ProgressBar>>>,
+    progress_bars: ArcMutex<HashMap<String, ProgressBar>>,
 }
 
 impl ScenarioEventLayer {
@@ -27,7 +26,7 @@ impl ScenarioEventLayer {
     /// A new ScenarioEventLayer instance ready to be added to a tracing subscriber.
     pub fn new() -> Self {
         ScenarioEventLayer {
-            progress_bars: Arc::new(Mutex::new(HashMap::new())),
+            progress_bars: ArcMutex::wrap(HashMap::new()),
         }
     }
 

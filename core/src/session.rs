@@ -1,12 +1,12 @@
 use crate::{
-    scenario::{credentials::Credentials, server::Server},
+    scenario::{
+        credentials::Credentials,
+        server::Server,
+        utils::{ArcMutex, Wrap},
+    },
     session::mock::{MockChannel, MockSftp},
 };
-use std::{
-    net::TcpStream,
-    path::Path,
-    sync::{Arc, Mutex},
-};
+use std::{net::TcpStream, path::Path};
 use tracing::debug;
 
 /// Defines operations for executing commands on a remote server via SSH.
@@ -67,8 +67,6 @@ pub trait Write {
 
 /// Represents an SSH session to a remote server.
 ///
-/// The session can be either a real SSH connection or a mock session
-/// depending on the build configuration and initialization method.
 pub struct Session {
     pub(crate) inner: SessionType,
 }
@@ -79,8 +77,8 @@ pub(crate) enum SessionType {
     Mock,
     #[cfg(test)]
     Test {
-        channel: Arc<Mutex<dyn Channel + Send + Sync>>,
-        sftp: Arc<Mutex<dyn Sftp + Send + Sync>>,
+        channel: ArcMutex<dyn Channel + Send + Sync>,
+        sftp: ArcMutex<dyn Sftp + Send + Sync>,
     },
 }
 
@@ -110,17 +108,17 @@ impl Session {
     /// # Returns
     /// * `Ok(Box<dyn Channel>)` with a channel for executing commands
     /// * `Err` if there was an error creating the channel
-    pub fn channel_session(&self) -> Result<Arc<Mutex<dyn Channel + Send + Sync>>, ssh2::Error> {
+    pub fn channel_session(&self) -> Result<ArcMutex<dyn Channel + Send + Sync>, ssh2::Error> {
         match &self.inner {
             SessionType::Real(real_session) => real_session
                 .channel_session()
-                .map(|ch| Arc::new(Mutex::new(ch)) as Arc<Mutex<dyn Channel + Send + Sync>>),
+                .map(|ch| ArcMutex::wrap(ch) as ArcMutex<dyn Channel + Send + Sync>),
             SessionType::Mock => {
                 std::thread::sleep(std::time::Duration::from_millis(100));
-                Ok(Arc::new(Mutex::new(MockChannel)))
+                Ok(ArcMutex::wrap(MockChannel))
             }
             #[cfg(test)]
-            SessionType::Test { channel, .. } => Ok(Arc::clone(channel)),
+            SessionType::Test { channel, .. } => Ok(ArcMutex::clone(channel)),
         }
     }
 
@@ -129,17 +127,17 @@ impl Session {
     /// # Returns
     /// * `Ok(Box<dyn Sftp>)` with an SFTP session
     /// * `Err` if there was an error creating the SFTP session
-    pub fn sftp(&self) -> Result<Arc<Mutex<dyn Sftp + Send + Sync>>, ssh2::Error> {
+    pub fn sftp(&self) -> Result<ArcMutex<dyn Sftp + Send + Sync>, ssh2::Error> {
         match &self.inner {
             SessionType::Real(real_session) => real_session
                 .sftp()
-                .map(|sftp| Arc::new(Mutex::new(sftp)) as Arc<Mutex<dyn Sftp + Send + Sync>>),
+                .map(|sftp| ArcMutex::wrap(sftp) as ArcMutex<dyn Sftp + Send + Sync>),
             SessionType::Mock => {
                 std::thread::sleep(std::time::Duration::from_millis(100));
-                Ok(Arc::new(Mutex::new(MockSftp)))
+                Ok(ArcMutex::wrap(MockSftp))
             }
             #[cfg(test)]
-            SessionType::Test { sftp, .. } => Ok(Arc::clone(sftp)),
+            SessionType::Test { sftp, .. } => Ok(ArcMutex::clone(sftp)),
         }
     }
 

@@ -125,13 +125,13 @@ impl RemoteSudo {
 mod tests {
     use super::*;
     use crate::{
-        scenario::variables::Variables,
+        scenario::{
+            utils::{ArcMutex, Wrap},
+            variables::Variables,
+        },
         session::{Channel, SessionType, Sftp},
     };
-    use std::{
-        panic,
-        sync::{Arc, Mutex},
-    };
+    use std::panic;
 
     struct TestWrite;
     impl crate::session::Write for TestWrite {
@@ -196,8 +196,8 @@ mod tests {
         };
         let session = Session {
             inner: SessionType::Test {
-                channel: Arc::new(Mutex::new(SuccessChannel)),
-                sftp: Arc::new(Mutex::new(TestSftp)),
+                channel: ArcMutex::wrap(SuccessChannel),
+                sftp: ArcMutex::wrap(TestSftp),
             },
         };
         let variables = Variables::default();
@@ -217,8 +217,8 @@ mod tests {
         };
         let session = Session {
             inner: SessionType::Test {
-                channel: Arc::new(Mutex::new(TestChannel)),
-                sftp: Arc::new(Mutex::new(TestSftp)),
+                channel: ArcMutex::wrap(TestChannel),
+                sftp: ArcMutex::wrap(TestSftp),
             },
         };
         let variables = Variables::default();
@@ -254,8 +254,8 @@ mod tests {
         };
         let session = Session {
             inner: SessionType::Test {
-                channel: Arc::new(Mutex::new(ExecFailChannel)),
-                sftp: Arc::new(Mutex::new(TestSftp)),
+                channel: ArcMutex::wrap(ExecFailChannel),
+                sftp: ArcMutex::wrap(TestSftp),
             },
         };
         let variables = Variables::default();
@@ -292,8 +292,8 @@ mod tests {
         };
         let session = Session {
             inner: SessionType::Test {
-                channel: Arc::new(Mutex::new(NonZeroExitChannel)),
-                sftp: Arc::new(Mutex::new(TestSftp)),
+                channel: ArcMutex::wrap(NonZeroExitChannel),
+                sftp: ArcMutex::wrap(TestSftp),
             },
         };
         let variables = Variables::default();
@@ -329,8 +329,8 @@ mod tests {
         };
         let session = Session {
             inner: SessionType::Test {
-                channel: Arc::new(Mutex::new(ReadFailChannel)),
-                sftp: Arc::new(Mutex::new(TestSftp)),
+                channel: ArcMutex::wrap(ReadFailChannel),
+                sftp: ArcMutex::wrap(TestSftp),
             },
         };
         let variables = Variables::default();
@@ -366,8 +366,8 @@ mod tests {
         };
         let session = Session {
             inner: SessionType::Test {
-                channel: Arc::new(Mutex::new(ExitStatusFailChannel)),
-                sftp: Arc::new(Mutex::new(TestSftp)),
+                channel: ArcMutex::wrap(ExitStatusFailChannel),
+                sftp: ArcMutex::wrap(TestSftp),
             },
         };
         let variables = Variables::default();
@@ -389,8 +389,8 @@ mod tests {
             command: "test".into(),
         };
 
-        let channel_mutex: Arc<Mutex<TestChannel>> = Arc::new(Mutex::new(TestChannel));
-        let channel_mutex_clone = Arc::clone(&channel_mutex);
+        let channel_mutex: ArcMutex<TestChannel> = ArcMutex::wrap(TestChannel);
+        let channel_mutex_clone = channel_mutex.clone();
         let _ = std::thread::spawn(move || {
             panic::set_hook(Box::new(|_info| {
                 // do nothing
@@ -405,7 +405,7 @@ mod tests {
         let session = Session {
             inner: SessionType::Test {
                 channel: channel_mutex,
-                sftp: Arc::new(Mutex::new(TestSftp)),
+                sftp: ArcMutex::wrap(TestSftp),
             },
         };
 
