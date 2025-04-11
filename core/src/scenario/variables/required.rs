@@ -22,8 +22,8 @@ use crate::config::variables::required::{RequiredVariablesConfig, VariableTypeCo
 /// # Examples
 ///
 /// ```
-/// use scenario_rs::config::variables::required::{RequiredVariablesConfig, RequiredVariableConfig, VariableTypeConfig};
-/// use scenario_rs::scenario::variables::required::RequiredVariables;
+/// use scenario_rs_core::config::variables::required::{RequiredVariablesConfig, RequiredVariableConfig, VariableTypeConfig};
+/// use scenario_rs_core::scenario::variables::required::RequiredVariables;
 /// use std::collections::HashMap;
 ///
 /// // Create a configuration with one string variable
@@ -129,19 +129,24 @@ impl RequiredVariables {
     /// # Examples
     ///
     /// ```
-    /// # use scenario_rs::scenario::variables::required::{RequiredVariables, RequiredVariable, VariableType};
+    /// # use scenario_rs_core::config::variables::required::{RequiredVariablesConfig, RequiredVariableConfig, VariableTypeConfig};
+    /// # use scenario_rs_core::scenario::variables::required::RequiredVariables;
     /// # use std::collections::HashMap;
     ///
-    /// let mut variables = RequiredVariables::default();
-    /// variables.insert(
+    /// // Create a configuration with a path variable
+    /// let mut config_map = HashMap::new();
+    /// config_map.insert(
     ///     "file_path".to_string(),
-    ///     RequiredVariable {
-    ///         label: "File Path".to_string(),
-    ///         var_type: VariableType::Path,
-    ///         value: String::new(),
+    ///     RequiredVariableConfig {
+    ///         label: Some("File Path".to_string()),
+    ///         var_type: VariableTypeConfig::Path,
     ///         read_only: false,
     ///     }
     /// );
+    /// let config = RequiredVariablesConfig(config_map);
+    ///
+    /// // Create RequiredVariables from the config
+    /// let mut variables = RequiredVariables::from(&config);
     ///
     /// // Update the file path variable
     /// let mut updates = HashMap::new();

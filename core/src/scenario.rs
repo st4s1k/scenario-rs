@@ -32,12 +32,11 @@ pub mod variables;
 /// # Example
 ///
 /// ```no_run
-/// use std::path::PathBuf;
-/// use scenario_rs::scenario::Scenario;
+/// use scenario_rs_core::scenario::Scenario;
 ///
 /// // Create a scenario from a TOML configuration file
 /// let scenario_path = "path/to/scenario.toml";
-/// let scenario = Scenario::try_from(scenario_path).expect("Failed to load scenario");
+/// let scenario = Scenario::try_from(scenario_path).expect("Failed to create scenario from config");
 ///
 /// // Execute the scenario
 /// scenario.execute();

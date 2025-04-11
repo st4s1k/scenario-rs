@@ -30,9 +30,8 @@ pub mod resolved;
 /// # Example
 ///
 /// ```no_run
-/// # use scenario_rs::config::variables::VariablesConfig;
+/// # use scenario_rs_core::scenario::variables::Variables;
 /// # use std::collections::HashMap;
-/// # use scenario_rs::scenario::variables::Variables;
 /// #
 /// // Create a Variables instance from a configuration
 /// let mut vars = Variables::default();
@@ -96,12 +95,12 @@ impl Variables {
     /// # Examples
     ///
     /// ```no_run
-    /// # use scenario_rs::scenario::variables::Variables;
+    /// # use scenario_rs_core::scenario::variables::Variables;
     /// #
     /// let vars = Variables::default();
     /// let result = vars.resolve_placeholders("Hello, {name}!");
     /// ```
-    pub(crate) fn resolve_placeholders(
+    pub fn resolve_placeholders(
         &self,
         input: &str,
     ) -> Result<String, PlaceholderResolutionError> {

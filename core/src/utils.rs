@@ -16,7 +16,7 @@ use std::{
 /// # Examples
 ///
 /// ```
-/// use scenario_rs::scenario::utils::{ArcMutex, Wrap};
+/// use scenario_rs_core::utils::{ArcMutex, Wrap};
 ///
 /// // Create a thread-safe counter
 /// let counter = ArcMutex::wrap(0);
@@ -52,7 +52,7 @@ pub type ArcMutex<T> = Arc<Mutex<T>>;
 /// # Examples
 ///
 /// ```
-/// use scenario_rs::scenario::utils::{ArcMutex, Wrap};
+/// use scenario_rs_core::utils::{ArcMutex, Wrap};
 ///
 /// // Create a shared counter
 /// let counter = ArcMutex::wrap(0);
@@ -100,7 +100,7 @@ impl<T> Wrap<T> for ArcMutex<T> {
 ///
 /// ```
 /// # use std::sync::mpsc;
-/// # use scenario_rs::scenario::utils::SendEvent;
+/// # use scenario_rs_core::utils::SendEvent;
 ///
 /// let (tx, rx) = mpsc::channel();
 /// tx.send_event("Scenario started");
@@ -129,12 +129,12 @@ impl<T: Clone + std::fmt::Debug> SendEvent<T> for Sender<T> {
 /// # Examples
 ///
 /// ```
-/// # use scenario_rs::scenario::utils::HasPlaceholders;
+/// # use scenario_rs_core::utils::HasPlaceholders;
 ///
 /// assert!(String::from("Hello, {name}!").has_placeholders());
 /// assert!(!"Hello, world!".has_placeholders());
 /// ```
-pub(crate) trait HasPlaceholders
+pub trait HasPlaceholders
 where
     Self: AsRef<str>,
 {
@@ -156,7 +156,7 @@ impl HasPlaceholders for &str {}
 /// # Examples
 ///
 /// ```
-/// # use scenario_rs::scenario::utils::IsNotEmpty;
+/// # use scenario_rs_core::utils::IsNotEmpty;
 /// # use std::collections::HashMap;
 ///
 /// let mut map = HashMap::new();
@@ -187,7 +187,7 @@ impl<T> IsNotEmpty for Vec<T> {
 /// # Examples
 ///
 /// ```
-/// # use scenario_rs::scenario::utils::IsBlank;
+/// # use scenario_rs_core::utils::IsBlank;
 ///
 /// assert!("".is_blank());
 /// assert!("   ".is_blank());
@@ -210,7 +210,7 @@ impl<T: AsRef<str>> IsBlank for T {
 /// # Examples
 ///
 /// ```
-/// # use scenario_rs::scenario::utils::HasText;
+/// # use scenario_rs_core::utils::HasText;
 ///
 /// assert!("Hello".has_text());
 /// assert!(!("").has_text());
