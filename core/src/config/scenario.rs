@@ -72,7 +72,7 @@ impl PartialScenarioConfig {
 /// This represents a fully resolved scenario configuration with all required fields
 /// present. It can be created by converting from a PartialScenarioConfig after
 /// all inheritance has been resolved.
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Default)]
 pub struct ScenarioConfig {
     /// Authentication credentials for the target server
     pub credentials: CredentialsConfig,

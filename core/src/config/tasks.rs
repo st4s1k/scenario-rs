@@ -15,7 +15,7 @@ use super::task::TaskConfig;
 ///
 /// Tasks are stored in a HashMap where the key is the task name and the value
 /// is its configuration.
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Default)]
 pub struct TasksConfig(HashMap<String, TaskConfig>);
 
 impl Deref for TasksConfig {

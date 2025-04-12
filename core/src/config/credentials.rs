@@ -4,7 +4,7 @@ use serde::Deserialize;
 ///
 /// This struct defines the credentials used to authenticate with a remote server.
 /// If password is not provided, SSH agent authentication will be attempted.
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Default)]
 pub struct CredentialsConfig {
     /// The username to authenticate as on the remote server
     pub username: String,

@@ -9,7 +9,7 @@ use super::step::StepConfig;
 /// This struct represents an ordered collection of steps to be executed
 /// as part of a scenario. It wraps a Vec<StepConfig> and provides
 /// convenient access to the underlying vector through Deref and DerefMut.
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Default)]
 pub struct StepsConfig(pub Vec<StepConfig>);
 
 impl Deref for StepsConfig {
