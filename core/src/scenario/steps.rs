@@ -38,7 +38,7 @@ use tracing::{debug, instrument};
 ///
 /// // Set up the task map
 /// let mut task_map = HashMap::new();
-/// 
+///
 /// // Create a setup task
 /// let setup_config = TaskConfig {
 ///     description: "Setup environment".to_string(),
@@ -78,7 +78,7 @@ use tracing::{debug, instrument};
 /// // Convert to Steps
 /// let result = Steps::try_from((&tasks, &steps_config));
 /// assert!(result.is_ok());
-/// 
+///
 /// let steps = result.unwrap();
 /// assert_eq!(steps.len(), 2);
 /// ```
@@ -87,7 +87,7 @@ pub struct Steps(Vec<Step>);
 
 impl Deref for Steps {
     type Target = Vec<Step>;
-    
+
     /// Dereferences to the underlying vector of steps.
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -103,7 +103,7 @@ impl DerefMut for Steps {
 
 impl TryFrom<(&Tasks, &StepsConfig)> for Steps {
     type Error = StepsError;
-    
+
     /// Attempts to create a Steps instance from tasks and steps configuration.
     ///
     /// This conversion will validate that all task references in the steps configuration
@@ -214,5 +214,203 @@ impl Steps {
 
         debug!(event = "steps_completed");
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{
+        on_fail::OnFailStepsConfig,
+        step::StepConfig,
+        task::{TaskConfig, TaskType},
+    };
+    use std::collections::HashMap;
+
+    // Helper functions for test setup
+    fn create_test_tasks() -> Tasks {
+        let mut task_map = HashMap::new();
+        task_map.insert("task1".to_string(), create_remote_sudo_task());
+        task_map.insert("task2".to_string(), create_sftp_copy_task());
+        task_map.insert("task3".to_string(), create_remote_sudo_task());
+        Tasks(task_map)
+    }
+
+    fn create_remote_sudo_task() -> Task {
+        let config = TaskConfig {
+            description: "Test task 1".to_string(),
+            error_message: "Task 1 failed".to_string(),
+            task_type: TaskType::RemoteSudo {
+                command: "echo test".to_string(),
+            },
+        };
+        Task::from(&config)
+    }
+
+    fn create_sftp_copy_task() -> Task {
+        let config = TaskConfig {
+            description: "Test task 2".to_string(),
+            error_message: "Task 2 failed".to_string(),
+            task_type: TaskType::SftpCopy {
+                source_path: "/test/source".to_string(),
+                destination_path: "/test/dest".to_string(),
+            },
+        };
+        Task::from(&config)
+    }
+
+    fn create_valid_steps_config() -> StepsConfig {
+        StepsConfig(vec![
+            StepConfig {
+                task: "task1".to_string(),
+                on_fail: None,
+            },
+            StepConfig {
+                task: "task2".to_string(),
+                on_fail: None,
+            },
+        ])
+    }
+
+    fn create_steps_config_with_on_fail() -> StepsConfig {
+        StepsConfig(vec![
+            StepConfig {
+                task: "task1".to_string(),
+                on_fail: Some(OnFailStepsConfig(vec!["task3".to_string()])),
+            },
+            StepConfig {
+                task: "task2".to_string(),
+                on_fail: None,
+            },
+        ])
+    }
+
+    fn create_invalid_steps_config() -> StepsConfig {
+        StepsConfig(vec![StepConfig {
+            task: "nonexistent".to_string(),
+            on_fail: None,
+        }])
+    }
+
+    #[test]
+    fn test_steps_try_from_success() {
+        // Given
+        let tasks = create_test_tasks();
+        let config = create_valid_steps_config();
+
+        // When
+        let result = Steps::try_from((&tasks, &config));
+
+        // Then
+        assert!(result.is_ok());
+        let steps = result.unwrap();
+        assert_eq!(steps.len(), 2);
+    }
+
+    #[test]
+    fn test_steps_try_from_with_on_fail() {
+        // Given
+        let tasks = create_test_tasks();
+        let config = create_steps_config_with_on_fail();
+
+        // When
+        let result = Steps::try_from((&tasks, &config));
+
+        // Then
+        assert!(result.is_ok());
+        let steps = result.unwrap();
+        assert_eq!(steps.len(), 2);
+        assert!(!steps[0].on_fail_steps.is_empty());
+    }
+
+    #[test]
+    fn test_steps_try_from_error() {
+        // Given
+        let tasks = create_test_tasks();
+        let config = create_invalid_steps_config();
+
+        // When
+        let result = Steps::try_from((&tasks, &config));
+
+        // Then
+        assert!(result.is_err());
+        if let Err(StepsError::CannotCreateStepFromConfig(_)) = result {
+            // Expected error type
+        } else {
+            panic!("Expected CannotCreateStepFromConfig error");
+        }
+    }
+
+    #[test]
+    fn test_steps_try_from_empty_config() {
+        // Given
+        let tasks = create_test_tasks();
+        let config = StepsConfig(vec![]);
+
+        // When
+        let result = Steps::try_from((&tasks, &config));
+
+        // Then
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_steps_default() {
+        // Given & When
+        let steps = Steps::default();
+
+        // Then
+        assert!(steps.is_empty());
+    }
+
+    #[test]
+    fn test_steps_deref() {
+        // Given
+        let tasks = create_test_tasks();
+        let config = create_valid_steps_config();
+        let steps = Steps::try_from((&tasks, &config)).unwrap();
+
+        // When & Then
+        assert_eq!(steps.len(), 2);
+        assert_eq!(steps[0].task().description(), "Test task 1");
+        assert_eq!(steps[1].task().description(), "Test task 2");
+    }
+
+    #[test]
+    fn test_steps_deref_mut() {
+        // Given
+        let tasks = create_test_tasks();
+        let config = create_valid_steps_config();
+        let mut steps = Steps::try_from((&tasks, &config)).unwrap();
+
+        // When
+        steps.pop();
+
+        // Then
+        assert_eq!(steps.len(), 1);
+        assert_eq!(steps[0].task().description(), "Test task 1");
+    }
+
+    #[test]
+    fn test_steps_clone() {
+        // Given
+        let tasks = create_test_tasks();
+        let config = create_valid_steps_config();
+        let original = Steps::try_from((&tasks, &config)).unwrap();
+
+        // When
+        let cloned = original.clone();
+
+        // Then
+        assert_eq!(cloned.len(), original.len());
+        assert_eq!(
+            cloned[0].task().description(),
+            original[0].task().description()
+        );
+        assert_eq!(
+            cloned[1].task().description(),
+            original[1].task().description()
+        );
     }
 }

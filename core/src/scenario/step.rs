@@ -26,7 +26,7 @@ use crate::{
 /// use scenario_rs_core::{
 ///     config::step::StepConfig,
 ///     scenario::{
-///         step::Step, 
+///         step::Step,
 ///         task::Task,
 ///         tasks::Tasks,
 ///         on_fail::OnFailSteps
@@ -36,7 +36,7 @@ use crate::{
 ///
 /// // Set up the task map with main and recovery tasks
 /// let mut task_map = HashMap::new();
-/// 
+///
 /// // Main deployment task
 /// let deploy_config = TaskConfig {
 ///     description: "Deploy application".to_string(),
@@ -61,7 +61,7 @@ use crate::{
 /// // Create all available tasks
 /// let tasks = Tasks(task_map);
 ///
-/// // Define a step configuration 
+/// // Define a step configuration
 /// // Note: For testing, we avoid creating OnFailStepsConfig directly since its constructor is private
 /// let task_name = "deploy".to_string();
 /// let step_config = StepConfig {
@@ -77,7 +77,7 @@ use crate::{
 /// if let Some(cleanup_task) = tasks.get("cleanup") {
 ///     on_fail_steps.push(cleanup_task.clone());
 /// }
-/// 
+///
 /// // Verify the step properties
 /// assert_eq!(step.task().description(), "Deploy application");
 /// ```
@@ -91,7 +91,7 @@ pub struct Step {
 
 impl TryFrom<(&Tasks, &StepConfig)> for Step {
     type Error = StepError;
-    
+
     /// Attempts to create a Step instance from tasks and step configuration.
     ///
     /// This conversion will validate that the referenced task exists in the
@@ -155,5 +155,157 @@ impl Step {
         self.on_fail_steps
             .execute(session, variables)
             .map_err(StepError::CannotExecuteOnFailSteps)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{
+        on_fail::OnFailStepsConfig,
+        task::{TaskConfig, TaskType},
+    };
+    use std::collections::HashMap;
+
+    // Helper functions for test setup
+    fn create_test_tasks() -> Tasks {
+        let mut task_map = HashMap::new();
+        task_map.insert("task1".to_string(), create_remote_sudo_task());
+        task_map.insert("task2".to_string(), create_sftp_copy_task());
+        Tasks(task_map)
+    }
+
+    fn create_remote_sudo_task() -> Task {
+        let config = TaskConfig {
+            description: "Test task 1".to_string(),
+            error_message: "Task 1 failed".to_string(),
+            task_type: TaskType::RemoteSudo {
+                command: "echo test".to_string(),
+            },
+        };
+        Task::from(&config)
+    }
+
+    fn create_sftp_copy_task() -> Task {
+        let config = TaskConfig {
+            description: "Test task 2".to_string(),
+            error_message: "Task 2 failed".to_string(),
+            task_type: TaskType::SftpCopy {
+                source_path: "/test/source".to_string(),
+                destination_path: "/test/dest".to_string(),
+            },
+        };
+        Task::from(&config)
+    }
+
+    #[test]
+    fn test_step_try_from_success_no_on_fail() {
+        // Given
+        let tasks = create_test_tasks();
+        let config = StepConfig {
+            task: "task1".to_string(),
+            on_fail: None,
+        };
+
+        // When
+        let result = Step::try_from((&tasks, &config));
+
+        // Then
+        assert!(result.is_ok());
+        let step = result.unwrap();
+        assert_eq!(step.task().description(), "Test task 1");
+        assert!(step.on_fail_steps().is_empty());
+    }
+
+    #[test]
+    fn test_step_try_from_success_with_on_fail() {
+        // Given
+        let tasks = create_test_tasks();
+        let config = StepConfig {
+            task: "task1".to_string(),
+            on_fail: Some(OnFailStepsConfig(vec!["task2".to_string()])),
+        };
+
+        // When
+        let result = Step::try_from((&tasks, &config));
+
+        // Then
+        assert!(result.is_ok());
+        let step = result.unwrap();
+        assert_eq!(step.task().description(), "Test task 1");
+        assert_eq!(step.on_fail_steps().len(), 1);
+    }
+
+    #[test]
+    fn test_step_try_from_error_invalid_task() {
+        // Given
+        let tasks = create_test_tasks();
+        let config = StepConfig {
+            task: "non_existent_task".to_string(),
+            on_fail: None,
+        };
+
+        // When
+        let result = Step::try_from((&tasks, &config));
+
+        // Then
+        assert!(result.is_err());
+        if let Err(StepError::CannotCreateTaskFromConfig(task_id)) = result {
+            assert_eq!(task_id, "non_existent_task");
+        } else {
+            panic!("Expected CannotCreateTaskFromConfig error");
+        }
+    }
+
+    #[test]
+    fn test_step_try_from_error_invalid_on_fail_task() {
+        // Given
+        let tasks = create_test_tasks();
+        let config = StepConfig {
+            task: "task1".to_string(),
+            on_fail: Some(OnFailStepsConfig(vec!["non_existent_task".to_string()])),
+        };
+
+        // When
+        let result = Step::try_from((&tasks, &config));
+
+        // Then
+        assert!(result.is_err());
+        matches!(result, Err(StepError::CannotCreateOnFailStepsFromConfig(_)));
+    }
+
+    #[test]
+    fn test_step_accessors() {
+        // Given
+        let tasks = create_test_tasks();
+        let config = StepConfig {
+            task: "task1".to_string(),
+            on_fail: Some(OnFailStepsConfig(vec!["task2".to_string()])),
+        };
+
+        // When
+        let step = Step::try_from((&tasks, &config)).unwrap();
+
+        // Then
+        assert_eq!(step.task().description(), "Test task 1");
+        assert_eq!(step.on_fail_steps().len(), 1);
+    }
+
+    #[test]
+    fn test_step_clone() {
+        // Given
+        let tasks = create_test_tasks();
+        let config = StepConfig {
+            task: "task1".to_string(),
+            on_fail: Some(OnFailStepsConfig(vec!["task2".to_string()])),
+        };
+        let original = Step::try_from((&tasks, &config)).unwrap();
+
+        // When
+        let cloned = original.clone();
+
+        // Then
+        assert_eq!(cloned.task().description(), original.task().description());
+        assert_eq!(cloned.on_fail_steps().len(), original.on_fail_steps().len());
     }
 }
