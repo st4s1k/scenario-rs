@@ -16,7 +16,8 @@ use tracing::debug;
 /// ```
 /// # use scenario_rs_core::{
 /// #     scenario::{server::Server, credentials::Credentials},
-/// #     session::{Session, Channel}
+/// #     session::{Session, Channel},
+/// #     utils::HasText,
 /// # };
 /// # 
 /// # // Create server and credentials objects properly via constructors
@@ -43,7 +44,7 @@ use tracing::debug;
 /// // Read command output
 /// let mut output = String::new();
 /// channel.read_to_string(&mut output).unwrap();
-/// println!("Command output: {}", output);
+/// assert!(output.has_text(), "Command output should not be empty");
 ///
 /// // Check exit status
 /// let status = channel.exit_status().unwrap();

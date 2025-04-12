@@ -1,6 +1,5 @@
-use std::ops::{Deref, DerefMut};
-
 use serde::Deserialize;
+use std::ops::{Deref, DerefMut};
 
 /// Configuration for fallback steps to execute when a scenario step fails.
 ///

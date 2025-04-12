@@ -3,6 +3,7 @@ use std::{
     collections::HashMap,
     sync::{mpsc::Sender, Arc, Mutex},
 };
+use tracing::error;
 
 /// A convenience type alias for an `Arc<Mutex<T>>`.
 ///
@@ -114,7 +115,7 @@ pub trait SendEvent<T> {
 impl<T: Clone + std::fmt::Debug> SendEvent<T> for Sender<T> {
     fn send_event(&self, event: T) {
         if let Err(err) = self.send(event.clone()) {
-            eprintln!(
+            error!(
                 "Failed to send event {:?} (channel closed): {:?}",
                 event, err
             );

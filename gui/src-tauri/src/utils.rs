@@ -1,5 +1,6 @@
 use std::sync::{Mutex, MutexGuard};
 use tauri::State;
+use tracing::error;
 
 pub trait SafeLock<T: Send> {
     fn safe_lock(&self) -> MutexGuard<'_, T>;
@@ -10,7 +11,7 @@ impl<'a, T: Send> SafeLock<T> for State<'a, Mutex<T>> {
         match self.lock() {
             Ok(guard) => guard,
             Err(poison_error) => {
-                eprintln!(
+                error!(
                     "WARNING: Recovered from mutex poison error: {:?}",
                     poison_error
                 );

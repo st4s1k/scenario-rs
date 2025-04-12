@@ -1,11 +1,9 @@
+use crate::config::task::TaskConfig;
+use serde::Deserialize;
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
 };
-
-use serde::Deserialize;
-
-use super::task::TaskConfig;
 
 /// Configuration for all tasks available in a scenario.
 ///

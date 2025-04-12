@@ -1,6 +1,5 @@
-use serde::Deserialize;
-
 use crate::scenario::errors::ScenarioConfigError;
+use serde::Deserialize;
 
 /// Partial configuration for a remote server connection that supports inheritance.
 ///
@@ -205,7 +204,7 @@ mod tests {
         assert!(debug_str.contains("test.example.com"));
         assert!(debug_str.contains("2222"));
     }
-    
+
     #[test]
     fn test_partial_server_merge() {
         // Given
@@ -213,20 +212,20 @@ mod tests {
             host: Some("host1.example.com".to_string()),
             port: None,
         };
-        
+
         let partial2 = PartialServerConfig {
             host: None,
             port: Some(2222),
         };
-        
+
         // When
         let merged = partial1.merge(&partial2);
-        
+
         // Then
         assert_eq!(merged.host, Some("host1.example.com".to_string()));
         assert_eq!(merged.port, Some(2222));
     }
-    
+
     #[test]
     fn test_partial_to_complete_conversion() {
         // Given
@@ -234,15 +233,15 @@ mod tests {
             host: Some("test.example.com".to_string()),
             port: Some(2222),
         };
-        
+
         // When
         let complete = ServerConfig::try_from(partial).unwrap();
-        
+
         // Then
         assert_eq!(complete.host, "test.example.com");
         assert_eq!(complete.port, Some(2222));
     }
-    
+
     #[test]
     fn test_partial_to_complete_missing_host() {
         // Given
@@ -250,14 +249,14 @@ mod tests {
             host: None,
             port: Some(2222),
         };
-        
+
         // When
         let result = ServerConfig::try_from(partial);
-        
+
         // Then
         assert!(result.is_err());
         match result {
-            Err(ScenarioConfigError::MissingHost) => {}, // expected
+            Err(ScenarioConfigError::MissingHost) => {} // expected
             _ => panic!("Expected MissingHost error"),
         }
     }

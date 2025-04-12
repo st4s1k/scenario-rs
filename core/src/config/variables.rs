@@ -4,18 +4,18 @@
 //! including both required variables (that must be provided at runtime) and
 //! defined variables (with predefined values in the configuration).
 
-use defined::DefinedVariablesConfig;
-use required::RequiredVariablesConfig;
+use crate::{
+    config::variables::{defined::DefinedVariablesConfig, required::RequiredVariablesConfig},
+    scenario::errors::ScenarioConfigError,
+};
 use serde::Deserialize;
-
-use crate::scenario::errors::ScenarioConfigError;
 
 pub mod defined;
 pub mod required;
 
 /// Complete configuration for variables in a scenario.
 ///
-/// This struct holds configurations for both required variables (that must be 
+/// This struct holds configurations for both required variables (that must be
 /// provided at runtime) and defined variables (predefined in the configuration).
 #[derive(Deserialize, Clone, Debug, Default)]
 pub struct VariablesConfig {
@@ -90,9 +90,17 @@ impl TryFrom<PartialVariablesConfig> for VariablesConfig {
     ///
     /// * `Ok(VariablesConfig)` - A complete configuration with all sections present
     fn try_from(partial: PartialVariablesConfig) -> Result<Self, Self::Error> {
-        Ok(VariablesConfig {
-            required: partial.required.unwrap_or_default(),
-            defined: partial.defined.unwrap_or_default(),
-        })
+        // Using explicit match pattern for consistency with other similar implementations
+        let required = match partial.required {
+            Some(req) => req,
+            None => RequiredVariablesConfig::default(),
+        };
+
+        let defined = match partial.defined {
+            Some(def) => def,
+            None => DefinedVariablesConfig::default(),
+        };
+
+        Ok(VariablesConfig { required, defined })
     }
 }

@@ -3,12 +3,11 @@
 //! This module provides configuration structures for predefined variables
 //! that have values set in the scenario configuration files.
 
+use serde::Deserialize;
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
 };
-
-use serde::Deserialize;
 
 /// Configuration for predefined variables in a scenario.
 ///

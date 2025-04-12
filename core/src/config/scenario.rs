@@ -1,16 +1,15 @@
-use std::path::PathBuf;
-
-use serde::Deserialize;
-
-use crate::scenario::errors::ScenarioConfigError;
-
-use super::{
-    credentials::{CredentialsConfig, PartialCredentialsConfig},
-    execute::ExecuteConfig,
-    server::{ServerConfig, PartialServerConfig},
-    tasks::TasksConfig,
-    variables::{PartialVariablesConfig, VariablesConfig},
+use crate::{
+    config::{
+        credentials::{CredentialsConfig, PartialCredentialsConfig},
+        execute::ExecuteConfig,
+        server::{PartialServerConfig, ServerConfig},
+        tasks::TasksConfig,
+        variables::{PartialVariablesConfig, VariablesConfig},
+    },
+    scenario::errors::ScenarioConfigError,
 };
+use serde::Deserialize;
+use std::path::PathBuf;
 
 /// A partial scenario configuration that supports inheritance.
 ///

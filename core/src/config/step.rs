@@ -1,6 +1,5 @@
+use crate::config::on_fail::OnFailStepsConfig;
 use serde::Deserialize;
-
-use super::on_fail::OnFailStepsConfig;
 
 /// Configuration for a single execution step in a scenario.
 ///
