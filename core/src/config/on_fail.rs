@@ -35,7 +35,7 @@ use std::ops::{Deref, DerefMut};
 /// task = "deploy_application"
 /// on_fail = ["cleanup_files", "restore_previous_version"]
 /// ```
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct OnFailStepsConfig(Vec<String>);
 
 impl Deref for OnFailStepsConfig {
@@ -65,15 +65,6 @@ impl From<Vec<String>> for OnFailStepsConfig {
 mod tests {
     use super::*;
     use toml;
-
-    // Test helpers
-    fn create_test_config() -> OnFailStepsConfig {
-        OnFailStepsConfig(vec![
-            "cleanup".to_string(),
-            "notify".to_string(),
-            "restore".to_string(),
-        ])
-    }
 
     #[test]
     fn test_on_fail_steps_config_deref() {
@@ -149,5 +140,14 @@ mod tests {
         assert!(debug_str.contains("cleanup"));
         assert!(debug_str.contains("notify"));
         assert!(debug_str.contains("restore"));
+    }
+
+    // Test helpers
+    fn create_test_config() -> OnFailStepsConfig {
+        OnFailStepsConfig(vec![
+            "cleanup".to_string(),
+            "notify".to_string(),
+            "restore".to_string(),
+        ])
     }
 }

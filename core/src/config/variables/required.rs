@@ -71,7 +71,7 @@ use std::{
 /// type = "Path"
 /// label = "Backup Directory"
 /// ```
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct RequiredVariablesConfig(HashMap<String, RequiredVariableConfig>);
 
 impl Deref for RequiredVariablesConfig {
@@ -221,7 +221,7 @@ impl RequiredVariablesConfig {
 ///     panic!("Expected Timestamp variable type");
 /// }
 /// ```
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct RequiredVariableConfig {
     /// The type of the variable (String, Path, or Timestamp)
     #[serde(flatten)]
@@ -265,10 +265,11 @@ pub struct RequiredVariableConfig {
 /// assert_eq!(VariableTypeConfig::String, VariableTypeConfig::String);
 /// assert_ne!(VariableTypeConfig::String, VariableTypeConfig::Path);
 /// ```
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 #[serde(tag = "type")]
 pub enum VariableTypeConfig {
     /// A simple text variable with no special handling
+    #[default]
     String,
     /// A filesystem path with special handling for basename extraction
     Path,
@@ -280,40 +281,6 @@ pub enum VariableTypeConfig {
 mod tests {
     use super::*;
     use toml;
-
-    // Test helpers
-    fn create_test_string_variable() -> RequiredVariableConfig {
-        RequiredVariableConfig {
-            var_type: VariableTypeConfig::String,
-            label: Some("Username".to_string()),
-            read_only: false,
-        }
-    }
-
-    fn create_test_path_variable() -> RequiredVariableConfig {
-        RequiredVariableConfig {
-            var_type: VariableTypeConfig::Path,
-            label: Some("Config Path".to_string()),
-            read_only: true,
-        }
-    }
-
-    fn create_test_timestamp_variable() -> RequiredVariableConfig {
-        RequiredVariableConfig {
-            var_type: VariableTypeConfig::Timestamp {
-                format: "%Y-%m-%d".to_string(),
-            },
-            label: Some("Deployment Date".to_string()),
-            read_only: false,
-        }
-    }
-
-    fn create_test_config() -> RequiredVariablesConfig {
-        let mut variables = HashMap::new();
-        variables.insert("username".to_string(), create_test_string_variable());
-        variables.insert("config_path".to_string(), create_test_path_variable());
-        RequiredVariablesConfig(variables)
-    }
 
     #[test]
     fn test_required_variables_config_default() {
@@ -464,5 +431,39 @@ mod tests {
             assert_eq!(cloned_value.label, value.label);
             assert_eq!(cloned_value.read_only, value.read_only);
         }
+    }
+
+    // Test helpers
+    fn create_test_string_variable() -> RequiredVariableConfig {
+        RequiredVariableConfig {
+            var_type: VariableTypeConfig::String,
+            label: Some("Username".to_string()),
+            read_only: false,
+        }
+    }
+
+    fn create_test_path_variable() -> RequiredVariableConfig {
+        RequiredVariableConfig {
+            var_type: VariableTypeConfig::Path,
+            label: Some("Config Path".to_string()),
+            read_only: true,
+        }
+    }
+
+    fn create_test_timestamp_variable() -> RequiredVariableConfig {
+        RequiredVariableConfig {
+            var_type: VariableTypeConfig::Timestamp {
+                format: "%Y-%m-%d".to_string(),
+            },
+            label: Some("Deployment Date".to_string()),
+            read_only: false,
+        }
+    }
+
+    fn create_test_config() -> RequiredVariablesConfig {
+        let mut variables = HashMap::new();
+        variables.insert("username".to_string(), create_test_string_variable());
+        variables.insert("config_path".to_string(), create_test_path_variable());
+        RequiredVariablesConfig(variables)
     }
 }

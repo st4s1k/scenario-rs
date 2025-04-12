@@ -96,7 +96,7 @@ impl PartialServerConfig {
 /// assert_eq!(config.host, "example.com");
 /// assert_eq!(config.port, Some(2222));
 /// ```
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct ServerConfig {
     /// The hostname or IP address of the target server
     pub host: String,

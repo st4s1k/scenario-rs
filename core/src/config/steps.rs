@@ -7,7 +7,7 @@ use std::ops::{Deref, DerefMut};
 /// This struct represents an ordered collection of steps to be executed
 /// as part of a scenario. It wraps a `Vec<StepConfig>` and provides
 /// convenient access to the underlying vector through Deref and DerefMut.
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct StepsConfig(Vec<StepConfig>);
 
 impl Deref for StepsConfig {

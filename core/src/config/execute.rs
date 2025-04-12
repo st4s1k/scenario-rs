@@ -5,7 +5,7 @@ use serde::Deserialize;
 ///
 /// This struct defines the execution flow of a scenario,
 /// including the sequence of steps to be performed.
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct ExecuteConfig {
     /// The ordered sequence of steps to execute in the scenario
     pub steps: StepsConfig,
@@ -16,24 +16,6 @@ mod tests {
     use super::*;
     use crate::config::{on_fail::OnFailStepsConfig, step::StepConfig};
     use toml;
-
-    // Test helpers at top of module
-    fn create_test_config() -> ExecuteConfig {
-        let steps = vec![
-            StepConfig {
-                task: "task1".to_string(),
-                on_fail: None,
-            },
-            StepConfig {
-                task: "task2".to_string(),
-                on_fail: Some(OnFailStepsConfig::from(vec!["cleanup".to_string()])),
-            },
-        ];
-
-        ExecuteConfig {
-            steps: StepsConfig::from(steps),
-        }
-    }
 
     #[test]
     fn test_execute_config_creation() {
@@ -93,5 +75,23 @@ mod tests {
         let on_fail = config.steps[1].on_fail.as_ref().unwrap();
         assert_eq!(on_fail.len(), 1);
         assert_eq!(on_fail[0], "cleanup");
+    }
+
+    // Test helpers
+    fn create_test_config() -> ExecuteConfig {
+        let steps = vec![
+            StepConfig {
+                task: "task1".to_string(),
+                on_fail: None,
+            },
+            StepConfig {
+                task: "task2".to_string(),
+                on_fail: Some(OnFailStepsConfig::from(vec!["cleanup".to_string()])),
+            },
+        ];
+
+        ExecuteConfig {
+            steps: StepsConfig::from(steps),
+        }
     }
 }

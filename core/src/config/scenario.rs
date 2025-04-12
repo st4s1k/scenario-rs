@@ -263,3 +263,330 @@ impl TryFrom<PathBuf> for ScenarioConfig {
         ScenarioConfig::try_from(merged_partial_config)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{execute::ExecuteConfig, task::TaskType, tasks::TasksConfig};
+
+    #[test]
+    fn test_partial_scenario_config_default() {
+        // PartialScenarioConfig doesn't implement Default, so we create an empty one
+        let partial = PartialScenarioConfig {
+            parent: None,
+            credentials: None,
+            server: None,
+            execute: None,
+            variables: None,
+            tasks: None,
+        };
+
+        assert!(partial.parent.is_none());
+        assert!(partial.credentials.is_none());
+        assert!(partial.server.is_none());
+        assert!(partial.execute.is_none());
+        assert!(partial.variables.is_none());
+        assert!(partial.tasks.is_none());
+    }
+
+    #[test]
+    fn test_scenario_config_default() {
+        let config = ScenarioConfig::default();
+
+        assert_eq!(config.credentials, CredentialsConfig::default());
+        assert_eq!(config.server, ServerConfig::default());
+        assert_eq!(config.execute, ExecuteConfig::default());
+        assert_eq!(config.variables, VariablesConfig::default());
+        assert_eq!(config.tasks, TasksConfig::default());
+    }
+
+    #[test]
+    fn test_partial_scenario_config_merge() {
+        // Given
+        let base = create_partial_base_config();
+        let override_config = create_partial_override_config();
+
+        // When
+        let merged = base.merge(&override_config);
+
+        // Then
+        assert_eq!(merged.parent, Some("parent2.toml".to_string()));
+
+        // Check that credentials were merged
+        let merged_creds = merged.credentials.unwrap();
+        assert_eq!(merged_creds.username, Some("user2".to_string()));
+        assert_eq!(merged_creds.password, Some("pass1".to_string())); // From base, not overridden
+
+        // Check that server was merged
+        let merged_server = merged.server.unwrap();
+        assert_eq!(merged_server.host, Some("host2".to_string()));
+        assert_eq!(merged_server.port, Some(2222));
+
+        // Check that execute was overridden (not merged)
+        assert_eq!(merged.execute, override_config.execute);
+
+        // Check that variables were merged
+        assert!(merged.variables.is_some());
+
+        // Check that tasks were overridden (not merged)
+        assert_eq!(merged.tasks, override_config.tasks);
+    }
+
+    #[test]
+    fn test_try_from_partial_scenario_config() {
+        // Given
+        let partial = create_full_partial_config();
+
+        // When
+        let result = ScenarioConfig::try_from(partial.clone());
+
+        // Then
+        assert!(result.is_ok());
+        let complete = result.unwrap();
+
+        // Verify credentials conversion
+        assert_eq!(complete.credentials.username, "user".to_string());
+        assert_eq!(complete.credentials.password, Some("pass".to_string()));
+
+        // Verify server conversion
+        assert_eq!(complete.server.host, "host".to_string());
+        assert_eq!(complete.server.port, Some(22));
+
+        // Verify execute and tasks were copied as-is
+        assert_eq!(complete.execute, partial.execute.unwrap());
+        assert_eq!(complete.tasks, partial.tasks.unwrap());
+    }
+
+    #[test]
+    fn test_try_from_partial_scenario_config_missing_credentials() {
+        // Given
+        let mut partial = create_full_partial_config();
+        partial.credentials = None;
+
+        // When
+        let result = ScenarioConfig::try_from(partial);
+
+        // Then
+        assert!(result.is_err());
+        match result {
+            Err(ScenarioConfigError::MissingCredentials) => {} // expected
+            err => panic!("Expected MissingCredentials error, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_try_from_partial_scenario_config_missing_server() {
+        // Given
+        let mut partial = create_full_partial_config();
+        partial.server = None;
+
+        // When
+        let result = ScenarioConfig::try_from(partial);
+
+        // Then
+        assert!(result.is_err());
+        match result {
+            Err(ScenarioConfigError::MissingServer) => {} // expected
+            err => panic!("Expected MissingServer error, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_try_from_partial_scenario_config_missing_execute() {
+        // Given
+        let mut partial = create_full_partial_config();
+        partial.execute = None;
+
+        // When
+        let result = ScenarioConfig::try_from(partial);
+
+        // Then
+        assert!(result.is_err());
+        match result {
+            Err(ScenarioConfigError::MissingExecute) => {} // expected
+            err => panic!("Expected MissingExecute error, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_try_from_partial_scenario_config_missing_tasks() {
+        // Given
+        let mut partial = create_full_partial_config();
+        partial.tasks = None;
+
+        // When
+        let result = ScenarioConfig::try_from(partial);
+
+        // Then
+        assert!(result.is_err());
+        match result {
+            Err(ScenarioConfigError::MissingTasks) => {} // expected
+            err => panic!("Expected MissingTasks error, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_credential_field_conversion() {
+        // Given
+        let partial_creds = PartialCredentialsConfig {
+            username: Some("test_user".to_string()),
+            password: Some("test_pass".to_string()),
+        };
+
+        // When
+        let creds = match CredentialsConfig::try_from(partial_creds) {
+            Ok(c) => c,
+            Err(e) => panic!("Conversion failed: {:?}", e),
+        };
+
+        // Then
+        assert_eq!(creds.username, "test_user");
+        assert_eq!(creds.password, Some("test_pass".to_string()));
+    }
+
+    #[test]
+    fn test_server_field_conversion() {
+        // Given
+        let partial_server = PartialServerConfig {
+            host: Some("test_host".to_string()),
+            port: Some(2222),
+        };
+
+        // When
+        let server = match ServerConfig::try_from(partial_server) {
+            Ok(s) => s,
+            Err(e) => panic!("Conversion failed: {:?}", e),
+        };
+
+        // Then
+        assert_eq!(server.host, "test_host");
+        assert_eq!(server.port, Some(2222));
+    }
+
+    #[test]
+    fn test_partial_scenario_config_deserialization() {
+        // Given
+        let toml_str = r#"
+            parent = "parent.toml"
+            
+            [credentials]
+            username = "test_user"
+            password = "test_pass"
+            
+            [server]
+            host = "test_host"
+            port = 2222
+            
+            [execute]
+            steps = [
+                { task = "task1" },
+                { task = "task2", on_fail = ["cleanup"] }
+            ]
+            
+            [tasks.task1]
+            type = "RemoteSudo"
+            description = "Test command description"
+            command = "test_command1"
+            error_message = "Test command error message"
+            
+            [tasks.task2]
+            type = "RemoteSudo"
+            description = "Another command description"
+            command = "test_command2"
+            error_message = "Another command error message"
+            
+            [tasks.cleanup]
+            type = "RemoteSudo"
+            description = "Cleanup command description"
+            command = "cleanup_command"
+            error_message = "Cleanup command error message"
+        "#;
+
+        // When
+        let config: PartialScenarioConfig = match toml::from_str(toml_str) {
+            Ok(c) => c,
+            Err(e) => panic!("TOML parsing failed: {:?}", e),
+        };
+
+        // Then
+        assert_eq!(config.parent, Some("parent.toml".to_string()));
+        assert_eq!(
+            config.credentials.as_ref().unwrap().username,
+            Some("test_user".to_string())
+        );
+        assert_eq!(
+            config.credentials.as_ref().unwrap().password,
+            Some("test_pass".to_string())
+        );
+        assert_eq!(
+            config.server.as_ref().unwrap().host,
+            Some("test_host".to_string())
+        );
+        assert_eq!(config.server.as_ref().unwrap().port, Some(2222));
+
+        // Verify task was parsed correctly
+        let tasks = config.tasks.unwrap();
+        assert!(tasks.contains_key("task1"));
+        let task = &tasks["task1"];
+        assert_eq!(task.description, "Test command description");
+        assert_eq!(task.error_message, "Test command error message");
+        match &task.task_type {
+            TaskType::RemoteSudo { command } => {
+                assert_eq!(command, "test_command1");
+            }
+            _ => panic!("Expected RemoteSudo task type"),
+        }
+    }
+
+    // Helper functions to create test configs
+    fn create_partial_base_config() -> PartialScenarioConfig {
+        PartialScenarioConfig {
+            parent: Some("parent1.toml".to_string()),
+            credentials: Some(PartialCredentialsConfig {
+                username: Some("user1".to_string()),
+                password: Some("pass1".to_string()),
+            }),
+            server: Some(PartialServerConfig {
+                host: Some("host1".to_string()),
+                port: Some(1111),
+            }),
+            execute: Some(ExecuteConfig::default()),
+            variables: Some(PartialVariablesConfig::default()),
+            tasks: Some(TasksConfig::default()),
+        }
+    }
+
+    fn create_partial_override_config() -> PartialScenarioConfig {
+        PartialScenarioConfig {
+            parent: Some("parent2.toml".to_string()),
+            credentials: Some(PartialCredentialsConfig {
+                username: Some("user2".to_string()),
+                password: None,
+            }),
+            server: Some(PartialServerConfig {
+                host: Some("host2".to_string()),
+                port: Some(2222),
+            }),
+            execute: Some(ExecuteConfig::default()),
+            variables: Some(PartialVariablesConfig::default()),
+            tasks: Some(TasksConfig::default()),
+        }
+    }
+
+    fn create_full_partial_config() -> PartialScenarioConfig {
+        PartialScenarioConfig {
+            parent: None,
+            credentials: Some(PartialCredentialsConfig {
+                username: Some("user".to_string()),
+                password: Some("pass".to_string()),
+            }),
+            server: Some(PartialServerConfig {
+                host: Some("host".to_string()),
+                port: Some(22),
+            }),
+            execute: Some(ExecuteConfig::default()),
+            variables: Some(PartialVariablesConfig::default()),
+            tasks: Some(TasksConfig::default()),
+        }
+    }
+}

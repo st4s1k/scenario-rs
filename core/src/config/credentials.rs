@@ -87,7 +87,7 @@ impl PartialCredentialsConfig {
 /// username = "admin"
 /// password = "secure_password"  # Optional, remove to use SSH agent
 /// ```
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct CredentialsConfig {
     /// The username to authenticate as on the remote server
     pub username: String,
@@ -118,21 +118,6 @@ impl TryFrom<PartialCredentialsConfig> for CredentialsConfig {
 mod tests {
     use super::*;
     use toml;
-
-    // Test helpers
-    fn create_credentials_with_password() -> CredentialsConfig {
-        CredentialsConfig {
-            username: "test_user".to_string(),
-            password: Some("test_pass".to_string()),
-        }
-    }
-
-    fn create_credentials_without_password() -> CredentialsConfig {
-        CredentialsConfig {
-            username: "test_user".to_string(),
-            password: None,
-        }
-    }
 
     #[test]
     fn test_credentials_config_default() {
@@ -274,6 +259,21 @@ mod tests {
         match result {
             Err(ScenarioConfigError::MissingUsername) => {} // expected
             _ => panic!("Expected MissingUsername error"),
+        }
+    }
+
+    // Test helpers
+    fn create_credentials_with_password() -> CredentialsConfig {
+        CredentialsConfig {
+            username: "test_user".to_string(),
+            password: Some("test_pass".to_string()),
+        }
+    }
+
+    fn create_credentials_without_password() -> CredentialsConfig {
+        CredentialsConfig {
+            username: "test_user".to_string(),
+            password: None,
         }
     }
 }

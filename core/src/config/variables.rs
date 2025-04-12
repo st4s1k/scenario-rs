@@ -17,7 +17,7 @@ pub mod required;
 ///
 /// This struct holds configurations for both required variables (that must be
 /// provided at runtime) and defined variables (predefined in the configuration).
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct VariablesConfig {
     /// Configuration for variables that must be provided at runtime
     #[serde(default)]
@@ -31,7 +31,7 @@ pub struct VariablesConfig {
 ///
 /// This structure represents an incomplete variables configuration that can be
 /// merged with another configuration, supporting hierarchical configuration.
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Default)]
 pub struct PartialVariablesConfig {
     /// Optional configuration for required variables
     pub required: Option<RequiredVariablesConfig>,

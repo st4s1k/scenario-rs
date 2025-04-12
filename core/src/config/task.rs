@@ -39,7 +39,7 @@ use serde::Deserialize;
 ///
 /// let task: TaskConfig = toml::from_str(toml_str).unwrap();
 /// ```
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct TaskConfig {
     /// Human-readable description of what this task does
     pub description: String,
@@ -76,7 +76,7 @@ pub struct TaskConfig {
 ///     destination_path: "/remote/app/config.json".to_string(),
 /// };
 /// ```
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(tag = "type")]
 pub enum TaskType {
     /// Execute a command with sudo privileges on a remote system.
@@ -91,6 +91,14 @@ pub enum TaskType {
         /// Path to the destination on the remote system
         destination_path: String,
     },
+}
+
+impl Default for TaskType {
+    fn default() -> Self {
+        TaskType::RemoteSudo {
+            command: String::new(),
+        }
+    }
 }
 
 #[cfg(test)]

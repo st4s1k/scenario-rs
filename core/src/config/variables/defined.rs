@@ -47,7 +47,7 @@ use std::{
 /// username = "admin"
 /// app_dir = "/opt/myapp"
 /// ```
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct DefinedVariablesConfig(HashMap<String, String>);
 
 impl Deref for DefinedVariablesConfig {
@@ -148,14 +148,6 @@ impl DefinedVariablesConfig {
 mod tests {
     use super::*;
 
-    // Test helpers
-    fn create_test_config() -> DefinedVariablesConfig {
-        let mut variables = HashMap::new();
-        variables.insert("username".to_string(), "admin".to_string());
-        variables.insert("app_dir".to_string(), "/opt/myapp".to_string());
-        DefinedVariablesConfig::from(variables)
-    }
-
     #[test]
     fn test_defined_variables_config_default() {
         // Given & When
@@ -251,5 +243,13 @@ mod tests {
         assert!(debug_str.contains("admin"));
         assert!(debug_str.contains("app_dir"));
         assert!(debug_str.contains("/opt/myapp"));
+    }
+
+    // Test helpers
+    fn create_test_config() -> DefinedVariablesConfig {
+        let mut variables = HashMap::new();
+        variables.insert("username".to_string(), "admin".to_string());
+        variables.insert("app_dir".to_string(), "/opt/myapp".to_string());
+        DefinedVariablesConfig::from(variables)
     }
 }

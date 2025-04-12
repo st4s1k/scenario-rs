@@ -5,7 +5,7 @@ use serde::Deserialize;
 ///
 /// A step represents a single task to be performed as part of a scenario,
 /// along with optional fallback steps to execute if the task fails.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Default, PartialEq, Eq)]
 pub struct StepConfig {
     /// The identifier of the task to execute in this step
     pub task: String,
