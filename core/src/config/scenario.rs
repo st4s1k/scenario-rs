@@ -5,9 +5,9 @@ use serde::Deserialize;
 use crate::scenario::errors::ScenarioConfigError;
 
 use super::{
-    credentials::CredentialsConfig,
+    credentials::{CredentialsConfig, PartialCredentialsConfig},
     execute::ExecuteConfig,
-    server::ServerConfig,
+    server::{ServerConfig, PartialServerConfig},
     tasks::TasksConfig,
     variables::{PartialVariablesConfig, VariablesConfig},
 };
@@ -22,9 +22,9 @@ pub struct PartialScenarioConfig {
     /// Path to the parent configuration file, if any
     pub parent: Option<String>,
     /// Authentication credentials for the target server
-    pub credentials: Option<CredentialsConfig>,
+    pub credentials: Option<PartialCredentialsConfig>,
     /// Server connection details
-    pub server: Option<ServerConfig>,
+    pub server: Option<PartialServerConfig>,
     /// Execution configuration, including steps to run
     pub execute: Option<ExecuteConfig>,
     /// Definition of variables used in the scenario
@@ -50,11 +50,18 @@ impl PartialScenarioConfig {
     pub fn merge(&self, other: &PartialScenarioConfig) -> PartialScenarioConfig {
         PartialScenarioConfig {
             parent: other.parent.clone().or_else(|| self.parent.clone()),
-            credentials: other
-                .credentials
-                .clone()
-                .or_else(|| self.credentials.clone()),
-            server: other.server.clone().or_else(|| self.server.clone()),
+            credentials: match (&self.credentials, &other.credentials) {
+                (Some(self_creds), Some(other_creds)) => Some(self_creds.merge(other_creds)),
+                (None, Some(creds)) => Some(creds.clone()),
+                (Some(creds), None) => Some(creds.clone()),
+                (None, None) => None,
+            },
+            server: match (&self.server, &other.server) {
+                (Some(self_server), Some(other_server)) => Some(self_server.merge(other_server)),
+                (None, Some(server)) => Some(server.clone()),
+                (Some(server), None) => Some(server.clone()),
+                (None, None) => None,
+            },
             execute: other.execute.clone().or_else(|| self.execute.clone()),
             variables: match (&self.variables, &other.variables) {
                 (Some(self_vars), Some(other_vars)) => Some(self_vars.merge(other_vars)),
@@ -100,10 +107,14 @@ impl TryFrom<PartialScenarioConfig> for ScenarioConfig {
     /// * `Err` if any required field is missing
     fn try_from(partial: PartialScenarioConfig) -> Result<Self, Self::Error> {
         Ok(ScenarioConfig {
-            credentials: partial
-                .credentials
-                .ok_or(ScenarioConfigError::MissingCredentials)?,
-            server: partial.server.ok_or(ScenarioConfigError::MissingServer)?,
+            credentials: match partial.credentials {
+                Some(partial_creds) => CredentialsConfig::try_from(partial_creds)?,
+                None => return Err(ScenarioConfigError::MissingCredentials),
+            },
+            server: match partial.server {
+                Some(partial_server) => ServerConfig::try_from(partial_server)?,
+                None => return Err(ScenarioConfigError::MissingServer),
+            },
             execute: partial.execute.ok_or(ScenarioConfigError::MissingExecute)?,
             variables: match partial.variables {
                 Some(partial_vars) => VariablesConfig::try_from(partial_vars)?,
