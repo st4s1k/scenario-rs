@@ -5,6 +5,7 @@ use crate::{
         tasks::Tasks, variables::Variables,
     },
     session::Session,
+    utils::HasText,
 };
 use std::path::PathBuf;
 use tracing::{debug, instrument};
@@ -99,9 +100,11 @@ impl TryFrom<ScenarioConfig> for Scenario {
 
         // Insert the username into defined variables
         let mut variables_config = config.variables.clone();
-        variables_config
-            .defined
-            .insert("username".to_string(), credentials.username.clone());
+        if credentials.username.has_text() {
+            variables_config
+                .defined
+                .insert("username".to_string(), credentials.username.clone());
+        }
 
         let variables = Variables::from(&variables_config);
 
