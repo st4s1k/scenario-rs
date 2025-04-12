@@ -1,9 +1,8 @@
 use regex::Regex;
 use std::{
     collections::HashMap,
-    sync::{mpsc::Sender, Arc, Mutex},
+    sync::{Arc, Mutex},
 };
-use tracing::error;
 
 /// A convenience type alias for an `Arc<Mutex<T>>`.
 ///
@@ -89,37 +88,6 @@ impl<T> Wrap<T> for ArcMutex<T> {
     /// An `ArcMutex<T>` containing the provided value
     fn wrap(data: T) -> Self {
         Arc::new(Mutex::new(data))
-    }
-}
-
-/// Trait for safely sending events through a channel.
-///
-/// This trait provides a convenient wrapper around channel sending that handles
-/// errors when the receiver has been dropped.
-///
-/// # Examples
-///
-/// ```
-/// # use std::sync::mpsc;
-/// # use scenario_rs_core::utils::SendEvent;
-///
-/// let (tx, rx) = mpsc::channel();
-/// tx.send_event("Scenario started");
-/// assert_eq!(rx.recv().unwrap(), "Scenario started");
-/// ```
-pub trait SendEvent<T> {
-    /// Sends an event through the channel, logging any errors if the channel is closed.
-    fn send_event(&self, event: T);
-}
-
-impl<T: Clone + std::fmt::Debug> SendEvent<T> for Sender<T> {
-    fn send_event(&self, event: T) {
-        if let Err(err) = self.send(event.clone()) {
-            error!(
-                "Failed to send event {:?} (channel closed): {:?}",
-                event, err
-            );
-        }
     }
 }
 
