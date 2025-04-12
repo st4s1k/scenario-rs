@@ -4,7 +4,7 @@ use serde::Deserialize;
 ///
 /// This struct defines the connection parameters for the remote server
 /// where deployment scenarios will be executed.
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Default)]
 pub struct ServerConfig {
     /// The hostname or IP address of the target server
     pub host: String,
