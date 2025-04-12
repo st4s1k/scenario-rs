@@ -223,7 +223,7 @@ mod tests {
         let tasks = create_test_tasks();
         let config = StepConfig {
             task: "task1".to_string(),
-            on_fail: Some(OnFailStepsConfig(vec!["task2".to_string()])),
+            on_fail: Some(OnFailStepsConfig::from(vec!["task2".to_string()])),
         };
 
         // When
@@ -263,7 +263,7 @@ mod tests {
         let tasks = create_test_tasks();
         let config = StepConfig {
             task: "task1".to_string(),
-            on_fail: Some(OnFailStepsConfig(vec!["non_existent_task".to_string()])),
+            on_fail: Some(OnFailStepsConfig::from(vec!["non_existent_task".to_string()])),
         };
 
         // When
@@ -280,7 +280,7 @@ mod tests {
         let tasks = create_test_tasks();
         let config = StepConfig {
             task: "task1".to_string(),
-            on_fail: Some(OnFailStepsConfig(vec!["task2".to_string()])),
+            on_fail: Some(OnFailStepsConfig::from(vec!["task2".to_string()])),
         };
 
         // When
@@ -297,7 +297,7 @@ mod tests {
         let tasks = create_test_tasks();
         let config = StepConfig {
             task: "task1".to_string(),
-            on_fail: Some(OnFailStepsConfig(vec!["task2".to_string()])),
+            on_fail: Some(OnFailStepsConfig::from(vec!["task2".to_string()])),
         };
         let original = Step::try_from((&tasks, &config)).unwrap();
 

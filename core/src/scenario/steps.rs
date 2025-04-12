@@ -276,7 +276,7 @@ mod tests {
         StepsConfig(vec![
             StepConfig {
                 task: "task1".to_string(),
-                on_fail: Some(OnFailStepsConfig(vec!["task3".to_string()])),
+                on_fail: Some(OnFailStepsConfig::from(vec!["task3".to_string()])),
             },
             StepConfig {
                 task: "task2".to_string(),

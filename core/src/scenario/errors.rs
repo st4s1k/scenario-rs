@@ -6,6 +6,20 @@
 use thiserror::Error;
 
 /// Errors that can occur when loading and processing scenario configurations.
+///
+/// # Examples
+///
+/// ```
+/// use scenario_rs_core::scenario::errors::ScenarioConfigError;
+/// use std::io;
+///
+/// // Create an error for a file that couldn't be opened
+/// let io_error = io::Error::new(io::ErrorKind::NotFound, "File not found");
+/// let config_error = ScenarioConfigError::CannotOpenConfig(io_error);
+///
+/// // Error message includes the source error
+/// assert!(format!("{}", config_error).contains("Cannot open config file"));
+/// ```
 #[derive(Error, Debug)]
 pub enum ScenarioConfigError {
     /// Failed to open the configuration file.
@@ -42,6 +56,19 @@ pub enum ScenarioConfigError {
 }
 
 /// Errors that can occur when creating or executing a scenario.
+///
+/// # Examples
+///
+/// ```
+/// use scenario_rs_core::scenario::errors::{ScenarioError, ScenarioConfigError};
+///
+/// // Create a scenario error that wraps a config error
+/// let config_error = ScenarioConfigError::MissingCredentials;
+/// let scenario_error = ScenarioError::CannotCreateScenarioFromConfig(config_error);
+///
+/// assert!(format!("{}", scenario_error).contains("Cannot create Scenario from config"));
+/// assert!(format!("{}", scenario_error).contains("Missing required credentials"));
+/// ```
 #[derive(Error, Debug)]
 pub enum ScenarioError {
     /// Failed to create a scenario from its configuration.
@@ -54,6 +81,23 @@ pub enum ScenarioError {
 }
 
 /// Errors that can occur in the execution component.
+///
+/// # Examples
+///
+/// ```
+/// use scenario_rs_core::scenario::errors::{ExecuteError, StepsError, StepError};
+///
+/// // Create a step error
+/// let step_error = StepError::CannotCreateTaskFromConfig("missing_task".to_string());
+/// 
+/// // Wrap in a steps error
+/// let steps_error = StepsError::CannotCreateStepFromConfig(step_error);
+/// 
+/// // Wrap in an execute error
+/// let execute_error = ExecuteError::CannotCreateStepsFromConfig(steps_error);
+///
+/// assert!(format!("{}", execute_error).contains("Cannot create Steps from config"));
+/// ```
 #[derive(Error, Debug)]
 pub enum ExecuteError {
     /// Failed to create steps from their configuration.
@@ -62,6 +106,20 @@ pub enum ExecuteError {
 }
 
 /// Errors that can occur when executing steps.
+///
+/// # Examples
+///
+/// ```
+/// use scenario_rs_core::scenario::errors::{StepsError, StepError};
+///
+/// // Create a step error
+/// let step_error = StepError::CannotCreateTaskFromConfig("invalid_task_id".to_string());
+/// 
+/// // Wrap in a steps error
+/// let steps_error = StepsError::CannotCreateStepFromConfig(step_error);
+///
+/// assert!(format!("{}", steps_error).contains("Cannot create Step from config"));
+/// ```
 #[derive(Error, Debug)]
 pub enum StepsError {
     /// Failed to create a step from its configuration.
@@ -182,6 +240,19 @@ pub enum SftpCopyError {
 }
 
 /// Errors that can occur when resolving variable placeholders.
+///
+/// # Examples
+///
+/// ```
+/// use scenario_rs_core::scenario::errors::PlaceholderResolutionError;
+///
+/// // Create an error for unresolvable placeholders
+/// let template = "Hello, {missing_var}!";
+/// let error = PlaceholderResolutionError::CannotResolvePlaceholders(template.to_string());
+///
+/// assert!(format!("{}", error).contains("Cannot resolve placeholders in this template"));
+/// assert!(format!("{}", error).contains("Hello, {missing_var}!"));
+/// ```
 #[derive(Error, Debug)]
 pub enum PlaceholderResolutionError {
     /// Failed to resolve placeholders in variable values, creating circular references.
@@ -191,4 +262,156 @@ pub enum PlaceholderResolutionError {
     /// Failed to resolve placeholders in a string template.
     #[error("Cannot resolve placeholders in this template: {0}")]
     CannotResolvePlaceholders(String),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io;
+    
+    // Test helpers
+    fn create_io_error() -> std::io::Error {
+        io::Error::new(io::ErrorKind::NotFound, "File not found")
+    }
+    
+    #[test]
+    fn test_scenario_config_error_display() {
+        // Given
+        let io_error = create_io_error();
+        let config_error = ScenarioConfigError::CannotOpenConfig(io_error);
+        
+        // When
+        let error_message = format!("{}", config_error);
+        
+        // Then
+        assert!(error_message.contains("Cannot open config file"));
+        assert!(error_message.contains("File not found"));
+    }
+    
+    #[test]
+    fn test_scenario_config_error_debug() {
+        // Given
+        let config_error = ScenarioConfigError::MissingCredentials;
+        
+        // When
+        let debug_message = format!("{:?}", config_error);
+        
+        // Then
+        assert!(debug_message.contains("MissingCredentials"));
+    }
+    
+    #[test]
+    fn test_scenario_error_display() {
+        // Given
+        let config_error = ScenarioConfigError::MissingServer;
+        let scenario_error = ScenarioError::CannotCreateScenarioFromConfig(config_error);
+        
+        // When
+        let error_message = format!("{}", scenario_error);
+        
+        // Then
+        assert!(error_message.contains("Cannot create Scenario from config"));
+        assert!(error_message.contains("Missing required server configuration"));
+    }
+    
+    #[test]
+    fn test_execute_error_display() {
+        // Given
+        let step_error = StepError::CannotCreateTaskFromConfig("task_id".to_string());
+        let steps_error = StepsError::CannotCreateStepFromConfig(step_error);
+        let execute_error = ExecuteError::CannotCreateStepsFromConfig(steps_error);
+        
+        // When
+        let error_message = format!("{}", execute_error);
+        
+        // Then
+        assert!(error_message.contains("Cannot create Steps from config"));
+        assert!(error_message.contains("Cannot create Step from config"));
+        assert!(error_message.contains("Cannot create Task from config"));
+        assert!(error_message.contains("task_id"));
+    }
+    
+    #[test]
+    fn test_steps_error_display() {
+        // Given
+        let placeholder_error = PlaceholderResolutionError::CannotResolvePlaceholders("cmd".to_string());
+        let remote_sudo_error = RemoteSudoError::CannotResolveCommandPlaceholders(placeholder_error);
+        let steps_error = StepsError::CannotExecuteRemoteSudoCommand(remote_sudo_error, "Install App".to_string());
+        
+        // When
+        let error_message = format!("{}", steps_error);
+        
+        // Then
+        assert!(error_message.contains("Cannot execute RemoteSudo command"));
+        assert!(error_message.contains("Install App"));
+        assert!(error_message.contains("Cannot resolve placeholders in command"));
+    }
+    
+    #[test]
+    fn test_step_error_display() {
+        // Given
+        let step_error = StepError::CannotCreateTaskFromConfig("invalid_id".to_string());
+        
+        // When
+        let error_message = format!("{}", step_error);
+        
+        // Then
+        assert!(error_message.contains("Cannot create Task from config"));
+        assert!(error_message.contains("invalid_id"));
+    }
+    
+    #[test]
+    fn test_on_fail_error_display() {
+        // Given
+        let on_fail_error = OnFailError::InvalidOnFailStep("bad_task".to_string());
+        
+        // When
+        let error_message = format!("{}", on_fail_error);
+        
+        // Then
+        assert!(error_message.contains("OnFail step must be a valid task id"));
+        assert!(error_message.contains("bad_task"));
+    }
+    
+    #[test]
+    fn test_remote_sudo_error_display() {
+        // Given
+        let remote_sudo_error = RemoteSudoError::RemoteCommandFailedWithStatusCode(127);
+        
+        // When
+        let error_message = format!("{}", remote_sudo_error);
+        
+        // Then
+        assert!(error_message.contains("Remote command failed with status code"));
+        assert!(error_message.contains("127"));
+    }
+    
+    #[test]
+    fn test_sftp_copy_error_display() {
+        // Given
+        let io_error = create_io_error();
+        let sftp_error = SftpCopyError::CannotOpenSourceFile(io_error);
+        
+        // When
+        let error_message = format!("{}", sftp_error);
+        
+        // Then
+        assert!(error_message.contains("Cannot open source file"));
+        assert!(error_message.contains("File not found"));
+    }
+    
+    #[test]
+    fn test_placeholder_resolution_error_display() {
+        // Given
+        let unresolved_vars = vec!["var1".to_string(), "var2".to_string()];
+        let error = PlaceholderResolutionError::CannotResolveVariablesPlaceholders(unresolved_vars);
+        
+        // When
+        let error_message = format!("{}", error);
+        
+        // Then
+        assert!(error_message.contains("Cannot resolve placeholders in variables"));
+        assert!(error_message.contains("var1"));
+        assert!(error_message.contains("var2"));
+    }
 }

@@ -274,7 +274,7 @@ mod tests {
     fn test_on_fail_steps_try_from_empty_config() {
         // Given
         let tasks = create_test_tasks();
-        let config = OnFailStepsConfig(vec![]);
+        let config = OnFailStepsConfig::default();
 
         // When
         let result = OnFailSteps::try_from((&tasks, &config));
@@ -351,10 +351,10 @@ mod tests {
     }
 
     fn create_valid_on_fail_config() -> OnFailStepsConfig {
-        OnFailStepsConfig(vec!["task1".to_string(), "task2".to_string()])
+        OnFailStepsConfig::from(vec!["task1".to_string(), "task2".to_string()])
     }
 
     fn create_invalid_on_fail_config() -> OnFailStepsConfig {
-        OnFailStepsConfig(vec!["non_existent_task".to_string()])
+        OnFailStepsConfig::from(vec!["non_existent_task".to_string()])
     }
 }
