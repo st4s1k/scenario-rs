@@ -29,7 +29,7 @@ pub struct DefinedVariablesConfig(HashMap<String, String>);
 
 impl Deref for DefinedVariablesConfig {
     type Target = HashMap<String, String>;
-    
+
     /// Dereferences to the underlying HashMap of variable name-value pairs.
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -40,6 +40,20 @@ impl DerefMut for DefinedVariablesConfig {
     /// Provides mutable access to the underlying HashMap of variable name-value pairs.
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl From<HashMap<String, String>> for DefinedVariablesConfig {
+    /// Creates a `DefinedVariablesConfig` from a HashMap of variable name-value pairs.
+    ///
+    /// This constructor allows for the creation of a `DefinedVariablesConfig` from an existing
+    /// HashMap, enabling flexibility in how variable configurations are initialized.
+    ///
+    /// # Arguments
+    ///
+    /// * `variables` - A HashMap containing variable names and their values
+    fn from(variables: HashMap<String, String>) -> Self {
+        DefinedVariablesConfig(variables)
     }
 }
 
