@@ -4,6 +4,36 @@ use crate::config::credentials::CredentialsConfig;
 ///
 /// This struct stores the username and optional password for authentication
 /// purposes within the scenario system.
+///
+/// # Examples
+///
+/// Creating credentials with a password:
+///
+/// ```
+/// use scenario_rs_core::scenario::credentials::Credentials;
+///
+/// let credentials = Credentials::new(
+///    "testuser".to_string(),
+///    Some("testpass".to_string()),
+/// );
+///
+/// assert_eq!(credentials.username(), "testuser");
+/// assert_eq!(credentials.password(), Some("testpass"));
+/// ```
+///
+/// Creating credentials without a password (for key-based authentication):
+///
+/// ```
+/// use scenario_rs_core::scenario::credentials::Credentials;
+///
+/// let credentials = Credentials::new(
+///    "testuser".to_string(),
+///    None,
+/// );
+///
+/// assert_eq!(credentials.username(), "testuser");
+/// assert_eq!(credentials.password(), None);
+/// ```
 #[derive(Clone, Debug)]
 pub struct Credentials {
     /// The username for authentication.
@@ -17,6 +47,27 @@ pub struct Credentials {
 ///
 /// This implementation allows for seamless creation of Credentials
 /// from configuration data.
+///
+/// # Examples
+///
+/// ```
+/// use scenario_rs_core::{
+///     config::credentials::CredentialsConfig,
+///     scenario::credentials::Credentials
+/// };
+///
+/// // Create a credentials config
+/// let config = CredentialsConfig {
+///     username: "configuser".to_string(),
+///     password: Some("configpass".to_string()),
+/// };
+///
+/// // Convert config to credentials
+/// let credentials = Credentials::from(&config);
+///
+/// assert_eq!(credentials.username(), "configuser");
+/// assert_eq!(credentials.password(), Some("configpass"));
+/// ```
 impl From<&CredentialsConfig> for Credentials {
     fn from(credentials_config: &CredentialsConfig) -> Self {
         Credentials {
@@ -26,35 +77,26 @@ impl From<&CredentialsConfig> for Credentials {
     }
 }
 
+impl Credentials {
+    /// Creates a new instance of `Credentials` with the given username and optional password.
+    pub fn new(username: String, password: Option<String>) -> Self {
+        Credentials { username, password }
+    }
+
+    /// Returns a reference to the username.
+    pub fn username(&self) -> &str {
+        &self.username
+    }
+
+    /// Returns a reference to the password, if available.
+    pub fn password(&self) -> Option<&str> {
+        self.password.as_deref()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_create_credentials_directly() {
-        // Given & When
-        let credentials = Credentials {
-            username: "testuser".to_string(),
-            password: Some("testpass".to_string()),
-        };
-
-        // Then
-        assert_eq!(credentials.username, "testuser");
-        assert_eq!(credentials.password, Some("testpass".to_string()));
-    }
-
-    #[test]
-    fn test_create_credentials_without_password() {
-        // Given & When
-        let credentials = Credentials {
-            username: "testuser".to_string(),
-            password: None,
-        };
-
-        // Then
-        assert_eq!(credentials.username, "testuser");
-        assert_eq!(credentials.password, None);
-    }
 
     #[test]
     fn test_create_credentials_with_empty_values() {
@@ -67,22 +109,6 @@ mod tests {
         // Then
         assert_eq!(credentials.username, "");
         assert_eq!(credentials.password, Some("".to_string()));
-    }
-
-    #[test]
-    fn test_from_credentials_config_with_password() {
-        // Given
-        let config = CredentialsConfig {
-            username: "configuser".to_string(),
-            password: Some("configpass".to_string()),
-        };
-
-        // When
-        let credentials = Credentials::from(&config);
-
-        // Then
-        assert_eq!(credentials.username, "configuser");
-        assert_eq!(credentials.password, Some("configpass".to_string()));
     }
 
     #[test]

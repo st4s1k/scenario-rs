@@ -31,15 +31,21 @@ pub mod variables;
 ///
 /// # Example
 ///
-/// ```no_run
-/// use scenario_rs_core::scenario::Scenario;
+/// ```
+/// use scenario_rs_core::{
+///     config::scenario::ScenarioConfig,
+///     scenario::Scenario
+/// };
+/// use std::collections::HashMap;
 ///
-/// // Create a scenario from a TOML configuration file
-/// let scenario_path = "path/to/scenario.toml";
-/// let scenario = Scenario::try_from(scenario_path).expect("Failed to create scenario from config");
+/// // Create a variables config
+/// let mut scenario_config = ScenarioConfig::default();
 ///
-/// // Execute the scenario
-/// scenario.execute();
+/// // Create a scenario from the config
+/// let scenario = Scenario::try_from(scenario_config).expect("Failed to create scenario from config");
+///
+/// // Access scenario properties
+/// assert_eq!(scenario.steps().len(), 0);
 /// ```
 #[derive(Clone, Debug)]
 pub struct Scenario {

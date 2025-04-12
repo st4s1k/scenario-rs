@@ -10,6 +10,62 @@ use tracing::{debug, instrument};
 ///
 /// This struct wraps a vector of `Task` instances that are executed in sequence
 /// when the main scenario execution encounters an error.
+///
+/// # Examples
+///
+/// Creating an empty set of on-fail steps:
+///
+/// ```
+/// use scenario_rs_core::scenario::on_fail::OnFailSteps;
+///
+/// // Create an empty set of recovery steps
+/// let on_fail_steps = OnFailSteps::default();
+/// assert!(on_fail_steps.is_empty());
+/// ```
+///
+/// Converting from a configuration:
+///
+/// ```
+/// use std::collections::HashMap;
+/// use scenario_rs_core::{
+///     scenario::{
+///         on_fail::OnFailSteps,
+///         task::Task,
+///         tasks::Tasks
+///     },
+///     config::task::{TaskConfig, TaskType}
+/// };
+/// 
+/// // Set up the task map
+/// let mut task_map = HashMap::new();
+/// 
+/// // Create a cleanup task
+/// let config = TaskConfig {
+///     description: "Cleanup task".to_string(),
+///     error_message: "Cleanup failed".to_string(),
+///     task_type: TaskType::RemoteSudo {
+///         command: "rm -rf /tmp/deployment".to_string(),
+///     },
+/// };
+/// let cleanup_task = Task::from(&config);
+/// task_map.insert("cleanup".to_string(), cleanup_task);
+///
+/// // Create all available tasks
+/// let tasks = Tasks(task_map);
+///
+/// // Create a vector of task names for on-fail steps
+/// let task_names = vec!["cleanup".to_string()];
+///
+/// // Create empty on_fail_steps and add tasks manually
+/// let mut on_fail_steps = OnFailSteps::default();
+/// for name in task_names {
+///     if let Some(task) = tasks.get(&name) {
+///         on_fail_steps.push(task.clone());
+///     }
+/// }
+/// 
+/// assert_eq!(on_fail_steps.len(), 1);
+/// ```
 #[derive(Clone, Debug)]
 pub struct OnFailSteps(Vec<Task>);
 

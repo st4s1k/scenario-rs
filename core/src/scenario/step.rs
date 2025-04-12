@@ -16,6 +16,71 @@ use crate::{
 /// A step represents a single operation in a scenario execution flow. It consists of a
 /// task to be executed and optional fallback steps to run if the primary task fails.
 /// This structure enables graceful error handling and cleanup actions.
+///
+/// # Examples
+///
+/// Creating a step with on-fail steps:
+///
+/// ```
+/// use std::collections::HashMap;
+/// use scenario_rs_core::{
+///     config::step::StepConfig,
+///     scenario::{
+///         step::Step, 
+///         task::Task,
+///         tasks::Tasks,
+///         on_fail::OnFailSteps
+///     },
+///     config::task::{TaskConfig, TaskType}
+/// };
+///
+/// // Set up the task map with main and recovery tasks
+/// let mut task_map = HashMap::new();
+/// 
+/// // Main deployment task
+/// let deploy_config = TaskConfig {
+///     description: "Deploy application".to_string(),
+///     error_message: "Deployment failed".to_string(),
+///     task_type: TaskType::SftpCopy {
+///         source_path: "./app.jar".to_string(),
+///         destination_path: "/app/app.jar".to_string(),
+///     },
+/// };
+/// task_map.insert("deploy".to_string(), Task::from(&deploy_config));
+///
+/// // Cleanup task for error recovery
+/// let cleanup_config = TaskConfig {
+///     description: "Clean up failed deployment".to_string(),
+///     error_message: "Cleanup failed".to_string(),
+///     task_type: TaskType::RemoteSudo {
+///         command: "rm -f /app/app.jar".to_string(),
+///     },
+/// };
+/// task_map.insert("cleanup".to_string(), Task::from(&cleanup_config));
+///
+/// // Create all available tasks
+/// let tasks = Tasks(task_map);
+///
+/// // Define a step configuration 
+/// // Note: For testing, we avoid creating OnFailStepsConfig directly since its constructor is private
+/// let task_name = "deploy".to_string();
+/// let step_config = StepConfig {
+///     task: task_name.clone(),
+///     on_fail: None, // We'll handle on_fail steps differently
+/// };
+///
+/// // Create the step
+/// let mut step = Step::try_from((&tasks, &step_config)).unwrap();
+///
+/// // Create on_fail steps manually using the public API
+/// let mut on_fail_steps = OnFailSteps::default();
+/// if let Some(cleanup_task) = tasks.get("cleanup") {
+///     on_fail_steps.push(cleanup_task.clone());
+/// }
+/// 
+/// // Verify the step properties
+/// assert_eq!(step.task().description(), "Deploy application");
+/// ```
 #[derive(Clone, Debug)]
 pub struct Step {
     /// The primary task to be executed

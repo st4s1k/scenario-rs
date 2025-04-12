@@ -15,10 +15,35 @@ use tests::TestFile as File;
 ///
 /// This struct holds source and destination paths for transferring a file
 /// from the local system to a remote system using SFTP protocol.
+///
+/// # Examples
+///
+/// ```
+/// use scenario_rs_core::scenario::sftp_copy::SftpCopy;
+///
+/// let copy_operation = SftpCopy {
+///     source_path: "/path/to/local/file.txt".to_string(),
+///     destination_path: "/remote/path/file.txt".to_string(),
+/// };
+///
+/// assert_eq!(copy_operation.source_path(), "/path/to/local/file.txt");
+/// assert_eq!(copy_operation.destination_path(), "/remote/path/file.txt");
+/// ```
+///
+/// Path variables can contain placeholders that will be resolved during execution:
+///
+/// ```
+/// use scenario_rs_core::scenario::sftp_copy::SftpCopy;
+///
+/// let copy_operation = SftpCopy {
+///     source_path: "/path/to/{file_name}".to_string(),
+///     destination_path: "/home/{username}/{file_name}".to_string(),
+/// };
+/// ```
 #[derive(Debug, Clone)]
 pub struct SftpCopy {
-    pub(crate) source_path: String,
-    pub(crate) destination_path: String,
+    pub source_path: String,
+    pub destination_path: String,
 }
 
 impl SftpCopy {
@@ -278,19 +303,6 @@ mod tests {
                 sftp: ArcMutex::wrap(MockSuccessfulSftp),
             },
         }
-    }
-
-    #[test]
-    fn test_accessors() {
-        // Given
-        let sftp_copy = SftpCopy {
-            source_path: "/path/to/source".into(),
-            destination_path: "/path/to/destination".into(),
-        };
-
-        // When & Then
-        assert_eq!(sftp_copy.source_path(), "/path/to/source");
-        assert_eq!(sftp_copy.destination_path(), "/path/to/destination");
     }
 
     #[test]

@@ -7,6 +7,48 @@ use std::{net::TcpStream, path::Path};
 use tracing::debug;
 
 /// Defines operations for executing commands on a remote server via SSH.
+///
+/// This trait abstracts the operations needed to execute commands on a remote server
+/// over SSH, including execution, reading the output, and checking the exit status.
+///
+/// # Examples
+///
+/// ```
+/// # use scenario_rs_core::{
+/// #     scenario::{server::Server, credentials::Credentials},
+/// #     session::{Session, Channel}
+/// # };
+/// # 
+/// # // Create server and credentials objects properly via constructors
+/// # let config = scenario_rs_core::config::server::ServerConfig {
+/// #    host: "example.com".to_string(),
+/// #    port: Some(22),
+/// # };
+/// # let server = Server::from(&config);
+/// # let credentials = Credentials::from(&scenario_rs_core::config::credentials::CredentialsConfig {
+/// #    username: "user".to_string(),
+/// #    password: None,
+/// # });
+/// #
+/// // Now create a session and execute commands
+/// let session = Session::new(&server, &credentials).unwrap();
+///
+/// // Get a channel and execute a command
+/// let channel_mutex = session.channel_session().unwrap();
+/// let mut channel = channel_mutex.lock().unwrap();
+///
+/// // Execute a command
+/// channel.exec("ls -la").unwrap();
+///
+/// // Read command output
+/// let mut output = String::new();
+/// channel.read_to_string(&mut output).unwrap();
+/// println!("Command output: {}", output);
+///
+/// // Check exit status
+/// let status = channel.exit_status().unwrap();
+/// assert_eq!(status, 0); // Command succeeded
+/// ```
 pub trait Channel {
     /// Executes a command on the remote system.
     ///
@@ -37,6 +79,45 @@ pub trait Channel {
 }
 
 /// Defines operations for SFTP file transfer.
+///
+/// This trait abstracts the operations needed for file transfer via SFTP,
+/// primarily focused on creating remote files for writing.
+///
+/// # Examples
+///
+/// ```
+/// # use std::path::Path;
+/// # use scenario_rs_core::{
+/// #     config::{server::ServerConfig, credentials::CredentialsConfig},
+/// #     scenario::{server::Server, credentials::Credentials},
+/// #     session::{Session, Sftp, Write}
+/// # };
+/// #
+/// # // Create server and credentials objects properly via constructors
+/// # let server = Server::from(&ServerConfig {
+/// #     host: "example.com".to_string(),
+/// #     port: Some(22),
+/// # });
+/// # let credentials = Credentials::from(&CredentialsConfig {
+/// #     username: "user".to_string(),
+/// #     password: None,
+/// # });
+/// #
+/// // Create a session
+/// let session = Session::new(&server, &credentials).unwrap();
+///
+/// // Get an SFTP session
+/// let sftp_mutex = session.sftp().unwrap();
+/// let sftp = sftp_mutex.lock().unwrap();
+///
+/// // Create a file on the remote server
+/// let path = Path::new("/remote/path/file.txt");
+/// let mut file = sftp.create(path).unwrap();
+///
+/// // Write data to the file
+/// let data = b"Hello, world!";
+/// file.write_all(data).unwrap();
+/// ```
 pub trait Sftp {
     /// Creates a new file at the specified path for writing.
     ///
@@ -50,6 +131,42 @@ pub trait Sftp {
 }
 
 /// Defines writing operations for remote files.
+///
+/// This trait provides operations for writing data to files on a remote server.
+/// It's typically returned by the `create` method of the `Sftp` trait.
+///
+/// # Examples
+///
+/// ```
+/// # use std::path::Path;
+/// # use scenario_rs_core::{
+/// #     config::{server::ServerConfig, credentials::CredentialsConfig},
+/// #     scenario::{server::Server, credentials::Credentials},
+/// #     session::{Session, Sftp, Write}
+/// # };
+/// #
+/// # // Create server and credentials objects properly via constructors
+/// # let server = Server::from(&ServerConfig {
+/// #     host: "example.com".to_string(),
+/// #     port: Some(22),
+/// # });
+/// # let credentials = Credentials::from(&CredentialsConfig {
+/// #     username: "user".to_string(),
+/// #     password: None,
+/// # });
+/// #
+/// // Create a session
+/// let session = Session::new(&server, &credentials).unwrap();
+///
+/// // Get an SFTP session and create a file
+/// let sftp_mutex = session.sftp().unwrap();
+/// let sftp = sftp_mutex.lock().unwrap();
+/// let mut file = sftp.create(Path::new("/remote/path/config.json")).unwrap();
+///
+/// // Write JSON data to the file
+/// let json_data = b"{\"name\": \"application\", \"version\": \"1.0.0\"}";
+/// file.write_all(json_data).unwrap();
+/// ```
 pub trait Write {
     /// Writes all bytes from a buffer to the remote file.
     ///
@@ -64,6 +181,56 @@ pub trait Write {
 
 /// Represents an SSH session to a remote server.
 ///
+/// This struct encapsulates an SSH connection to a remote server, providing methods
+/// to execute commands and transfer files. It supports both real SSH connections and
+/// mock implementations for testing and development.
+///
+/// # Examples
+///
+/// Creating a session:
+///
+/// ```no_run
+/// use scenario_rs_core::{
+///     config::{server::ServerConfig, credentials::CredentialsConfig},
+///     scenario::{server::Server, credentials::Credentials},
+///     session::Session,
+/// };
+///
+/// // Set up server connection information using config
+/// let server = Server::from(&ServerConfig {
+///     host: "example.com".to_string(),
+///     port: Some(22)
+/// });
+///
+/// // Set up authentication credentials using config
+/// let credentials = Credentials::from(&CredentialsConfig {
+///     username: "user".to_string(),
+///     password: Some("password".to_string()) // Or None to use SSH agent
+/// });
+///
+/// // Create a new session
+/// let session_result = Session::new(&server, &credentials);
+/// assert!(session_result.is_ok());
+///
+/// // Use session to create a channel for command execution
+/// let session = session_result.unwrap();
+/// let channel_result = session.channel_session();
+/// assert!(channel_result.is_ok());
+/// ```
+///
+/// Creating a mock session for testing:
+///
+/// ```
+/// use scenario_rs_core::session::Session;
+///
+/// // Create a default (mock) session
+/// let session = Session::default();
+///
+/// // This session can be used like a real one, but doesn't
+/// // actually connect to a remote server
+/// let channel = session.channel_session().unwrap();
+/// let sftp = session.sftp().unwrap();
+/// ```
 pub struct Session {
     pub(crate) inner: SessionType,
 }

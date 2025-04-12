@@ -45,7 +45,7 @@ use crate::config::variables::required::{RequiredVariablesConfig, VariableTypeCo
 /// let username = variables.get("username").unwrap();
 /// assert_eq!(username.label(), "Username");
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RequiredVariables(HashMap<String, RequiredVariable>);
 
 impl Deref for RequiredVariables {
@@ -96,13 +96,6 @@ impl From<&RequiredVariablesConfig> for RequiredVariables {
         }
 
         RequiredVariables(required_variables)
-    }
-}
-
-impl Default for RequiredVariables {
-    /// Creates an empty collection of required variables.
-    fn default() -> Self {
-        RequiredVariables(HashMap::new())
     }
 }
 
@@ -193,7 +186,7 @@ impl RequiredVariables {
 }
 
 /// Represents a single required variable with its metadata and value.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RequiredVariable {
     pub(crate) label: String,
     pub(crate) var_type: VariableType,
@@ -211,6 +204,22 @@ impl Deref for RequiredVariable {
 }
 
 impl RequiredVariable {
+    pub fn with_label(self, label: String) -> Self {
+        RequiredVariable { label, ..self }
+    }
+
+    pub fn with_var_type(self, var_type: VariableType) -> Self {
+        RequiredVariable { var_type, ..self }
+    }
+
+    pub fn with_value(self, value: String) -> Self {
+        RequiredVariable { value, ..self }
+    }
+
+    pub fn with_read_only(self, read_only: bool) -> Self {
+        RequiredVariable { read_only, ..self }
+    }
+
     /// Returns the user-friendly label for this variable.
     pub fn label(&self) -> &str {
         &self.label
@@ -237,9 +246,10 @@ impl RequiredVariable {
 }
 
 /// Defines the possible types for required variables.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub enum VariableType {
     /// A simple string variable.
+    #[default]
     String,
 
     /// A file or directory path.

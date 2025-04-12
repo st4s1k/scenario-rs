@@ -27,18 +27,68 @@ pub mod resolved;
 /// are those that must be provided at runtime, while defined variables are
 /// predefined in the scenario configuration.
 ///
-/// # Example
+/// # Examples
 ///
-/// ```no_run
-/// # use scenario_rs_core::scenario::variables::Variables;
-/// # use std::collections::HashMap;
-/// #
-/// // Create a Variables instance from a configuration
-/// let mut vars = Variables::default();
+/// Creating and using Variables:
+///
+/// ```
+/// use scenario_rs_core::scenario::variables::{
+///     Variables, 
+///     defined::DefinedVariables, 
+///     required::{RequiredVariables, RequiredVariable, VariableType}
+/// };
+/// use std::collections::HashMap;
+///
+/// // Create a default Variables instance
+/// let mut variables = Variables::default();
+///
+/// // Add defined variables
+/// let mut defined_vars = HashMap::new();
+/// defined_vars.insert("hostname".to_string(), "example.com".to_string());
+/// defined_vars.insert("port".to_string(), "8080".to_string());
+/// variables.defined_mut().extend(defined_vars);
+///
+/// // Create and add a required variable directly
+/// variables.required_mut().insert(
+///     "username".to_string(), 
+///     RequiredVariable::default()
+///         .with_label("Username".to_string())
+///         .with_value("admin".to_string())
+/// );
 ///
 /// // Resolve placeholders in a string
-/// let resolved = vars.resolve_placeholders("Hello, {username}!")
-///     .expect("Failed to resolve placeholders");
+/// let greeting_result = variables.resolve_placeholders("Hello, {username}! Connect to {hostname}:{port}");
+/// assert!(greeting_result.is_ok());
+/// assert_eq!(greeting_result.unwrap(), "Hello, admin! Connect to example.com:8080");
+/// ```
+///
+/// Working with nested variable resolution:
+///
+/// ```
+/// use scenario_rs_core::scenario::variables::{Variables, defined::DefinedVariables};
+/// use std::collections::HashMap;
+///
+/// // Create a default Variables instance
+/// let mut variables = Variables::default();
+///
+/// // Add defined variables with nested references
+/// let mut defined_vars = HashMap::new();
+/// defined_vars.insert("app_name".to_string(), "my-service".to_string());
+/// defined_vars.insert("env".to_string(), "production".to_string());
+/// defined_vars.insert("log_dir".to_string(), "/var/log/{app_name}/{env}".to_string());
+/// defined_vars.insert("config_path".to_string(), "/etc/{app_name}/config.{env}.json".to_string());
+/// variables.defined_mut().extend(defined_vars);
+///
+/// // Resolve nested references
+/// let log_path = variables.resolve_placeholders("{log_dir}/app.log").unwrap();
+/// let config = variables.resolve_placeholders("{config_path}").unwrap();
+///
+/// assert_eq!(log_path, "/var/log/my-service/production/app.log");
+/// assert_eq!(config, "/etc/my-service/config.production.json");
+///
+/// // Get all fully resolved variables
+/// let resolved = variables.resolved().unwrap();
+/// assert_eq!(resolved.get("log_dir").unwrap(), "/var/log/my-service/production");
 /// ```
 #[derive(Clone, Debug)]
 pub struct Variables {
@@ -77,6 +127,16 @@ impl Variables {
         &mut self.required
     }
 
+    /// Returns a reference to the defined variables.
+    pub fn defined(&self) -> &DefinedVariables {
+        &self.defined
+    }
+    
+    /// Returns a mutable reference to the defined variables.
+    pub fn defined_mut(&mut self) -> &mut DefinedVariables {
+        &mut self.defined
+    }
+
     /// Resolves all variable placeholders in a string.
     ///
     /// This method replaces occurrences of `{variable_name}` in the input string
@@ -94,11 +154,24 @@ impl Variables {
     ///
     /// # Examples
     ///
-    /// ```no_run
+    /// ```
     /// # use scenario_rs_core::scenario::variables::Variables;
+    /// # use std::collections::HashMap;
     /// #
-    /// let vars = Variables::default();
+    /// // Create variables and add a name
+    /// let mut vars = Variables::default();
+    /// 
+    /// // Define a name variable
+    /// let mut defined_vars = HashMap::new();
+    /// defined_vars.insert("name".to_string(), "Alice".to_string());
+    /// 
+    /// // Add to defined variables
+    /// vars.defined_mut().extend(defined_vars);
+    /// 
+    /// // Resolve a placeholder
     /// let result = vars.resolve_placeholders("Hello, {name}!");
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap(), "Hello, Alice!");
     /// ```
     pub fn resolve_placeholders(
         &self,

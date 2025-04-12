@@ -16,6 +16,72 @@ use tracing::{debug, instrument};
 /// This struct represents an ordered collection of steps that define the execution flow
 /// of a scenario. Each step executes a task, and the execution sequence continues
 /// until all steps complete successfully or one step fails.
+///
+/// # Examples
+///
+/// Creating steps from a configuration:
+///
+/// ```
+/// use std::collections::HashMap;
+/// use scenario_rs_core::{
+///     config::{
+///         step::StepConfig,
+///         steps::StepsConfig,
+///         task::{TaskConfig, TaskType}
+///     },
+///     scenario::{
+///         task::Task,
+///         tasks::Tasks,
+///         steps::Steps
+///     }
+/// };
+///
+/// // Set up the task map
+/// let mut task_map = HashMap::new();
+/// 
+/// // Create a setup task
+/// let setup_config = TaskConfig {
+///     description: "Setup environment".to_string(),
+///     error_message: "Setup failed".to_string(),
+///     task_type: TaskType::RemoteSudo {
+///         command: "mkdir -p /app/data".to_string(),
+///     },
+/// };
+/// task_map.insert("setup".to_string(), Task::from(&setup_config));
+///
+/// // Create a deploy task
+/// let deploy_config = TaskConfig {
+///     description: "Deploy application".to_string(),
+///     error_message: "Deployment failed".to_string(),
+///     task_type: TaskType::SftpCopy {
+///         source_path: "./app.jar".to_string(),
+///         destination_path: "/app/app.jar".to_string(),
+///     },
+/// };
+/// task_map.insert("deploy".to_string(), Task::from(&deploy_config));
+///
+/// // Create all available tasks
+/// let tasks = Tasks(task_map);
+///
+/// // Define the steps configuration
+/// let steps_config = StepsConfig(vec![
+///     StepConfig {
+///         task: "setup".to_string(),
+///         on_fail: None, // No on_fail steps
+///     },
+///     StepConfig {
+///         task: "deploy".to_string(),
+///         on_fail: None, // No on_fail steps
+///     },
+/// ]);
+///
+/// // Convert to Steps
+/// let result = Steps::try_from((&tasks, &steps_config));
+/// assert!(result.is_ok());
+/// 
+/// let steps = result.unwrap();
+/// assert_eq!(steps.len(), 2);
+/// ```
 #[derive(Clone, Debug)]
 pub struct Steps(Vec<Step>);
 
