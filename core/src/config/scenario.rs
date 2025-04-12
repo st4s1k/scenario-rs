@@ -538,7 +538,7 @@ mod tests {
         }
     }
 
-    // Helper functions to create test configs
+    // Test helpers
     fn create_partial_base_config() -> PartialScenarioConfig {
         PartialScenarioConfig {
             parent: Some("parent1.toml".to_string()),

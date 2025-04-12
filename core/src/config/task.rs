@@ -106,28 +106,6 @@ mod tests {
     use super::*;
     use toml;
 
-    // Test helpers
-    fn create_remote_sudo_toml() -> String {
-        r#"
-            description = "Update system packages"
-            error_message = "Failed to update system packages"
-            type = "RemoteSudo"
-            command = "apt-get update && apt-get upgrade -y"
-        "#
-        .to_string()
-    }
-
-    fn create_sftp_copy_toml() -> String {
-        r#"
-            description = "Deploy configuration file"
-            error_message = "Failed to deploy configuration file"
-            type = "SftpCopy"
-            source_path = "/local/config.json"
-            destination_path = "/remote/config.json"
-        "#
-        .to_string()
-    }
-
     #[test]
     fn test_task_config_remote_sudo_deserialization() {
         // Given
@@ -233,5 +211,27 @@ mod tests {
 
         // Then
         assert!(result.is_err());
+    }
+
+    // Test helpers
+    fn create_remote_sudo_toml() -> String {
+        r#"
+            description = "Update system packages"
+            error_message = "Failed to update system packages"
+            type = "RemoteSudo"
+            command = "apt-get update && apt-get upgrade -y"
+        "#
+        .to_string()
+    }
+
+    fn create_sftp_copy_toml() -> String {
+        r#"
+            description = "Deploy configuration file"
+            error_message = "Failed to deploy configuration file"
+            type = "SftpCopy"
+            source_path = "/local/config.json"
+            destination_path = "/remote/config.json"
+        "#
+        .to_string()
     }
 }

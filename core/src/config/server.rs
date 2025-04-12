@@ -126,15 +126,6 @@ mod tests {
     use super::*;
     use toml;
 
-    // Test helpers
-    fn create_test_toml() -> String {
-        r#"
-            host = "test.example.com"
-            port = 2222
-        "#
-        .to_string()
-    }
-
     #[test]
     fn test_server_config_default() {
         // Given & When
@@ -259,5 +250,14 @@ mod tests {
             Err(ScenarioConfigError::MissingHost) => {} // expected
             _ => panic!("Expected MissingHost error"),
         }
+    }
+
+    // Test helpers
+    fn create_test_toml() -> String {
+        r#"
+            host = "test.example.com"
+            port = 2222
+        "#
+        .to_string()
     }
 }

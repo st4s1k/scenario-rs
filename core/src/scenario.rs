@@ -258,23 +258,6 @@ mod tests {
     };
     use std::collections::HashMap;
 
-    // Test helpers
-    fn create_test_config() -> ScenarioConfig {
-        ScenarioConfig {
-            server: ServerConfig {
-                host: "test.example.com".to_string(),
-                port: Some(22),
-            },
-            credentials: CredentialsConfig {
-                username: "testuser".to_string(),
-                password: Some("testpass".to_string()),
-            },
-            execute: ExecuteConfig::default(),
-            tasks: TasksConfig::default(),
-            variables: VariablesConfig::default(),
-        }
-    }
-
     #[test]
     fn test_scenario_try_from_config() {
         // Given
@@ -380,5 +363,22 @@ mod tests {
         // Then
         assert!(debug_str.contains("test.example.com"));
         assert!(debug_str.contains("testuser"));
+    }
+
+    // Test helpers
+    fn create_test_config() -> ScenarioConfig {
+        ScenarioConfig {
+            server: ServerConfig {
+                host: "test.example.com".to_string(),
+                port: Some(22),
+            },
+            credentials: CredentialsConfig {
+                username: "testuser".to_string(),
+                password: Some("testpass".to_string()),
+            },
+            execute: ExecuteConfig::default(),
+            tasks: TasksConfig::default(),
+            variables: VariablesConfig::default(),
+        }
     }
 }
