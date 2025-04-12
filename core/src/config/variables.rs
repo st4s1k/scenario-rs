@@ -30,7 +30,7 @@ pub struct VariablesConfig {
 /// Partial configuration for variables that supports inheritance.
 ///
 /// This structure represents an incomplete variables configuration that can be
-    /// merged with another configuration, supporting hierarchical configuration.
+/// merged with another configuration, supporting hierarchical configuration.
 #[derive(Deserialize, Clone, Debug)]
 pub struct PartialVariablesConfig {
     /// Optional configuration for required variables
