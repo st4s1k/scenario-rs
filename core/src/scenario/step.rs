@@ -59,7 +59,7 @@ use crate::{
 /// task_map.insert("cleanup".to_string(), Task::from(&cleanup_config));
 ///
 /// // Create all available tasks
-/// let tasks = Tasks(task_map);
+/// let tasks = Tasks::from(task_map);
 ///
 /// // Define a step configuration
 /// // Note: For testing, we avoid creating OnFailStepsConfig directly since its constructor is private
@@ -172,7 +172,7 @@ mod tests {
         let mut task_map = HashMap::new();
         task_map.insert("task1".to_string(), create_remote_sudo_task());
         task_map.insert("task2".to_string(), create_sftp_copy_task());
-        Tasks(task_map)
+        Tasks::from(task_map)
     }
 
     fn create_remote_sudo_task() -> Task {

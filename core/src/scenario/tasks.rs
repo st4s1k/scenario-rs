@@ -53,7 +53,7 @@ use std::{
 /// task_map.insert("deploy_config".to_string(), deploy_config_task);
 ///
 /// // Create the Tasks registry
-/// let tasks = Tasks(task_map);
+/// let tasks = Tasks::from(task_map);
 ///
 /// // Access tasks by name
 /// assert!(tasks.contains_key("start_service"));
@@ -65,7 +65,7 @@ use std::{
 /// assert_eq!(start_task.description(), "Start the application service");
 /// ```
 #[derive(Clone, Debug)]
-pub struct Tasks(pub HashMap<String, Task>);
+pub struct Tasks(HashMap<String, Task>);
 
 impl Deref for Tasks {
     type Target = HashMap<String, Task>;
@@ -80,6 +80,24 @@ impl DerefMut for Tasks {
     /// Provides mutable access to the underlying HashMap of tasks.
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl From<HashMap<String, Task>> for Tasks {
+    /// Creates a new Tasks instance from a HashMap of tasks.
+    ///
+    /// This constructor allows for the creation of a Tasks instance from an existing
+    /// HashMap, enabling flexibility in how task configurations are initialized.
+    ///
+    /// # Arguments
+    ///
+    /// * `tasks` - A HashMap mapping task identifiers to their implementations
+    ///
+    /// # Returns
+    ///
+    /// A new Tasks instance containing the provided tasks
+    fn from(tasks: HashMap<String, Task>) -> Self {
+        Tasks(tasks)
     }
 }
 

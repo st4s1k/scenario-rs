@@ -61,11 +61,11 @@ use crate::{
 /// task_map.insert("start".to_string(), Task::from(&start_config));
 ///
 /// // Create the task registry
-/// let tasks = Tasks(task_map);
+/// let tasks = Tasks::from(task_map);
 ///
 /// // Define execution steps
 /// let execution_config = ExecuteConfig {
-///     steps: StepsConfig(vec![
+///     steps: StepsConfig::from(vec![
 ///         StepConfig {
 ///             task: "install".to_string(),
 ///             on_fail: None,
@@ -201,7 +201,7 @@ mod tests {
         // Given
         let tasks = create_test_tasks();
         let config = ExecuteConfig {
-            steps: StepsConfig(vec![]),
+            steps: StepsConfig::from(vec![]),
         };
 
         // When
@@ -221,7 +221,7 @@ mod tests {
         // Given
         let tasks = create_test_tasks();
         let config = ExecuteConfig {
-            steps: StepsConfig(vec![
+            steps: StepsConfig::from(vec![
                 StepConfig {
                     task: "task1".to_string(),
                     on_fail: None,
@@ -248,7 +248,7 @@ mod tests {
     #[test]
     fn test_execute_try_from_empty_tasks() {
         // Given
-        let tasks = Tasks(HashMap::new());
+        let tasks = Tasks::from(HashMap::new());
         let config = create_valid_execute_config();
 
         // When
@@ -269,7 +269,7 @@ mod tests {
         let mut task_map = HashMap::new();
         task_map.insert("task1".to_string(), create_remote_sudo_task());
         task_map.insert("task2".to_string(), create_sftp_copy_task());
-        Tasks(task_map)
+        Tasks::from(task_map)
     }
 
     fn create_remote_sudo_task() -> Task {
@@ -297,7 +297,7 @@ mod tests {
 
     fn create_valid_execute_config() -> ExecuteConfig {
         ExecuteConfig {
-            steps: StepsConfig(vec![
+            steps: StepsConfig::from(vec![
                 StepConfig {
                     task: "task1".to_string(),
                     on_fail: None,
@@ -312,7 +312,7 @@ mod tests {
 
     fn create_invalid_execute_config() -> ExecuteConfig {
         ExecuteConfig {
-            steps: StepsConfig(vec![StepConfig {
+            steps: StepsConfig::from(vec![StepConfig {
                 task: "non_existent_task".to_string(),
                 on_fail: None,
             }]),

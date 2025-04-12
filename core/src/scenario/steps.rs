@@ -61,10 +61,10 @@ use tracing::{debug, instrument};
 /// task_map.insert("deploy".to_string(), Task::from(&deploy_config));
 ///
 /// // Create all available tasks
-/// let tasks = Tasks(task_map);
+/// let tasks = Tasks::from(task_map);
 ///
 /// // Define the steps configuration
-/// let steps_config = StepsConfig(vec![
+/// let steps_config = StepsConfig::from(vec![
 ///     StepConfig {
 ///         task: "setup".to_string(),
 ///         on_fail: None, // No on_fail steps
@@ -233,7 +233,7 @@ mod tests {
         task_map.insert("task1".to_string(), create_remote_sudo_task());
         task_map.insert("task2".to_string(), create_sftp_copy_task());
         task_map.insert("task3".to_string(), create_remote_sudo_task());
-        Tasks(task_map)
+        Tasks::from(task_map)
     }
 
     fn create_remote_sudo_task() -> Task {
@@ -260,7 +260,7 @@ mod tests {
     }
 
     fn create_valid_steps_config() -> StepsConfig {
-        StepsConfig(vec![
+        StepsConfig::from(vec![
             StepConfig {
                 task: "task1".to_string(),
                 on_fail: None,
@@ -273,7 +273,7 @@ mod tests {
     }
 
     fn create_steps_config_with_on_fail() -> StepsConfig {
-        StepsConfig(vec![
+        StepsConfig::from(vec![
             StepConfig {
                 task: "task1".to_string(),
                 on_fail: Some(OnFailStepsConfig::from(vec!["task3".to_string()])),
@@ -286,7 +286,7 @@ mod tests {
     }
 
     fn create_invalid_steps_config() -> StepsConfig {
-        StepsConfig(vec![StepConfig {
+        StepsConfig::from(vec![StepConfig {
             task: "nonexistent".to_string(),
             on_fail: None,
         }])
@@ -345,7 +345,7 @@ mod tests {
     fn test_steps_try_from_empty_config() {
         // Given
         let tasks = create_test_tasks();
-        let config = StepsConfig(vec![]);
+        let config = StepsConfig::from(vec![]);
 
         // When
         let result = Steps::try_from((&tasks, &config));

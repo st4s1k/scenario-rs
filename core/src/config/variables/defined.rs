@@ -141,7 +141,7 @@ impl DefinedVariablesConfig {
         for (key, value) in &other.0 {
             merged.insert(key.clone(), value.clone());
         }
-        DefinedVariablesConfig(merged)
+        DefinedVariablesConfig::from(merged)
     }
 }
 

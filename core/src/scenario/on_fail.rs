@@ -51,7 +51,7 @@ use tracing::{debug, instrument};
 /// task_map.insert("cleanup".to_string(), cleanup_task);
 ///
 /// // Create all available tasks
-/// let tasks = Tasks(task_map);
+/// let tasks = Tasks::from(task_map);
 ///
 /// // Create a vector of task names for on-fail steps
 /// let task_names = vec!["cleanup".to_string()];
@@ -324,7 +324,7 @@ mod tests {
         let mut task_map = HashMap::new();
         task_map.insert("task1".to_string(), create_remote_sudo_task());
         task_map.insert("task2".to_string(), create_sftp_copy_task());
-        Tasks(task_map)
+        Tasks::from(task_map)
     }
 
     fn create_remote_sudo_task() -> Task {

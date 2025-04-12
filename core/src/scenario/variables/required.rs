@@ -36,7 +36,7 @@ use crate::config::variables::required::{RequiredVariablesConfig, VariableTypeCo
 ///         read_only: false,
 ///     }
 /// );
-/// let config = RequiredVariablesConfig(config_map);
+/// let config = RequiredVariablesConfig::from(config_map);
 ///
 /// // Create RequiredVariables from the config
 /// let variables = RequiredVariables::from(&config);
@@ -136,7 +136,7 @@ impl RequiredVariables {
     ///         read_only: false,
     ///     }
     /// );
-    /// let config = RequiredVariablesConfig(config_map);
+    /// let config = RequiredVariablesConfig::from(config_map);
     ///
     /// // Create RequiredVariables from the config
     /// let mut variables = RequiredVariables::from(&config);
@@ -359,7 +359,7 @@ mod tests {
                 read_only: false,
             },
         );
-        let config = RequiredVariablesConfig(config_map);
+        let config = RequiredVariablesConfig::from(config_map);
 
         // When
         let required_vars = RequiredVariables::from(&config);
@@ -404,7 +404,7 @@ mod tests {
         };
         let mut config_map = HashMap::new();
         config_map.insert("timestamp".to_string(), config);
-        let required_config = RequiredVariablesConfig(config_map);
+        let required_config = RequiredVariablesConfig::from(config_map);
 
         // When
         let required_vars = RequiredVariables::from(&required_config);
@@ -426,7 +426,7 @@ mod tests {
     #[test]
     fn test_required_variables_default_and_empty_config() {
         // Given
-        let empty_config = RequiredVariablesConfig(HashMap::new());
+        let empty_config = RequiredVariablesConfig::from(HashMap::new());
 
         // When
         let empty_vars = RequiredVariables::from(&empty_config);

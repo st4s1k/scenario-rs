@@ -55,7 +55,7 @@ use serde::Deserialize;
 /// variables.insert("backup_path".to_string(), backup_path_config);
 ///
 /// // Create the configuration
-/// let required_vars = RequiredVariablesConfig(variables);
+/// let required_vars = RequiredVariablesConfig::from(variables);
 ///
 /// assert_eq!(required_vars.len(), 2);
 /// assert!(required_vars.contains_key("server_ip"));
@@ -73,7 +73,7 @@ use serde::Deserialize;
 /// label = "Backup Directory"
 /// ```
 #[derive(Deserialize, Clone, Debug, Default)]
-pub struct RequiredVariablesConfig(pub HashMap<String, RequiredVariableConfig>);
+pub struct RequiredVariablesConfig(HashMap<String, RequiredVariableConfig>);
 
 impl Deref for RequiredVariablesConfig {
     type Target = HashMap<String, RequiredVariableConfig>;
@@ -88,6 +88,16 @@ impl DerefMut for RequiredVariablesConfig {
     /// Provides mutable access to the underlying HashMap of variable name-config pairs.
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl From<HashMap<String, RequiredVariableConfig>> for RequiredVariablesConfig {
+    /// Creates a new `RequiredVariablesConfig` from a HashMap of variable name-config pairs.
+    ///
+    /// This constructor allows for the creation of a `RequiredVariablesConfig` from an existing
+    /// HashMap, enabling flexibility in how variable configurations are initialized.
+    fn from(variables: HashMap<String, RequiredVariableConfig>) -> Self {
+        RequiredVariablesConfig(variables)
     }
 }
 
@@ -115,7 +125,7 @@ impl RequiredVariablesConfig {
     ///         read_only: false,
     ///     }
     /// );
-    /// let config1 = RequiredVariablesConfig(vars1);
+    /// let config1 = RequiredVariablesConfig::from(vars1);
     ///
     /// // Create second configuration
     /// let mut vars2 = HashMap::new();
@@ -135,7 +145,7 @@ impl RequiredVariablesConfig {
     ///         read_only: false,
     ///     }
     /// );
-    /// let config2 = RequiredVariablesConfig(vars2);
+    /// let config2 = RequiredVariablesConfig::from(vars2);
     ///
     /// // Merge configurations
     /// let merged = config1.merge(&config2);

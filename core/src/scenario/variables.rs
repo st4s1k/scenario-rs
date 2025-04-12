@@ -336,7 +336,7 @@ mod tests {
                 read_only: false,
             },
         );
-        let required_config = RequiredVariablesConfig(required_map);
+        let required_config = RequiredVariablesConfig::from(required_map);
 
         let mut defined_map = HashMap::new();
         defined_map.insert("hostname".to_string(), "example.com".to_string());
