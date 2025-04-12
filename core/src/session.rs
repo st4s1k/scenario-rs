@@ -19,7 +19,7 @@ use tracing::debug;
 /// #     session::{Session, Channel},
 /// #     utils::HasText,
 /// # };
-/// # 
+/// #
 /// # // Create server and credentials objects properly via constructors
 /// # let config = scenario_rs_core::config::server::ServerConfig {
 /// #    host: "example.com".to_string(),
@@ -501,25 +501,6 @@ mod tests {
     };
     use std::path::Path;
 
-    // Test fixtures
-    fn test_server() -> Server {
-        Server {
-            host: "test.example.com".to_string(),
-            port: 22,
-        }
-    }
-
-    fn test_credentials(with_password: bool) -> Credentials {
-        Credentials {
-            username: "testuser".to_string(),
-            password: if with_password {
-                Some("testpass".to_string())
-            } else {
-                None
-            },
-        }
-    }
-
     #[test]
     fn test_session_default() {
         // Given & When
@@ -823,5 +804,24 @@ mod tests {
             result.is_err(),
             "Expected an error when connecting to invalid server"
         );
+    }
+
+    // Test helpers
+    fn test_server() -> Server {
+        Server {
+            host: "test.example.com".to_string(),
+            port: 22,
+        }
+    }
+
+    fn test_credentials(with_password: bool) -> Credentials {
+        Credentials {
+            username: "testuser".to_string(),
+            password: if with_password {
+                Some("testpass".to_string())
+            } else {
+                None
+            },
+        }
     }
 }

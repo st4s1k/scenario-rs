@@ -227,71 +227,6 @@ mod tests {
     };
     use std::collections::HashMap;
 
-    // Helper functions for test setup
-    fn create_test_tasks() -> Tasks {
-        let mut task_map = HashMap::new();
-        task_map.insert("task1".to_string(), create_remote_sudo_task());
-        task_map.insert("task2".to_string(), create_sftp_copy_task());
-        task_map.insert("task3".to_string(), create_remote_sudo_task());
-        Tasks::from(task_map)
-    }
-
-    fn create_remote_sudo_task() -> Task {
-        let config = TaskConfig {
-            description: "Test task 1".to_string(),
-            error_message: "Task 1 failed".to_string(),
-            task_type: TaskType::RemoteSudo {
-                command: "echo test".to_string(),
-            },
-        };
-        Task::from(&config)
-    }
-
-    fn create_sftp_copy_task() -> Task {
-        let config = TaskConfig {
-            description: "Test task 2".to_string(),
-            error_message: "Task 2 failed".to_string(),
-            task_type: TaskType::SftpCopy {
-                source_path: "/test/source".to_string(),
-                destination_path: "/test/dest".to_string(),
-            },
-        };
-        Task::from(&config)
-    }
-
-    fn create_valid_steps_config() -> StepsConfig {
-        StepsConfig::from(vec![
-            StepConfig {
-                task: "task1".to_string(),
-                on_fail: None,
-            },
-            StepConfig {
-                task: "task2".to_string(),
-                on_fail: None,
-            },
-        ])
-    }
-
-    fn create_steps_config_with_on_fail() -> StepsConfig {
-        StepsConfig::from(vec![
-            StepConfig {
-                task: "task1".to_string(),
-                on_fail: Some(OnFailStepsConfig::from(vec!["task3".to_string()])),
-            },
-            StepConfig {
-                task: "task2".to_string(),
-                on_fail: None,
-            },
-        ])
-    }
-
-    fn create_invalid_steps_config() -> StepsConfig {
-        StepsConfig::from(vec![StepConfig {
-            task: "nonexistent".to_string(),
-            on_fail: None,
-        }])
-    }
-
     #[test]
     fn test_steps_try_from_success() {
         // Given
@@ -412,5 +347,70 @@ mod tests {
             cloned[1].task().description(),
             original[1].task().description()
         );
+    }
+
+    // Test helpers
+    fn create_test_tasks() -> Tasks {
+        let mut task_map = HashMap::new();
+        task_map.insert("task1".to_string(), create_remote_sudo_task());
+        task_map.insert("task2".to_string(), create_sftp_copy_task());
+        task_map.insert("task3".to_string(), create_remote_sudo_task());
+        Tasks::from(task_map)
+    }
+
+    fn create_remote_sudo_task() -> Task {
+        let config = TaskConfig {
+            description: "Test task 1".to_string(),
+            error_message: "Task 1 failed".to_string(),
+            task_type: TaskType::RemoteSudo {
+                command: "echo test".to_string(),
+            },
+        };
+        Task::from(&config)
+    }
+
+    fn create_sftp_copy_task() -> Task {
+        let config = TaskConfig {
+            description: "Test task 2".to_string(),
+            error_message: "Task 2 failed".to_string(),
+            task_type: TaskType::SftpCopy {
+                source_path: "/test/source".to_string(),
+                destination_path: "/test/dest".to_string(),
+            },
+        };
+        Task::from(&config)
+    }
+
+    fn create_valid_steps_config() -> StepsConfig {
+        StepsConfig::from(vec![
+            StepConfig {
+                task: "task1".to_string(),
+                on_fail: None,
+            },
+            StepConfig {
+                task: "task2".to_string(),
+                on_fail: None,
+            },
+        ])
+    }
+
+    fn create_steps_config_with_on_fail() -> StepsConfig {
+        StepsConfig::from(vec![
+            StepConfig {
+                task: "task1".to_string(),
+                on_fail: Some(OnFailStepsConfig::from(vec!["task3".to_string()])),
+            },
+            StepConfig {
+                task: "task2".to_string(),
+                on_fail: None,
+            },
+        ])
+    }
+
+    fn create_invalid_steps_config() -> StepsConfig {
+        StepsConfig::from(vec![StepConfig {
+            task: "nonexistent".to_string(),
+            on_fail: None,
+        }])
     }
 }

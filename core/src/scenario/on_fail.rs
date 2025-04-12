@@ -35,10 +35,10 @@ use tracing::{debug, instrument};
 ///     },
 ///     config::task::{TaskConfig, TaskType}
 /// };
-/// 
+///
 /// // Set up the task map
 /// let mut task_map = HashMap::new();
-/// 
+///
 /// // Create a cleanup task
 /// let config = TaskConfig {
 ///     description: "Cleanup task".to_string(),
@@ -63,7 +63,7 @@ use tracing::{debug, instrument};
 ///         on_fail_steps.push(task.clone());
 ///     }
 /// }
-/// 
+///
 /// assert_eq!(on_fail_steps.len(), 1);
 /// ```
 #[derive(Clone, Debug)]
@@ -320,6 +320,7 @@ mod tests {
         }
     }
 
+    // Test helpers
     fn create_test_tasks() -> Tasks {
         let mut task_map = HashMap::new();
         task_map.insert("task1".to_string(), create_remote_sudo_task());

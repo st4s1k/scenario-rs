@@ -171,36 +171,6 @@ mod tests {
     };
     use std::panic;
 
-    struct TestWrite;
-    impl crate::session::Write for TestWrite {
-        fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {
-            Ok(())
-        }
-    }
-
-    struct TestSftp;
-    impl Sftp for TestSftp {
-        fn create(
-            &self,
-            _path: &std::path::Path,
-        ) -> Result<Box<dyn crate::session::Write>, ssh2::Error> {
-            Ok(Box::new(TestWrite))
-        }
-    }
-
-    struct TestChannel;
-    impl Channel for TestChannel {
-        fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
-            Ok(())
-        }
-        fn read_to_string(&mut self, _output: &mut String) -> Result<usize, ssh2::Error> {
-            Ok(0)
-        }
-        fn exit_status(&self) -> Result<i32, ssh2::Error> {
-            Ok(0)
-        }
-    }
-
     #[test]
     fn test_execute_success() {
         // Given
@@ -446,5 +416,36 @@ mod tests {
             result,
             Err(RemoteSudoError::CannotGetALockOnChannel)
         ));
+    }
+
+    // Test helpers
+    struct TestWrite;
+    impl crate::session::Write for TestWrite {
+        fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {
+            Ok(())
+        }
+    }
+
+    struct TestSftp;
+    impl Sftp for TestSftp {
+        fn create(
+            &self,
+            _path: &std::path::Path,
+        ) -> Result<Box<dyn crate::session::Write>, ssh2::Error> {
+            Ok(Box::new(TestWrite))
+        }
+    }
+
+    struct TestChannel;
+    impl Channel for TestChannel {
+        fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+            Ok(())
+        }
+        fn read_to_string(&mut self, _output: &mut String) -> Result<usize, ssh2::Error> {
+            Ok(0)
+        }
+        fn exit_status(&self) -> Result<i32, ssh2::Error> {
+            Ok(0)
+        }
     }
 }

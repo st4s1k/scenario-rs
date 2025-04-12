@@ -134,35 +134,6 @@ mod tests {
         tasks::TasksConfig,
     };
 
-    // Test helper functions
-    fn create_remote_sudo_config() -> TaskConfig {
-        TaskConfig {
-            description: "Remote command task".to_string(),
-            error_message: "Command failed".to_string(),
-            task_type: TaskType::RemoteSudo {
-                command: "systemctl restart service".to_string(),
-            },
-        }
-    }
-
-    fn create_sftp_copy_config() -> TaskConfig {
-        TaskConfig {
-            description: "File transfer task".to_string(),
-            error_message: "Transfer failed".to_string(),
-            task_type: TaskType::SftpCopy {
-                source_path: "./local/file".to_string(),
-                destination_path: "/remote/file".to_string(),
-            },
-        }
-    }
-
-    fn create_test_tasks_config() -> TasksConfig {
-        let mut tasks = HashMap::new();
-        tasks.insert("task1".to_string(), create_remote_sudo_config());
-        tasks.insert("task2".to_string(), create_sftp_copy_config());
-        TasksConfig::from(tasks)
-    }
-
     #[test]
     fn test_tasks_from_empty_config() {
         // Given
@@ -240,5 +211,34 @@ mod tests {
 
         // Then
         assert!(task.is_none());
+    }
+
+    // Test helpers
+    fn create_remote_sudo_config() -> TaskConfig {
+        TaskConfig {
+            description: "Remote command task".to_string(),
+            error_message: "Command failed".to_string(),
+            task_type: TaskType::RemoteSudo {
+                command: "systemctl restart service".to_string(),
+            },
+        }
+    }
+
+    fn create_sftp_copy_config() -> TaskConfig {
+        TaskConfig {
+            description: "File transfer task".to_string(),
+            error_message: "Transfer failed".to_string(),
+            task_type: TaskType::SftpCopy {
+                source_path: "./local/file".to_string(),
+                destination_path: "/remote/file".to_string(),
+            },
+        }
+    }
+
+    fn create_test_tasks_config() -> TasksConfig {
+        let mut tasks = HashMap::new();
+        tasks.insert("task1".to_string(), create_remote_sudo_config());
+        tasks.insert("task2".to_string(), create_sftp_copy_config());
+        TasksConfig::from(tasks)
     }
 }

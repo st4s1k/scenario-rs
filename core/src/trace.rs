@@ -195,43 +195,6 @@ impl Visit for ScenarioEventVisitor {
 mod tests {
     use super::*;
 
-    fn field(name: &str) -> Field {
-        struct TestCallsite();
-        impl tracing::callsite::Callsite for TestCallsite {
-            fn set_interest(&self, _: tracing::subscriber::Interest) {
-                unimplemented!()
-            }
-
-            fn metadata(&self) -> &tracing::Metadata<'_> {
-                &TEST_META
-            }
-        }
-        static TEST_CALLSITE: TestCallsite = TestCallsite();
-        static TEST_META: tracing::Metadata<'static> = tracing::metadata! {
-            name: "field_test",
-            target: module_path!(),
-            level: tracing::metadata::Level::INFO,
-            fields: &[
-                    "event",
-                    "description",
-                    "command",
-                    "index",
-                    "total_steps",
-                    "output",
-                    "error",
-                    "source",
-                    "destination",
-                    "ignored_field",
-                    "current",
-                    "total",
-            ],
-            callsite: &TEST_CALLSITE,
-            kind: tracing::metadata::Kind::SPAN,
-        };
-
-        tracing::field::AsField::as_field(name, &TEST_META).unwrap()
-    }
-
     #[test]
     fn test_visitor_new_creates_empty_visitor() {
         // Given & When
@@ -341,5 +304,43 @@ mod tests {
         assert!(visitor.event_type.is_none());
         assert!(visitor.description.is_none());
         assert!(visitor.index.is_none());
+    }
+
+    // Test helpers
+    fn field(name: &str) -> Field {
+        struct TestCallsite();
+        impl tracing::callsite::Callsite for TestCallsite {
+            fn set_interest(&self, _: tracing::subscriber::Interest) {
+                unimplemented!()
+            }
+
+            fn metadata(&self) -> &tracing::Metadata<'_> {
+                &TEST_META
+            }
+        }
+        static TEST_CALLSITE: TestCallsite = TestCallsite();
+        static TEST_META: tracing::Metadata<'static> = tracing::metadata! {
+            name: "field_test",
+            target: module_path!(),
+            level: tracing::metadata::Level::INFO,
+            fields: &[
+                    "event",
+                    "description",
+                    "command",
+                    "index",
+                    "total_steps",
+                    "output",
+                    "error",
+                    "source",
+                    "destination",
+                    "ignored_field",
+                    "current",
+                    "total",
+            ],
+            callsite: &TEST_CALLSITE,
+            kind: tracing::metadata::Kind::SPAN,
+        };
+
+        tracing::field::AsField::as_field(name, &TEST_META).unwrap()
     }
 }

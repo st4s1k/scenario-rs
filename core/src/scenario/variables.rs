@@ -288,32 +288,6 @@ mod tests {
     };
     use crate::scenario::variables::required::RequiredVariable;
 
-    // Helper functions for test setup
-    fn create_test_required_variables() -> RequiredVariables {
-        let mut required = RequiredVariables::default();
-        required.insert(
-            "username".to_string(),
-            RequiredVariable::default()
-                .with_label("Username".to_string())
-                .with_value("admin".to_string()),
-        );
-        required.insert(
-            "password".to_string(),
-            RequiredVariable::default()
-                .with_label("Password".to_string())
-                .with_value("secret".to_string()),
-        );
-        required
-    }
-
-    fn create_test_defined_variables() -> DefinedVariables {
-        let mut defined_vars = HashMap::new();
-        defined_vars.insert("hostname".to_string(), "example.com".to_string());
-        defined_vars.insert("port".to_string(), "8080".to_string());
-        defined_vars.insert("url".to_string(), "https://{hostname}:{port}".to_string());
-        DefinedVariables::from(defined_vars)
-    }
-
     #[test]
     fn test_variables_default() {
         // Given & When
@@ -555,5 +529,31 @@ mod tests {
         // Then
         assert!(debug_string.contains("debug_key"));
         assert!(debug_string.contains("debug_value"));
+    }
+
+    // Test helpers
+    fn create_test_required_variables() -> RequiredVariables {
+        let mut required = RequiredVariables::default();
+        required.insert(
+            "username".to_string(),
+            RequiredVariable::default()
+                .with_label("Username".to_string())
+                .with_value("admin".to_string()),
+        );
+        required.insert(
+            "password".to_string(),
+            RequiredVariable::default()
+                .with_label("Password".to_string())
+                .with_value("secret".to_string()),
+        );
+        required
+    }
+
+    fn create_test_defined_variables() -> DefinedVariables {
+        let mut defined_vars = HashMap::new();
+        defined_vars.insert("hostname".to_string(), "example.com".to_string());
+        defined_vars.insert("port".to_string(), "8080".to_string());
+        defined_vars.insert("url".to_string(), "https://{hostname}:{port}".to_string());
+        DefinedVariables::from(defined_vars)
     }
 }

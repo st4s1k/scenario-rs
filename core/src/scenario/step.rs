@@ -167,37 +167,6 @@ mod tests {
     };
     use std::collections::HashMap;
 
-    // Helper functions for test setup
-    fn create_test_tasks() -> Tasks {
-        let mut task_map = HashMap::new();
-        task_map.insert("task1".to_string(), create_remote_sudo_task());
-        task_map.insert("task2".to_string(), create_sftp_copy_task());
-        Tasks::from(task_map)
-    }
-
-    fn create_remote_sudo_task() -> Task {
-        let config = TaskConfig {
-            description: "Test task 1".to_string(),
-            error_message: "Task 1 failed".to_string(),
-            task_type: TaskType::RemoteSudo {
-                command: "echo test".to_string(),
-            },
-        };
-        Task::from(&config)
-    }
-
-    fn create_sftp_copy_task() -> Task {
-        let config = TaskConfig {
-            description: "Test task 2".to_string(),
-            error_message: "Task 2 failed".to_string(),
-            task_type: TaskType::SftpCopy {
-                source_path: "/test/source".to_string(),
-                destination_path: "/test/dest".to_string(),
-            },
-        };
-        Task::from(&config)
-    }
-
     #[test]
     fn test_step_try_from_success_no_on_fail() {
         // Given
@@ -263,7 +232,9 @@ mod tests {
         let tasks = create_test_tasks();
         let config = StepConfig {
             task: "task1".to_string(),
-            on_fail: Some(OnFailStepsConfig::from(vec!["non_existent_task".to_string()])),
+            on_fail: Some(OnFailStepsConfig::from(vec![
+                "non_existent_task".to_string()
+            ])),
         };
 
         // When
@@ -307,5 +278,36 @@ mod tests {
         // Then
         assert_eq!(cloned.task().description(), original.task().description());
         assert_eq!(cloned.on_fail_steps().len(), original.on_fail_steps().len());
+    }
+
+    // Test helpers
+    fn create_test_tasks() -> Tasks {
+        let mut task_map = HashMap::new();
+        task_map.insert("task1".to_string(), create_remote_sudo_task());
+        task_map.insert("task2".to_string(), create_sftp_copy_task());
+        Tasks::from(task_map)
+    }
+
+    fn create_remote_sudo_task() -> Task {
+        let config = TaskConfig {
+            description: "Test task 1".to_string(),
+            error_message: "Task 1 failed".to_string(),
+            task_type: TaskType::RemoteSudo {
+                command: "echo test".to_string(),
+            },
+        };
+        Task::from(&config)
+    }
+
+    fn create_sftp_copy_task() -> Task {
+        let config = TaskConfig {
+            description: "Test task 2".to_string(),
+            error_message: "Task 2 failed".to_string(),
+            task_type: TaskType::SftpCopy {
+                source_path: "/test/source".to_string(),
+                destination_path: "/test/dest".to_string(),
+            },
+        };
+        Task::from(&config)
     }
 }

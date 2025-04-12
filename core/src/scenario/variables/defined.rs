@@ -3,12 +3,11 @@
 //! This module provides types and implementations for managing defined variables
 //! that are used within scenarios
 
+use crate::config::variables::defined::DefinedVariablesConfig;
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
 };
-
-use crate::config::variables::defined::DefinedVariablesConfig;
 
 /// A collection of defined variables for a scenario.
 ///

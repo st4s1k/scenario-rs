@@ -126,28 +126,6 @@ impl Task {
 mod tests {
     use super::*;
 
-    // Test helper functions
-    fn create_remote_sudo_config() -> TaskConfig {
-        TaskConfig {
-            description: "Remote sudo task".to_string(),
-            error_message: "Remote command failed".to_string(),
-            task_type: TaskType::RemoteSudo {
-                command: "echo test".to_string(),
-            },
-        }
-    }
-
-    fn create_sftp_copy_config() -> TaskConfig {
-        TaskConfig {
-            description: "SFTP copy task".to_string(),
-            error_message: "File transfer failed".to_string(),
-            task_type: TaskType::SftpCopy {
-                source_path: "/source/path".to_string(),
-                destination_path: "/dest/path".to_string(),
-            },
-        }
-    }
-
     #[test]
     fn test_task_from_remote_sudo_config() {
         // Given
@@ -267,5 +245,27 @@ mod tests {
         // Then
         assert!(debug_str.contains("RemoteSudo"));
         assert!(debug_str.contains("Remote sudo task"));
+    }
+
+    // Test helpers
+    fn create_remote_sudo_config() -> TaskConfig {
+        TaskConfig {
+            description: "Remote sudo task".to_string(),
+            error_message: "Remote command failed".to_string(),
+            task_type: TaskType::RemoteSudo {
+                command: "echo test".to_string(),
+            },
+        }
+    }
+
+    fn create_sftp_copy_config() -> TaskConfig {
+        TaskConfig {
+            description: "SFTP copy task".to_string(),
+            error_message: "File transfer failed".to_string(),
+            task_type: TaskType::SftpCopy {
+                source_path: "/source/path".to_string(),
+                destination_path: "/dest/path".to_string(),
+            },
+        }
     }
 }

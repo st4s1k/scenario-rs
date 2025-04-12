@@ -179,132 +179,6 @@ mod tests {
     };
     use std::{io, panic};
 
-    enum ReadBehavior {
-        Success,
-        ReturnError,
-    }
-
-    enum MetadataBehavior {
-        Success,
-        ReturnError,
-    }
-
-    pub struct TestFile {
-        read_behavior: ReadBehavior,
-        metadata_behavior: MetadataBehavior,
-    }
-
-    pub struct TestFileMetadata {}
-
-    impl TestFileMetadata {
-        pub fn len(&self) -> u64 {
-            0
-        }
-    }
-
-    impl TestFile {
-        pub fn new() -> Self {
-            Self {
-                read_behavior: ReadBehavior::Success,
-                metadata_behavior: MetadataBehavior::Success,
-            }
-        }
-
-        pub fn with_read_error() -> Self {
-            Self {
-                read_behavior: ReadBehavior::ReturnError,
-                metadata_behavior: MetadataBehavior::Success,
-            }
-        }
-
-        pub fn with_metadata_error() -> Self {
-            Self {
-                read_behavior: ReadBehavior::Success,
-                metadata_behavior: MetadataBehavior::ReturnError,
-            }
-        }
-
-        pub fn open(path: &str) -> io::Result<Self> {
-            match path {
-                "cannot-open" => Err(io::Error::new(
-                    io::ErrorKind::NotFound,
-                    "Cannot open source file",
-                )),
-                "read-error" => Ok(Self::with_read_error()),
-                "metadata-error" => Ok(Self::with_metadata_error()),
-                _ => Ok(Self::new()),
-            }
-        }
-
-        pub fn metadata(&self) -> io::Result<TestFileMetadata> {
-            match self.metadata_behavior {
-                MetadataBehavior::Success => Ok(TestFileMetadata {}),
-                MetadataBehavior::ReturnError => {
-                    Err(io::Error::new(io::ErrorKind::Other, "Metadata error"))
-                }
-            }
-        }
-    }
-
-    impl Read for TestFile {
-        fn read(&mut self, _buf: &mut [u8]) -> Result<usize, io::Error> {
-            match self.read_behavior {
-                ReadBehavior::Success => {
-                    thread_local! {
-                        static ALREADY_READ: std::cell::Cell<bool> = std::cell::Cell::new(false);
-                    }
-                    ALREADY_READ.with(|already_read| {
-                        if already_read.get() {
-                            return Ok(0);
-                        }
-                        already_read.set(true);
-                        _buf.fill(0);
-                        Ok(_buf.len())
-                    })
-                }
-                ReadBehavior::ReturnError => {
-                    Err(io::Error::new(io::ErrorKind::Other, "Read error"))
-                }
-            }
-        }
-    }
-
-    struct MockSuccessfulChannel;
-    impl Channel for MockSuccessfulChannel {
-        fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
-            Ok(())
-        }
-        fn read_to_string(&mut self, _output: &mut String) -> Result<usize, ssh2::Error> {
-            Ok(0)
-        }
-        fn exit_status(&self) -> Result<i32, ssh2::Error> {
-            Ok(0)
-        }
-    }
-
-    fn create_successful_test_session() -> Session {
-        struct MockSuccessfulWrite;
-        impl Write for MockSuccessfulWrite {
-            fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {
-                Ok(())
-            }
-        }
-
-        struct MockSuccessfulSftp;
-        impl Sftp for MockSuccessfulSftp {
-            fn create(&self, _path: &std::path::Path) -> Result<Box<dyn Write>, ssh2::Error> {
-                Ok(Box::new(MockSuccessfulWrite))
-            }
-        }
-
-        Session {
-            inner: SessionType::Test {
-                channel: ArcMutex::wrap(MockSuccessfulChannel),
-                sftp: ArcMutex::wrap(MockSuccessfulSftp),
-            },
-        }
-    }
-
     #[test]
     fn test_execute_success() {
         // Given
@@ -538,5 +412,132 @@ mod tests {
             result,
             Err(SftpCopyError::CannotReadSourceFile(_))
         ));
+    }
+
+    // Test helpers
+    enum ReadBehavior {
+        Success,
+        ReturnError,
+    }
+
+    enum MetadataBehavior {
+        Success,
+        ReturnError,
+    }
+
+    pub struct TestFile {
+        read_behavior: ReadBehavior,
+        metadata_behavior: MetadataBehavior,
+    }
+
+    pub struct TestFileMetadata {}
+
+    impl TestFileMetadata {
+        pub fn len(&self) -> u64 {
+            0
+        }
+    }
+
+    impl TestFile {
+        pub fn new() -> Self {
+            Self {
+                read_behavior: ReadBehavior::Success,
+                metadata_behavior: MetadataBehavior::Success,
+            }
+        }
+
+        pub fn with_read_error() -> Self {
+            Self {
+                read_behavior: ReadBehavior::ReturnError,
+                metadata_behavior: MetadataBehavior::Success,
+            }
+        }
+
+        pub fn with_metadata_error() -> Self {
+            Self {
+                read_behavior: ReadBehavior::Success,
+                metadata_behavior: MetadataBehavior::ReturnError,
+            }
+        }
+
+        pub fn open(path: &str) -> io::Result<Self> {
+            match path {
+                "cannot-open" => Err(io::Error::new(
+                    io::ErrorKind::NotFound,
+                    "Cannot open source file",
+                )),
+                "read-error" => Ok(Self::with_read_error()),
+                "metadata-error" => Ok(Self::with_metadata_error()),
+                _ => Ok(Self::new()),
+            }
+        }
+
+        pub fn metadata(&self) -> io::Result<TestFileMetadata> {
+            match self.metadata_behavior {
+                MetadataBehavior::Success => Ok(TestFileMetadata {}),
+                MetadataBehavior::ReturnError => {
+                    Err(io::Error::new(io::ErrorKind::Other, "Metadata error"))
+                }
+            }
+        }
+    }
+
+    impl Read for TestFile {
+        fn read(&mut self, _buf: &mut [u8]) -> Result<usize, io::Error> {
+            match self.read_behavior {
+                ReadBehavior::Success => {
+                    thread_local! {
+                        static ALREADY_READ: std::cell::Cell<bool> = std::cell::Cell::new(false);
+                    }
+                    ALREADY_READ.with(|already_read| {
+                        if already_read.get() {
+                            return Ok(0);
+                        }
+                        already_read.set(true);
+                        _buf.fill(0);
+                        Ok(_buf.len())
+                    })
+                }
+                ReadBehavior::ReturnError => {
+                    Err(io::Error::new(io::ErrorKind::Other, "Read error"))
+                }
+            }
+        }
+    }
+
+    struct MockSuccessfulChannel;
+    impl Channel for MockSuccessfulChannel {
+        fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+            Ok(())
+        }
+        fn read_to_string(&mut self, _output: &mut String) -> Result<usize, ssh2::Error> {
+            Ok(0)
+        }
+        fn exit_status(&self) -> Result<i32, ssh2::Error> {
+            Ok(0)
+        }
+    }
+
+    fn create_successful_test_session() -> Session {
+        struct MockSuccessfulWrite;
+        impl Write for MockSuccessfulWrite {
+            fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {
+                Ok(())
+            }
+        }
+
+        struct MockSuccessfulSftp;
+        impl Sftp for MockSuccessfulSftp {
+            fn create(&self, _path: &std::path::Path) -> Result<Box<dyn Write>, ssh2::Error> {
+                Ok(Box::new(MockSuccessfulWrite))
+            }
+        }
+
+        Session {
+            inner: SessionType::Test {
+                channel: ArcMutex::wrap(MockSuccessfulChannel),
+                sftp: ArcMutex::wrap(MockSuccessfulSftp),
+            },
+        }
     }
 }

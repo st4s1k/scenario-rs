@@ -30,7 +30,7 @@ use crate::{
 ///
 /// // First, set up the available tasks
 /// let mut task_map = HashMap::new();
-/// 
+///
 /// // Create task configs
 /// let install_config = TaskConfig {
 ///     description: "Install application".to_string(),
@@ -131,6 +131,7 @@ impl Execute {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::{
         config::{
             step::StepConfig,
@@ -139,8 +140,6 @@ mod tests {
         },
         scenario::task::Task,
     };
-
-    use super::*;
     use std::collections::HashMap;
 
     #[test]
@@ -265,6 +264,7 @@ mod tests {
         }
     }
 
+    // Test helpers
     fn create_test_tasks() -> Tasks {
         let mut task_map = HashMap::new();
         task_map.insert("task1".to_string(), create_remote_sudo_task());
