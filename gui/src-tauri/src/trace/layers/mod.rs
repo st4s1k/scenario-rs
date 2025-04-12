@@ -1,8 +1,8 @@
-pub use app::AppEventLayer;
+pub use app_layer::AppEventLayer;
 pub use scenario::ScenarioEventLayer;
 use tracing::Event;
 
-mod app;
+mod app_layer;
 mod scenario;
 
 pub trait EventLayer {
