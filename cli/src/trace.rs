@@ -216,6 +216,14 @@ where
                     );
                 }
             }
+            "create_session_started" => {}
+            "created_mock_session" => {}
+            "session_created" => {}
+            "steps_started" => {}
+            "step_completed" => {}
+            "remote_sudo_completed" => {}
+            "steps_completed" => {}
+            "on_fail_step_completed" => {}
             _ => {
                 error!("Unrecognized event type: {}", event_type);
             }

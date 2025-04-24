@@ -4,7 +4,7 @@ use crate::{
 };
 use scenario_rs::trace::ScenarioEventVisitor;
 use std::sync::mpsc::Sender;
-use tracing::Event;
+use tracing::{error, Event};
 
 pub struct ScenarioEventLayer {
     pub sender: Sender<AppEvent>,
@@ -141,6 +141,12 @@ impl EventLayer for ScenarioEventLayer {
                         SCENARIO_PREFIX
                     )));
                 }
+                "on_fail_steps_completed" => {
+                    self.sender.send_event(AppEvent::LogMessage(format!(
+                        "{}[on_fail] Failure recovery steps completed",
+                        SCENARIO_PREFIX
+                    )));
+                }
                 "on_fail_step_started" => {
                     if let (Some(index), Some(total_steps), Some(description)) = (
                         visitor.index,
@@ -154,7 +160,17 @@ impl EventLayer for ScenarioEventLayer {
                         )));
                     }
                 }
-                _ => {}
+                "create_session_started" => {}
+                "created_mock_session" => {}
+                "session_created" => {}
+                "steps_started" => {}
+                "step_completed" => {}
+                "remote_sudo_completed" => {}
+                "steps_completed" => {}
+                "on_fail_step_completed" => {}
+                _ => {
+                    error!("Unrecognized event type: {}", event_type);
+                }
             }
         }
     }

@@ -1,5 +1,8 @@
 use std::fmt;
-use tracing::field::{Field, Visit};
+use tracing::{
+    error,
+    field::{Field, Visit},
+};
 
 /// A visitor struct for tracing events in scenarios.
 ///
@@ -144,7 +147,13 @@ impl Visit for ScenarioEventVisitor {
             "error" => self.error = Some(value.to_string()),
             "source" => self.source = Some(value.to_string()),
             "destination" => self.destination = Some(value.to_string()),
-            _ => {}
+            "message" => {}
+            "host" => {}
+            "username" => {}
+            "password" => {}
+            _ => {
+                error!("Unrecognized field: {}", field.name());
+            }
         }
     }
 
@@ -167,7 +176,13 @@ impl Visit for ScenarioEventVisitor {
             "output" => self.output = Some(value_str),
             "source" => self.source = Some(value_str),
             "destination" => self.destination = Some(value_str),
-            _ => {}
+            "message" => {}
+            "host" => {}
+            "username" => {}
+            "password" => {}
+            _ => {
+                error!("Unrecognized field: {}", field.name());
+            }
         }
     }
 
@@ -186,7 +201,10 @@ impl Visit for ScenarioEventVisitor {
             "total_steps" => self.total_steps = Some(value as usize),
             "current" => self.current = Some(value),
             "total" => self.total = Some(value),
-            _ => {}
+            "port" => {}
+            _ => {
+                error!("Unrecognized field: {}", field.name());
+            }
         }
     }
 }

@@ -3,7 +3,7 @@ use crate::{
     utils::SendEvent,
 };
 use std::sync::mpsc::Sender;
-use tracing::Event;
+use tracing::{error, Event};
 
 /// A tracing layer that processes application events and forwards them as `AppEvent`s.
 ///
@@ -100,7 +100,9 @@ impl EventLayer for AppEventLayer {
                     self.sender.send_event(AppEvent::ClearLog);
                     self.send_event(format!("{}Log cleared!", APP_PREFIX));
                 }
-                _ => {}
+                _ => {
+                    error!("Unrecognized event type: {}", event_type);
+                }
             }
         } else {
             if let Some(message) = &visitor.message {

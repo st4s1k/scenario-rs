@@ -1,5 +1,8 @@
 use std::fmt::Debug;
-use tracing::field::{Field, Visit};
+use tracing::{
+    error,
+    field::{Field, Visit},
+};
 
 /// A visitor struct for tracing application events.
 ///
@@ -82,7 +85,9 @@ impl Visit for AppEventVisitor {
         match field.name() {
             "event" => self.event_type = Some(value.to_string()),
             "message" => self.message = Some(value.to_string()),
-            _ => {}
+            _ => {
+                error!("Unrecognized field: {}", field.name());
+            }
         }
     }
 
