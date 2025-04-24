@@ -8,6 +8,7 @@ import { TitlebarComponent } from "./titlebar/titlebar.component";
 import { ClipboardModule } from 'ngx-clipboard';
 import * as dialog from "@tauri-apps/plugin-dialog"
 import { Subscription } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { SidebarComponent } from './sidebar/sidebar.component';
 
 interface RequiredFieldsForm {
@@ -99,6 +100,7 @@ export class AppComponent implements OnDestroy {
     this.cleanupSubscriptions();
 
     this.formValueChangesSubscription = this.requiredFieldsFormGroup.valueChanges
+      .pipe(debounceTime(300))
       .subscribe((requiredFieldsPartial) => {
         for (const name in requiredFieldsPartial) {
           if (name) {
