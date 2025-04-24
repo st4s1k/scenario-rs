@@ -263,8 +263,13 @@ pub enum VariableType {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{config::variables::required::RequiredVariableConfig, utils::HasText};
+    use crate::{
+        config::variables::required::{
+            RequiredVariableConfig, RequiredVariablesConfig, VariableTypeConfig,
+        },
+        scenario::variables::required::{RequiredVariable, RequiredVariables, VariableType},
+        utils::HasText,
+    };
     use std::collections::HashMap;
 
     #[test]

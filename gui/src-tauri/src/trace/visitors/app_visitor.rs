@@ -106,7 +106,8 @@ impl Visit for AppEventVisitor {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::trace::visitors::AppEventVisitor;
+    use tracing::field::{Field, Visit};
 
     #[test]
     fn test_appvisitor_initialization_with_default() {

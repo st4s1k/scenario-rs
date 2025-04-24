@@ -128,11 +128,14 @@ impl From<&TasksConfig> for Tasks {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::config::{
-        task::{TaskConfig, TaskType},
-        tasks::TasksConfig,
+    use crate::{
+        config::{
+            task::{TaskConfig, TaskType},
+            tasks::TasksConfig,
+        },
+        scenario::tasks::Tasks,
     };
+    use std::collections::HashMap;
 
     #[test]
     fn test_tasks_from_empty_config() {

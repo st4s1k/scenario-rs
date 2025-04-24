@@ -103,7 +103,7 @@ impl Default for TaskType {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::config::task::{TaskConfig, TaskType};
     use toml;
 
     #[test]

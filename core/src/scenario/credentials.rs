@@ -96,7 +96,7 @@ impl Credentials {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::{config::credentials::CredentialsConfig, scenario::credentials::Credentials};
 
     #[test]
     fn test_create_credentials_with_empty_values() {

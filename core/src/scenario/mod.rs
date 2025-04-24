@@ -251,10 +251,12 @@ impl Scenario {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::config::{
-        credentials::CredentialsConfig, execute::ExecuteConfig, scenario::ScenarioConfig,
-        server::ServerConfig, tasks::TasksConfig, variables::VariablesConfig,
+    use crate::{
+        config::{
+            credentials::CredentialsConfig, execute::ExecuteConfig, scenario::ScenarioConfig,
+            server::ServerConfig, tasks::TasksConfig, variables::VariablesConfig,
+        },
+        scenario::Scenario,
     };
     use std::collections::HashMap;
 

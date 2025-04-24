@@ -88,7 +88,8 @@ impl Default for ResolvedVariables {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::scenario::variables::resolved::ResolvedVariables;
+    use std::collections::HashMap;
 
     #[test]
     fn test_resolved_variables_default() {

@@ -163,10 +163,12 @@ impl RemoteSudo {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{
-        scenario::variables::Variables,
-        session::{Channel, SessionType, Sftp},
+        scenario::{
+            remote_sudo::{RemoteSudo, RemoteSudoError},
+            variables::Variables,
+        },
+        session::{Channel, Session, SessionType, Sftp},
         utils::{ArcMutex, Wrap},
     };
     use std::panic;

@@ -16,7 +16,7 @@ pub struct StepConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::config::{on_fail::OnFailStepsConfig, step::StepConfig};
     use toml;
 
     #[test]

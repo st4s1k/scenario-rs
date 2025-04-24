@@ -107,8 +107,11 @@ impl TryFrom<PartialVariablesConfig> for VariablesConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::config::variables::required::{RequiredVariableConfig, VariableTypeConfig};
+    use crate::config::variables::{
+        defined::DefinedVariablesConfig,
+        required::{RequiredVariableConfig, RequiredVariablesConfig, VariableTypeConfig},
+        PartialVariablesConfig, VariablesConfig,
+    };
     use std::collections::HashMap;
     use toml;
 

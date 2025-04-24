@@ -197,7 +197,7 @@ impl<T: IsBlank> HasText for T {
 
 #[cfg(test)]
 mod tests {
-    use super::{ArcMutex, HasPlaceholders, HasText, IsBlank, IsNotEmpty, Wrap};
+    use crate::utils::{ArcMutex, HasPlaceholders, HasText, IsBlank, IsNotEmpty, Wrap};
     use std::{collections::HashMap, thread};
 
     #[test]

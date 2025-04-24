@@ -160,10 +160,13 @@ impl Step {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::config::{
-        on_fail::OnFailStepsConfig,
-        task::{TaskConfig, TaskType},
+    use crate::{
+        config::{
+            on_fail::OnFailStepsConfig,
+            step::StepConfig,
+            task::{TaskConfig, TaskType},
+        },
+        scenario::{errors::StepError, step::Step, task::Task, tasks::Tasks},
     };
     use std::collections::HashMap;
 

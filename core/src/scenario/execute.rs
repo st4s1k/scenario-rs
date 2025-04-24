@@ -131,14 +131,18 @@ impl Execute {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{
         config::{
+            execute::ExecuteConfig,
             step::StepConfig,
             steps::StepsConfig,
             task::{TaskConfig, TaskType},
         },
-        scenario::task::Task,
+        scenario::{
+            execute::{Execute, ExecuteError},
+            task::Task,
+            tasks::Tasks,
+        },
     };
     use std::collections::HashMap;
 

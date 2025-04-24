@@ -13,8 +13,9 @@ pub struct ExecuteConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::config::{on_fail::OnFailStepsConfig, step::StepConfig};
+    use crate::config::{
+        execute::ExecuteConfig, on_fail::OnFailStepsConfig, step::StepConfig, steps::StepsConfig,
+    };
     use toml;
 
     #[test]

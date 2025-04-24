@@ -266,8 +266,18 @@ impl TryFrom<PathBuf> for ScenarioConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::config::{execute::ExecuteConfig, task::TaskType, tasks::TasksConfig};
+    use crate::{
+        config::{
+            credentials::{CredentialsConfig, PartialCredentialsConfig},
+            execute::ExecuteConfig,
+            scenario::{PartialScenarioConfig, ScenarioConfig},
+            server::{PartialServerConfig, ServerConfig},
+            task::TaskType,
+            tasks::TasksConfig,
+            variables::{PartialVariablesConfig, VariablesConfig},
+        },
+        scenario::errors::ScenarioConfigError,
+    };
 
     #[test]
     fn test_partial_scenario_config_default() {

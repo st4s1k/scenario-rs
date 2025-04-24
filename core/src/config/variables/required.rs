@@ -279,7 +279,10 @@ pub enum VariableTypeConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::config::variables::required::{
+        RequiredVariableConfig, RequiredVariablesConfig, VariableTypeConfig,
+    };
+    use std::collections::HashMap;
     use toml;
 
     #[test]

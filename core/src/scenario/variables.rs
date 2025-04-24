@@ -280,13 +280,23 @@ impl Variables {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::config::variables::{
-        defined::DefinedVariablesConfig,
-        required::{RequiredVariableConfig, RequiredVariablesConfig, VariableTypeConfig},
-        VariablesConfig,
+    use crate::{
+        config::variables::{
+            defined::DefinedVariablesConfig,
+            required::{RequiredVariableConfig, RequiredVariablesConfig, VariableTypeConfig},
+            VariablesConfig,
+        },
+        scenario::{
+            errors::PlaceholderResolutionError,
+            variables::{
+                defined::DefinedVariables,
+                required::{RequiredVariable, RequiredVariables},
+                Variables,
+            },
+        },
     };
-    use crate::scenario::variables::required::RequiredVariable;
+    use std::collections::HashMap;
+    use std::ops::Deref;
 
     #[test]
     fn test_variables_default() {

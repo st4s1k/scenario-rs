@@ -733,7 +733,7 @@ impl ScenarioAppState {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::app::{ConfigPathData, RequiredVariableDTO, ScenarioAppStateConfig};
     use std::collections::HashMap;
 
     #[test]

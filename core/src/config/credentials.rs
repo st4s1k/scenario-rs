@@ -116,7 +116,10 @@ impl TryFrom<PartialCredentialsConfig> for CredentialsConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::{
+        config::credentials::{CredentialsConfig, PartialCredentialsConfig},
+        scenario::errors::ScenarioConfigError,
+    };
     use toml;
 
     #[test]

@@ -112,9 +112,12 @@ impl EventLayer for AppEventLayer {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::trace::{
+        layers::{app_layer::AppEventLayer, EventLayer},
+        AppEvent,
+    };
     use std::sync::mpsc;
-    use tracing::{event, subscriber, Level, Subscriber};
+    use tracing::{event, subscriber, Event, Level, Subscriber};
     use tracing_subscriber::{layer::Context, prelude::*, Layer, Registry};
 
     #[test]

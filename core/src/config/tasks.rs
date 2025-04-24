@@ -48,8 +48,11 @@ impl From<HashMap<String, TaskConfig>> for TasksConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::config::task::TaskType;
+    use crate::config::{
+        task::{TaskConfig, TaskType},
+        tasks::TasksConfig,
+    };
+    use std::collections::HashMap;
 
     #[test]
     fn test_tasks_config_default() {

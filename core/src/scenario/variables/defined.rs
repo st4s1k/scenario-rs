@@ -95,7 +95,11 @@ impl Default for DefinedVariables {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::{
+        config::variables::defined::DefinedVariablesConfig,
+        scenario::variables::defined::DefinedVariables,
+    };
+    use std::collections::HashMap;
 
     #[test]
     fn test_defined_variables_from_config() {

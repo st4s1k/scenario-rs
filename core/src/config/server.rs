@@ -123,7 +123,10 @@ impl TryFrom<PartialServerConfig> for ServerConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::{
+        config::server::{PartialServerConfig, ServerConfig},
+        scenario::errors::ScenarioConfigError,
+    };
     use toml;
 
     #[test]

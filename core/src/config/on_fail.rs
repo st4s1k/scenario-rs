@@ -63,7 +63,8 @@ impl From<Vec<String>> for OnFailStepsConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::config::on_fail::OnFailStepsConfig;
+    use serde::Deserialize;
     use toml;
 
     #[test]

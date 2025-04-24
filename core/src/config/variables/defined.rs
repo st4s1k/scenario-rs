@@ -146,7 +146,8 @@ impl DefinedVariablesConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::config::variables::defined::DefinedVariablesConfig;
+    use std::collections::HashMap;
 
     #[test]
     fn test_defined_variables_config_default() {

@@ -87,7 +87,7 @@ impl Server {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::{config::server::ServerConfig, scenario::server::Server};
 
     #[test]
     fn test_server_from_config_with_port() {

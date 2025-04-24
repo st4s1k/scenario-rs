@@ -172,10 +172,14 @@ impl OnFailSteps {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{
-        config::task::{TaskConfig, TaskType},
-        scenario::sftp_copy::SftpCopy,
+        config::{
+            on_fail::OnFailStepsConfig,
+            task::{TaskConfig, TaskType},
+        },
+        scenario::on_fail::{OnFailError, OnFailSteps},
+        scenario::{sftp_copy::SftpCopy, task::Task, tasks::Tasks, variables::Variables},
+        session::Session,
     };
     use std::collections::HashMap;
 

@@ -124,7 +124,10 @@ impl Task {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::{
+        config::task::{TaskConfig, TaskType},
+        scenario::task::Task,
+    };
 
     #[test]
     fn test_task_from_remote_sudo_config() {

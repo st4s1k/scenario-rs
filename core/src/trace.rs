@@ -193,7 +193,8 @@ impl Visit for ScenarioEventVisitor {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::trace::ScenarioEventVisitor;
+    use tracing::field::{Field, Visit};
 
     #[test]
     fn test_visitor_new_creates_empty_visitor() {

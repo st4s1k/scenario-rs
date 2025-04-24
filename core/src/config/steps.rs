@@ -35,7 +35,7 @@ impl From<Vec<StepConfig>> for StepsConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::config::{step::StepConfig, steps::StepsConfig};
 
     #[test]
     fn test_default_creates_empty_vector() {

@@ -447,7 +447,8 @@ impl Write for ssh2::File {
 
 /// Provides mock implementations for SSH components to use in tests and debugging.
 pub mod mock {
-    use super::*;
+    use crate::session::{Channel, Sftp, Write};
+    use std::path::Path;
 
     /// Mock implementation of the `Channel` trait.
     pub struct MockChannel;
@@ -494,9 +495,9 @@ pub mod mock {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{
         scenario::{credentials::Credentials, server::Server},
+        session::{mock, Channel, Session, SessionType, Sftp, Write},
         utils::HasText,
     };
     use std::path::Path;

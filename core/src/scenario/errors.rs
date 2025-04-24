@@ -274,7 +274,10 @@ pub enum PlaceholderResolutionError {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::scenario::errors::{
+        ExecuteError, OnFailError, PlaceholderResolutionError, RemoteSudoError,
+        ScenarioConfigError, ScenarioError, SftpCopyError, StepError, StepsError,
+    };
     use std::io;
 
     // Test helpers

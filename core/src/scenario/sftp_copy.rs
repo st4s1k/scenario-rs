@@ -171,13 +171,15 @@ impl SftpCopy {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{
-        scenario::variables::Variables,
-        session::{Channel, SessionType, Sftp, Write},
+        scenario::{
+            sftp_copy::{SftpCopy, SftpCopyError},
+            variables::Variables,
+        },
+        session::{Channel, Session, SessionType, Sftp, Write},
         utils::{ArcMutex, Wrap},
     };
-    use std::{io, panic};
+    use std::{io::Read, panic};
 
     #[test]
     fn test_execute_success() {
@@ -460,10 +462,10 @@ mod tests {
             }
         }
 
-        pub fn open(path: &str) -> io::Result<Self> {
+        pub fn open(path: &str) -> std::io::Result<Self> {
             match path {
-                "cannot-open" => Err(io::Error::new(
-                    io::ErrorKind::NotFound,
+                "cannot-open" => Err(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
                     "Cannot open source file",
                 )),
                 "read-error" => Ok(Self::with_read_error()),
@@ -472,18 +474,19 @@ mod tests {
             }
         }
 
-        pub fn metadata(&self) -> io::Result<TestFileMetadata> {
+        pub fn metadata(&self) -> std::io::Result<TestFileMetadata> {
             match self.metadata_behavior {
                 MetadataBehavior::Success => Ok(TestFileMetadata {}),
-                MetadataBehavior::ReturnError => {
-                    Err(io::Error::new(io::ErrorKind::Other, "Metadata error"))
-                }
+                MetadataBehavior::ReturnError => Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Metadata error",
+                )),
             }
         }
     }
 
     impl Read for TestFile {
-        fn read(&mut self, _buf: &mut [u8]) -> Result<usize, io::Error> {
+        fn read(&mut self, _buf: &mut [u8]) -> Result<usize, std::io::Error> {
             match self.read_behavior {
                 ReadBehavior::Success => {
                     thread_local! {
@@ -499,7 +502,7 @@ mod tests {
                     })
                 }
                 ReadBehavior::ReturnError => {
-                    Err(io::Error::new(io::ErrorKind::Other, "Read error"))
+                    Err(std::io::Error::new(std::io::ErrorKind::Other, "Read error"))
                 }
             }
         }
