@@ -48,6 +48,10 @@ impl ScenarioEventLayer {
 
         let pb = ProgressBar::new(100);
         pb.set_draw_target(ProgressDrawTarget::stderr());
+
+        #[cfg(test)]
+        pb.set_draw_target(ProgressDrawTarget::hidden());
+
         pb.set_style(
             ProgressStyle::default_bar()
             .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})").unwrap()
@@ -212,7 +216,182 @@ where
                     );
                 }
             }
-            _ => {}
+            _ => {
+                error!("Unrecognized event type: {}", event_type);
+            }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::trace::ScenarioEventLayer;
+    use tracing::{error, info, subscriber};
+    use tracing_subscriber::{layer::SubscriberExt, Registry};
+
+    #[test]
+    fn test_scenarioeventlayer_new() {
+        // Given & When
+        let layer = ScenarioEventLayer::new();
+
+        // Then
+        assert!(layer.progress_bars.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_get_or_create_progress_bar_creates_new() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let id = "test_progress";
+
+        // When
+        let pb = layer.get_or_create_progress_bar(id);
+
+        // Then
+        assert_eq!(pb.length(), Some(100));
+        assert_eq!(layer.progress_bars.lock().unwrap().len(), 1);
+        assert!(layer.progress_bars.lock().unwrap().contains_key(id));
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_get_or_create_progress_bar_returns_existing() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let id = "test_progress";
+        let first_pb = layer.get_or_create_progress_bar(id);
+
+        // When
+        let second_pb = layer.get_or_create_progress_bar(id);
+
+        // Then
+        assert_eq!(layer.progress_bars.lock().unwrap().len(), 1);
+        assert_eq!(first_pb.position(), second_pb.position());
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_finish_progress_bar() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let id = "test_progress";
+        layer.get_or_create_progress_bar(id);
+        assert_eq!(layer.progress_bars.lock().unwrap().len(), 1);
+
+        // When
+        layer.finish_progress_bar(id, "Test complete");
+
+        // Then
+        assert_eq!(layer.progress_bars.lock().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_finish_progress_bar_nonexistent() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+
+        // When
+        layer.finish_progress_bar("nonexistent", "Test complete");
+
+        // Then
+        assert_eq!(layer.progress_bars.lock().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_error_clears_progress_bars() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let progress_bars = layer.progress_bars.clone();
+        let id = "test_progress";
+        layer.get_or_create_progress_bar(id);
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When
+        error!(event = "error", error = "Test error");
+
+        // Then
+        assert_eq!(progress_bars.lock().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_sftp_copy_started() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let progress_bars = layer.progress_bars.clone();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When
+        info!(
+            event = "sftp_copy_started",
+            source = "/local/file.txt",
+            destination = "/remote/file.txt"
+        );
+
+        // Then
+        let id = "sftp_/local/file.txt_/remote/file.txt";
+        assert!(progress_bars.lock().unwrap().contains_key(id));
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_sftp_copy_progress() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let progress_bars = layer.progress_bars.clone();
+        let id = "sftp_/local/file.txt_/remote/file.txt";
+        layer.get_or_create_progress_bar(id);
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When
+        info!(
+            event = "sftp_copy_progress",
+            source = "/local/file.txt",
+            destination = "/remote/file.txt",
+            current = 50u64,
+            total = 200u64
+        );
+
+        // Then
+        let pb = progress_bars.lock().unwrap().get(id).unwrap().clone();
+        assert_eq!(pb.length(), Some(200));
+        assert_eq!(pb.position(), 50);
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_sftp_copy_completed() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let progress_bars = layer.progress_bars.clone();
+        let id = "sftp_/local/file.txt_/remote/file.txt";
+        layer.get_or_create_progress_bar(id);
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When
+        info!(
+            event = "sftp_copy_completed",
+            source = "/local/file.txt",
+            destination = "/remote/file.txt"
+        );
+
+        // Then
+        assert!(!progress_bars.lock().unwrap().contains_key(id));
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_ignores_non_event_messages() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let progress_bars = layer.progress_bars.clone();
+        let progress_bars_before = progress_bars.lock().unwrap().len();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When
+        info!("Regular log message");
+
+        // Then
+        let progress_bars_after = progress_bars.lock().unwrap().len();
+        assert_eq!(progress_bars_before, progress_bars_after);
     }
 }
