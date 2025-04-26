@@ -1,6 +1,7 @@
 {
   "name": "scenario-rs-gui",
   "version": "0.5.3",
+  "license": "MIT OR Apache-2.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",

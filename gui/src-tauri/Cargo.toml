@@ -4,6 +4,8 @@ version = "0.5.3"
 description = "Rust SSH automation tool"
 authors = ["st4s1k"]
 edition = "2021"
+license = "MIT OR Apache-2.0"
+license-file = "../../LICENSE"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

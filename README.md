@@ -1,5 +1,8 @@
 # scenario-rs
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) or [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+
 [![publish](https://github.com/st4s1k/scenario-rs/actions/workflows/scenario-rs.yml/badge.svg)](https://github.com/st4s1k/scenario-rs/actions/workflows/scenario-rs.yml)
 
 A powerful automation tool for executing remote commands and transferring files via SSH. It uses configuration files to define execution scenarios, making system administration and deployment tasks repeatable and reliable.
