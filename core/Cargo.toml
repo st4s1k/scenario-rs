@@ -3,7 +3,6 @@ name = "scenario-rs-core"
 version = "0.5.3"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-license-file = "../LICENSE"
 
 [dependencies]
 thiserror = "2.0.12"
