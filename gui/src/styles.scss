@@ -96,12 +96,6 @@ html {
     border: 1px solid $primary-color;
 }
 
-@mixin centered-grid {
-    display: grid;
-    align-items: center;
-    justify-items: center;
-}
-
 @mixin expandable-transition {
     .expandable-title:has(input[type="checkbox"]:checked)+.expandable {
         max-height: 0;
@@ -114,8 +108,7 @@ html {
     }
 
     .expandable-title:has(:not(input[type="checkbox"]:checked))+.expandable {
-        max-height: 2000px;
-        /* Large enough to fit content */
+        max-height: 1000px;
         opacity: 1;
         margin-top: 5px;
         margin-bottom: 5px;
@@ -210,23 +203,6 @@ button {
     }
 }
 
-// Spacing utilities (keeping minimal utilities)
-.gap-5 {
-    gap: $gap-5;
-}
-
-.gap-10 {
-    gap: $gap-10;
-}
-
-.gap-15 {
-    gap: $gap-15;
-}
-
-.gap-20 {
-    gap: $gap-20;
-}
-
 // Tooltip styles
 .tooltip {
     opacity: 0;
@@ -253,26 +229,6 @@ button {
     }
 }
 
-.tooltip-arrow-bottom {
-    @extend .tooltip;
-
-    &::after {
-        top: 100%;
-        left: 50%;
-        border-color: $primary-color-lighter-40 transparent transparent transparent;
-    }
-}
-
-.tooltip-arrow-left {
-    @extend .tooltip;
-
-    &::after {
-        right: 100%;
-        top: 50%;
-        border-color: transparent $primary-color-lighter-40 transparent transparent;
-    }
-}
-
 .tooltip-arrow-top {
     @extend .tooltip;
 
@@ -283,13 +239,13 @@ button {
     }
 }
 
-.tooltip-arrow-right {
+.tooltip-arrow-left {
     @extend .tooltip;
 
     &::after {
-        left: 100%;
+        right: 100%;
         top: 50%;
-        border-color: transparent transparent transparent $primary-color-lighter-40;
+        border-color: transparent $primary-color-lighter-40 transparent transparent;
     }
 }
 
@@ -322,6 +278,7 @@ button {
         display: grid;
         grid-template-columns: auto 1fr;
         align-items: center;
+        gap: 8px;
 
         input[type="checkbox"] {
             display: none;
@@ -335,13 +292,13 @@ button {
             }
 
             &:before {
-                content: '[-]\00a0';
+                content: '[-]';
             }
         }
 
         &:has(input[type="checkbox"]:checked) {
             &:before {
-                content: '[+]\00a0';
+                content: '[+]';
             }
         }
     }

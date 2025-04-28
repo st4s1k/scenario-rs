@@ -62,70 +62,70 @@
         display: grid;
         padding: styles.$gap-10;
         overflow: auto;
+      }
+    }
 
-        .variables {
-          display: grid;
-          grid-auto-flow: row;
-          grid-auto-rows: min-content;
-          gap: styles.$gap-10;
+    .variables {
+      display: grid;
+      grid-auto-flow: row;
+      grid-auto-rows: min-content;
+      gap: styles.$gap-10;
 
-          .variable {
-            display: grid;
-            grid-auto-flow: row;
-            gap: styles.$gap-5;
-          }
-        }
+      .variable {
+        display: grid;
+        grid-auto-flow: row;
+        gap: styles.$gap-5;
+      }
+    }
 
-        .tasks {
-          display: grid;
-          grid-auto-rows: min-content;
-          min-width: max-content;
+    .tasks {
+      display: grid;
+      grid-auto-rows: min-content;
+      min-width: max-content;
 
-          .task {
-            display: grid;
-            border-bottom: 1px solid styles.$secondary-color-lighter-10;
-            padding-bottom: styles.$gap-5;
+      .task {
+        display: grid;
+        border-bottom: 1px solid styles.$secondary-color-lighter-10;
+        padding-bottom: styles.$gap-5;
 
-            .expandable-title:hover+.expandable>.expandable-content {
-              border-left: 1px solid styles.$primary-color-lighter-40;
-            }
-
-            .expandable-content {
-              display: grid;
-              border: none;
-              border-left: 1px solid styles.$primary-color;
-              background-color: transparent;
-              padding-left: 10px;
-              gap: styles.$gap-10;
-
-              .task-item {
-                display: grid;
-                gap: styles.$gap-5;
-              }
-            }
-
-            &:last-child {
-              border-bottom: none;
-              padding-bottom: 0;
-            }
-          }
+        &:last-child {
+          border-bottom: none;
+          padding-bottom: 0;
         }
       }
+    }
+
+    .expandable-content {
+      display: grid;
+      border: none;
+      border-left: 1px solid styles.$primary-color;
+      background-color: transparent;
+      padding-left: 10px;
+      gap: styles.$gap-10;
+
+      .task-item {
+        display: grid;
+        gap: styles.$gap-5;
+      }
+    }
+
+    .expandable-title:hover + .expandable > .expandable-content {
+      border-left: 1px solid styles.$primary-color-lighter-40;
     }
 
     .tabs {
       display: grid;
       grid-auto-rows: min-content;
-      width: styles.$title-size - 1px;
-      min-width: styles.$title-size - 1px;
+      width: calc(#{styles.$title-size} - 1px);
+      min-width: calc(#{styles.$title-size} - 1px);
       background-color: styles.$secondary-color-lighter-5;
       border-left: 1px solid styles.$secondary-color-lighter-20;
 
       .tab {
         display: grid;
         writing-mode: vertical-lr;
-        align-items: center; // Center the text vertically
-        justify-items: center; // Center the text horizontally
+        align-items: center;
+        justify-items: center;
         width: styles.$title-size;
         padding: styles.$gap-10 0;
         cursor: pointer;
