@@ -11,6 +11,7 @@ import { Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { AutoScrollDirective } from './auto-scroll.directive';
+import { ExecutionProgressComponent } from './execution-progress/execution-progress.component';
 
 interface RequiredFieldsForm {
   [key: string]: FormControl<string | null>;
@@ -52,7 +53,8 @@ export interface Step {
     TitlebarComponent,
     NoRightClickDirective,
     SidebarComponent,
-    AutoScrollDirective
+    AutoScrollDirective,
+    ExecutionProgressComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'

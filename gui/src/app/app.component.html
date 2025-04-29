@@ -46,6 +46,16 @@
         }
       </div>
 
+      <div class="execution-progress-section expandable-container">
+        <label class="expandable-title">Execution progress:
+          <input type="checkbox" />
+        </label>
+        <div class="expandable">
+          <app-execution-progress class="expandable-content" [steps]="steps">
+          </app-execution-progress>
+        </div>
+      </div>
+
       <div class="log-section expandable-container">
         <label class="expandable-title">Execution log:
           <input type="checkbox" />

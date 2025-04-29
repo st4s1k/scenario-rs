@@ -1,0 +1,173 @@
+import { CommonModule } from '@angular/common';
+import { AfterViewInit, Component, ElementRef, Input, OnChanges, OnDestroy, signal, SimpleChanges, ViewChild, WritableSignal } from '@angular/core';
+import { StepEvent } from '../models/step-state.model';
+import { Step } from '../app.component';
+import { listen, UnlistenFn } from '@tauri-apps/api/event';
+import { startWith } from 'rxjs';
+import { AutoScrollDirective } from '../auto-scroll.directive';
+
+type StepStatus = 'executing' | 'completed' | 'failed' | 'pending';
+
+type StepStateType = 'SftpCopyState' | 'RemoteSudoState';
+
+interface BaseStepState {
+  type: StepStateType;
+}
+
+interface SftpCopyState extends BaseStepState {
+  type: 'SftpCopyState';
+  current: number;
+  total: number;
+  source: string;
+  destination: string;
+}
+
+interface RemoteSudoState extends BaseStepState {
+  type: 'RemoteSudoState';
+  command: string;
+  output: string;
+}
+
+interface DisplayStep {
+  index: number;
+  step: Step;
+  state: WritableSignal<StepState | undefined>;
+  status: StepStatus;
+  errorMessage?: string;
+}
+
+type StepState = SftpCopyState | RemoteSudoState;
+
+@Component({
+  selector: 'app-execution-progress',
+  standalone: true,
+  imports: [CommonModule, AutoScrollDirective],
+  templateUrl: './execution-progress.component.html',
+  styleUrl: './execution-progress.component.scss'
+})
+export class ExecutionProgressComponent implements OnChanges, OnDestroy, AfterViewInit {
+
+  Object = Object;
+  Math = Math;
+
+  @Input() steps: Step[] = [];
+
+  currentStepIndex = signal(-1);
+  displaySteps: DisplayStep[] = [];
+
+  unlistenStepState?: UnlistenFn;
+  unlistenCurrentStepIndex?: UnlistenFn;
+
+  ngOnInit(): void {
+    this.setupStepStateListener();
+    this.setupCurrentStepIndexListener();
+  }
+
+  ngAfterViewInit(): void {
+  }
+
+  ngOnDestroy(): void {
+    if (this.unlistenStepState) {
+      this.unlistenStepState();
+    }
+    if (this.unlistenCurrentStepIndex) {
+      this.unlistenCurrentStepIndex();
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes["steps"]) {
+      this.initializeDisplaySteps();
+    }
+  }
+
+  formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const sizeFactor = 1024;
+    const decimals = 2;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const exponent = Math.floor(Math.log(bytes) / Math.log(sizeFactor));
+    const baseSize = Math.pow(sizeFactor, exponent);
+    const convertedSize = bytes / baseSize;
+    return convertedSize.toFixed(decimals) + ' ' + sizes[exponent];
+  }
+
+  private initializeDisplaySteps() {
+    if (this.steps.length === 0) {
+      this.displaySteps = [];
+    } else {
+      this.displaySteps = this.steps.map((step, index) => ({
+        index,
+        step,
+        state: signal(undefined),
+        status: 'pending',
+        errorMessage: undefined
+      } as DisplayStep));
+    }
+  }
+
+  private async setupStepStateListener(): Promise<void> {
+    this.unlistenStepState = await listen<StepEvent>('step-state', (event) => {
+      this.updateDisplayStep(event.payload);
+    });
+  }
+
+  private async setupCurrentStepIndexListener(): Promise<void> {
+    this.unlistenCurrentStepIndex = await listen<number>('step-index', (event) => {
+      this.currentStepIndex.set(event.payload);
+    });
+  }
+
+  private updateDisplayStep(
+    stepEvent: StepEvent
+  ): void {
+    const index = this.currentStepIndex();
+    this.displaySteps[index] = {
+      ...this.displaySteps[index],
+      status: this.getDisplayStatus(stepEvent),
+      errorMessage: stepEvent.type === 'StepFailed' ? stepEvent.message : undefined
+    };
+    const oldDisplayState = this.displaySteps[index].state();
+    const newDisplayState = this.updateDisplayState(oldDisplayState, stepEvent);
+    this.displaySteps[index].state.set(newDisplayState);
+  }
+
+  private updateDisplayState(
+    oldDisplayState: StepState | undefined,
+    stepEvent: StepEvent
+  ): StepState | undefined {
+    if (stepEvent) {
+      switch (stepEvent.type) {
+        case 'SftpCopyProgress':
+          return {
+            type: 'SftpCopyState',
+            current: stepEvent.current,
+            total: stepEvent.total,
+            source: stepEvent.source,
+            destination: stepEvent.destination
+          } as SftpCopyState;
+        case 'RemoteSudoOutput':
+          return {
+            type: 'RemoteSudoState',
+            command: stepEvent.command,
+            output: stepEvent.output
+          } as RemoteSudoState;
+      }
+    }
+    return oldDisplayState;
+  }
+
+  private getDisplayStatus(stepEvent: StepEvent): StepStatus {
+    if (stepEvent) {
+      switch (stepEvent.type) {
+        case 'StepCompleted':
+          return 'completed';
+        case 'StepFailed':
+          return 'failed';
+      }
+      return 'executing';
+    } else {
+      return 'pending';
+    }
+  }
+}

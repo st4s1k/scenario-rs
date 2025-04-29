@@ -22,7 +22,7 @@
     .main-content {
         padding: styles.$gap-20;
         display: grid;
-        grid-template-rows: auto auto auto auto 1fr;
+        grid-template-rows: auto auto auto auto auto 1fr;
         gap: styles.$gap-15;
 
         .config-section {
@@ -118,6 +118,12 @@
                     }
                 }
             }
+        }
+
+        .execution-progress-section {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            overflow: none;
         }
 
         .log-section {

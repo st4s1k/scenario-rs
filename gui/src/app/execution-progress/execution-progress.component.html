@@ -1,0 +1,83 @@
+<div class="execution-progress">
+    @if (currentStepIndex() == -1 || displaySteps.length === 0) {
+    <div class="empty-state">No steps to display</div>
+    } @else {
+    @for (item of displaySteps.slice(0, currentStepIndex() + 1); track item.index) {
+    <div class="task expandable-container">
+        <label class="expandable-title" [ngClass]="item.status">
+            <div>[{{ item.index + 1 }}]</div>
+            <div class="status-indicator" [ngClass]="item.status"></div>
+            <div>{{ item.step.task.description }}</div>
+            <input type="checkbox" />
+        </label>
+
+        <div class="expandable">
+            <div class="expandable-content">
+                @let state = item.state();
+
+                @switch (item.step.task.task_type) {
+                @case ('RemoteSudo') {
+                <div class="task-item">
+                    <label>Command</label>
+                    @let command = state && state.type === 'RemoteSudoState' && state.command
+                    ? state.command
+                    : item.step.task.command;
+                    <input class="text-field" type="text" [value]="command" readonly />
+                </div>
+
+                <div class="task-item">
+                    <div>
+                        <label>Output</label>
+                    </div>
+                    @let output = state && state.type === 'RemoteSudoState' && state.output
+                    ? state.output
+                    : '';
+                    <textarea class="output-text" wrap="off" [autoScroll]="item.state" readonly>{{ output }}</textarea>
+                </div>
+
+                @if (item.status === 'executing') {
+                <div class="executing-indicator">
+                    <div class="dot-pulse"></div>
+                </div>
+                }
+                }
+                @case ('SftpCopy') {
+                <div class="task-item">
+                    <label>Source</label>
+                    @let source = state && state.type === 'SftpCopyState'
+                    ? state.source
+                    : item.step.task.source_path;
+                    <input class="text-field" type="text" [value]="source" readonly />
+
+                    <label>Destination</label>
+                    @let destination = state && state.type === 'SftpCopyState'
+                    ? state.destination
+                    : item.step.task.destination_path;
+                    <input class="text-field" type="text" [value]="destination" readonly />
+
+                    @let total = state && state.type === 'SftpCopyState' ? state.total : 0;
+                    @let current = state && state.type === 'SftpCopyState' ? state.current : 0;
+                    @let progress = total == 0 ? 0 : Math.round((current / total) * 100);
+                    <div class="progress-bar" role="progressbar" aria-label="File transfer progress"
+                        [attr.aria-valuemin]="0" [attr.aria-valuemax]="total" [attr.aria-valuenow]="current">
+                        <div class="fill" [style.width.%]="progress"></div>
+                        <span class="label">
+                            {{ progress }}% ({{ formatBytes(current) }} / {{ formatBytes(total) }})
+                        </span>
+                    </div>
+                </div>
+                }
+                }
+
+                @if (item.status === 'failed') {
+                <div class="task-item error-message">
+                    <label>Error</label>
+                    <textarea readonly>{{ item.errorMessage }}</textarea>
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+    }
+    }
+</div>
