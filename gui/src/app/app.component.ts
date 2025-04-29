@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal, OnDestroy, HostListener } from '@angular/core';
+import { Component, signal, OnDestroy } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from "@angular/forms";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
@@ -10,6 +10,7 @@ import * as dialog from "@tauri-apps/plugin-dialog"
 import { Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { SidebarComponent } from './sidebar/sidebar.component';
+import { AutoScrollDirective } from './auto-scroll.directive';
 
 interface RequiredFieldsForm {
   [key: string]: FormControl<string | null>;
@@ -26,16 +27,18 @@ interface ResolvedVariables {
   [key: string]: string;
 }
 
-interface Task {
+export type TaskType = 'SftpCopy' | 'RemoteSudo';
+
+export interface Task {
   description: string;
   error_message: string;
-  task_type: string;
+  task_type: TaskType;
   command?: string;
   source_path?: string;
   destination_path?: string;
 }
 
-interface Step {
+export interface Step {
   task: Task;
   on_fail_steps: Task[];
 }
@@ -48,7 +51,8 @@ interface Step {
     ClipboardModule,
     TitlebarComponent,
     NoRightClickDirective,
-    SidebarComponent
+    SidebarComponent,
+    AutoScrollDirective
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -159,6 +163,8 @@ export class AppComponent implements OnDestroy {
     if (configPath && typeof configPath === 'string') {
       this.scenarioConfigPath.setValue(configPath);
       await this.loadConfigFile();
+      await this.getTasks();
+      await this.getSteps();
       await this.getRequiredVariables();
       await this.getResolvedVariables();
     }
@@ -170,8 +176,6 @@ export class AppComponent implements OnDestroy {
       return;
     }
     await invoke('load_config', { configPath });
-    await this.getTasks();
-    await this.getSteps();
   }
 
   private async getRequiredVariables(): Promise<void> {

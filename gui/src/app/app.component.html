@@ -15,9 +15,10 @@
         <button (click)="selectConfigFile()">Select</button>
       </div>
 
-      @if ((requiredFields | keyvalue).length > 0) {
       <div class="expandable-container">
-        <label class="expandable-title">Required fields:
+        @if ((requiredFields | keyvalue).length > 0) {
+        <label class="expandable-title">
+          Required fields:
           <input type="checkbox" />
         </label>
         <div class="expandable">
@@ -35,8 +36,8 @@
             }
           </form>
         </div>
+        }
       </div>
-      }
 
       <div class="execute-section">
         <button (click)="executeScenario()">Execute Scenario</button>
@@ -62,7 +63,7 @@
                 </svg>
                 <span class="tooltip-arrow-left">Copy log</span>
               </button>
-              <div></div> <!-- Empty div for spacing: auto 1fr auto -->
+              <div><!-- Empty div for spacing: auto 1fr auto --></div>
               <button class="log-button" (click)="clearLog()">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="20 15 40 52">
                   <path fill="currentColor" d="M52 33v29H28V33H52 M57 28H23v39h34V28L57 28z" />
@@ -72,7 +73,7 @@
               </button>
             </div>
             <div class="log-content">
-              <textarea wrap="off" readonly [formControl]="executionLog"></textarea>
+              <textarea wrap="off" [formControl]="executionLog" [autoScroll]="executionLog.valueChanges" readonly></textarea>
             </div>
           </div>
         </div>
