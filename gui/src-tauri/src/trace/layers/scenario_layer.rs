@@ -1,5 +1,5 @@
 use crate::{
-    trace::{layers::EventLayer, AppEvent},
+    trace::{frontend_event_handler::StepState, layers::EventLayer, AppEvent},
     utils::SendEvent,
 };
 use scenario_rs::trace::ScenarioEventVisitor;
@@ -44,11 +44,23 @@ impl EventLayer for ScenarioEventLayer {
                             "{}{error}",
                             SCENARIO_PREFIX
                         )));
+
+                        self.sender.send_event(AppEvent::StepState {
+                            state: StepState::StepFailed {
+                                message: error.to_string(),
+                            },
+                        });
                     } else {
                         self.sender.send_event(AppEvent::LogMessage(format!(
                             "{}Scenario execution failed",
                             SCENARIO_PREFIX
                         )));
+
+                        self.sender.send_event(AppEvent::StepState {
+                            state: StepState::StepFailed {
+                                message: "Scenario execution failed".to_string(),
+                            },
+                        });
                     }
                     self.sender.send_event(AppEvent::Execution(false));
                 }
@@ -77,6 +89,14 @@ impl EventLayer for ScenarioEventLayer {
                             "{}[{task_number}/{total_steps}] {description}",
                             SCENARIO_PREFIX
                         )));
+                        self.sender.send_event(AppEvent::StepIndex { index });
+                    }
+                }
+                "step_completed" => {
+                    if let Some(index) = visitor.index {
+                        self.sender.send_event(AppEvent::StepState {
+                            state: StepState::StepCompleted { index },
+                        });
                     }
                 }
                 "remote_sudo_started" => {
@@ -87,8 +107,8 @@ impl EventLayer for ScenarioEventLayer {
                         )));
                     }
                 }
-                "remote_sudo_channel_output" => {
-                    if let Some(output) = &visitor.output {
+                "remote_sudo_output" => {
+                    if let (Some(command), Some(output)) = (&visitor.command, &visitor.output) {
                         let output = output.trim();
                         let truncated_output = output
                             .chars()
@@ -104,6 +124,13 @@ impl EventLayer for ScenarioEventLayer {
                                 SCENARIO_PREFIX
                             )));
                         }
+
+                        self.sender.send_event(AppEvent::StepState {
+                            state: StepState::RemoteSudoOutput {
+                                command: command.to_owned(),
+                                output: output.to_owned(),
+                            },
+                        });
                     }
                 }
                 "sftp_copy_started" => {
@@ -127,12 +154,26 @@ impl EventLayer for ScenarioEventLayer {
                     )));
                 }
                 "sftp_copy_progress" => {
-                    if let (Some(current), Some(total)) = (visitor.current, visitor.total) {
+                    if let (Some(current), Some(total), Some(source), Some(destination)) = (
+                        visitor.current,
+                        visitor.total,
+                        visitor.source.as_ref(),
+                        visitor.destination.as_ref(),
+                    ) {
                         let percentage = (current as f64 / total as f64) * 100.0;
                         self.sender.send_event(AppEvent::LogMessage(format!(
                             "{}Progress: {:.1}%",
                             SCENARIO_PREFIX, percentage
                         )));
+
+                        self.sender.send_event(AppEvent::StepState {
+                            state: StepState::SftpCopyProgress {
+                                source: source.to_owned(),
+                                destination: destination.to_owned(),
+                                current,
+                                total,
+                            },
+                        });
                     }
                 }
                 "on_fail_steps_started" => {
@@ -164,7 +205,6 @@ impl EventLayer for ScenarioEventLayer {
                 "created_mock_session" => {}
                 "session_created" => {}
                 "steps_started" => {}
-                "step_completed" => {}
                 "remote_sudo_completed" => {}
                 "steps_completed" => {}
                 "on_fail_step_completed" => {}

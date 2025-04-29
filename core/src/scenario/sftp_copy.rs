@@ -3,7 +3,7 @@ use crate::{
     session::Session,
 };
 use std::{io::Read, path::Path};
-use tracing::{debug, instrument};
+use tracing::{debug, instrument, trace};
 
 #[cfg(not(test))]
 use std::fs::File;
@@ -156,10 +156,12 @@ impl SftpCopy {
 
             current_bytes += bytes_read as u64;
 
-            debug!(
+            trace!(
                 event = "sftp_copy_progress",
                 current = current_bytes,
-                total = total_bytes
+                total = total_bytes,
+                source = %resolved_source,
+                destination = %resolved_destination
             );
         }
 

@@ -123,12 +123,7 @@ impl RemoteSudo {
                 error
             })?;
 
-        let truncated_output: String = output.chars().take(1000).collect();
-
-        debug!(
-            event = "remote_sudo_channel_output",
-            output = truncated_output
-        );
+        debug!(event = "remote_sudo_output", command, output);
 
         let exit_status = channel
             .lock()

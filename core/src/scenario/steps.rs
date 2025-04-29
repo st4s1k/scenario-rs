@@ -209,7 +209,7 @@ impl Steps {
                 return Err(error);
             }
 
-            debug!(event = "step_completed");
+            debug!(event = "step_completed", index);
         }
 
         debug!(event = "steps_completed");

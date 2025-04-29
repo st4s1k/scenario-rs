@@ -155,7 +155,7 @@ where
                     info!("{}=[{}]", "CMD".yellow(), cmd.bright_cyan());
                 }
             }
-            "remote_sudo_channel_output" => {
+            "remote_sudo_output" => {
                 if let Some(output) = visitor.output {
                     let trimmed = output.trim();
 

@@ -1,13 +1,39 @@
 use crate::{app::ScenarioAppState, trace::event_handler::EventHandler, utils::SafeLock};
 use chrono::Local;
+use serde::Serialize;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager};
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "type")]
+pub enum StepState {
+    SftpCopyProgress {
+        source: String,
+        destination: String,
+        current: u64,
+        total: u64,
+    },
+    RemoteSudoOutput {
+        command: String,
+        output: String,
+    },
+    StepCompleted {
+        index: usize,
+    },
+    StepFailed {
+        message: String,
+    },
+}
 
 #[derive(Debug, Clone)]
 pub enum AppEvent {
     Execution(bool),
     ClearLog,
     LogMessage(String),
+    StepState { state: StepState },
+    StepIndex {
+        index: usize
+    },
 }
 
 pub struct FrontendEventHandler;
@@ -36,6 +62,12 @@ impl EventHandler<AppEvent> for FrontendEventHandler {
                     .output_log
                     .push_str(&format!("[{timestamp}] {message}\n"));
                 let _ = app_handle.emit("log-update", ());
+            }
+            AppEvent::StepState { state } => {
+                let _ = app_handle.emit("step-state", state);
+            }
+            AppEvent::StepIndex { index} => {
+                let _ = app_handle.emit("step-index", index);
             }
         }
     }
