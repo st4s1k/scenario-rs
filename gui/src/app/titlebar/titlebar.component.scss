@@ -2,21 +2,23 @@
 
 :host {
     display: block;
-    height: styles.$titlebar-height;
+    height: styles.$titlebar-height - 0.5px;
     width: 100%;
 }
 
 .titlebar {
     display: flex;
     justify-content: flex-end;
-    height: styles.$titlebar-height;
+    height: styles.$titlebar-height - 0.5px;
     background: styles.$secondary-color-lighter-5;
+    border-bottom: 0.5px solid styles.$secondary-color-lighter-20;
 
     #spacer {
         flex: 1;
     }
 
     .button {
+        position: relative;
         display: inline-flex;
         justify-content: center;
         align-items: center;

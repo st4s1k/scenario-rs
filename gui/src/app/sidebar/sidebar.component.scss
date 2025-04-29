@@ -12,7 +12,7 @@
   min-width: styles.$title-size;
   display: grid;
   grid-template-rows: 1fr;
-  transition: width 0.3s ease;
+  transition: width 0.2s ease;
   background-color: styles.$secondary-color-lighter-2;
 
   &.resizing {
@@ -107,10 +107,6 @@
         display: grid;
         gap: styles.$gap-5;
       }
-    }
-
-    .expandable-title:hover + .expandable > .expandable-content {
-      border-left: 1px solid styles.$primary-color-lighter-40;
     }
 
     .tabs {
