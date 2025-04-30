@@ -8,8 +8,7 @@
 
 .sidebar {
   position: relative;
-  height: calc(100vh - #{styles.$titlebar-height});
-  min-width: styles.$title-size;
+  height: 100%;
   display: grid;
   grid-template-rows: 1fr;
   transition: width 0.2s ease;
@@ -112,8 +111,7 @@
     .tabs {
       display: grid;
       grid-auto-rows: min-content;
-      width: calc(#{styles.$title-size} - 1px);
-      min-width: calc(#{styles.$title-size} - 1px);
+      width: styles.$title-size - 1px;
       background-color: styles.$secondary-color-lighter-5;
       border-left: 1px solid styles.$secondary-color-lighter-20;
 
@@ -122,10 +120,22 @@
         writing-mode: vertical-lr;
         align-items: center;
         justify-items: center;
-        width: styles.$title-size;
+        width: 100%;
         padding: styles.$gap-10 0;
         cursor: pointer;
         border-bottom: 1px solid styles.$secondary-color-lighter-20;
+
+        &:focus,
+        &:hover {
+          label {
+            color: styles.$primary-color-lighter-40;
+          }
+        }
+
+
+        label {
+          cursor: pointer;
+        }
 
         &.active {
           background-color: styles.$secondary-color-lighter-10;

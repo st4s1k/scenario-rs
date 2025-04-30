@@ -1,29 +1,29 @@
 @use '../../styles.scss';
 
 :host {
-    display: block;
-    height: styles.$titlebar-height - 0.5px;
-    width: 100%;
+    display: fixed;
+    width: 100vw;
 }
 
+$size: styles.$titlebar-height;
+
 .titlebar {
-    display: flex;
-    justify-content: flex-end;
-    height: styles.$titlebar-height - 0.5px;
+    display: grid;
+    grid-template-columns: auto 1fr auto auto auto auto;
+    height: $size;
     background: styles.$secondary-color-lighter-5;
-    border-bottom: 0.5px solid styles.$secondary-color-lighter-20;
+    border-bottom: 1px solid styles.$secondary-color-lighter-20;
 
     #spacer {
         flex: 1;
     }
 
     .button {
+        display: grid;
         position: relative;
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        width: styles.$titlebar-height;
-        height: styles.$titlebar-height;
+        place-content: center;
+        width: $size;
+        height: $size;
         background-repeat: no-repeat;
         background-position: center;
         transition: background-color 0.2s;
@@ -58,11 +58,11 @@
         }
 
         .tooltip-arrow-top {
-            transform: translate(-5px, styles.$titlebar-height + 5px);
+            transform: translateX(-50%) translateX(($size / 2) - 5px) translateY($size + 5px);
         }
 
         .tooltip-arrow-left {
-            transform: translate(105px, 5px);
+            transform: translateX($size + 5px) translateY(5px);
         }
     }
 }
