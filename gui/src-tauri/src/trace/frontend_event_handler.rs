@@ -1,8 +1,7 @@
-use crate::{app::ScenarioAppState, trace::event_handler::EventHandler, utils::SafeLock};
+use crate::trace::event_handler::EventHandler;
 use chrono::Local;
 use serde::Serialize;
-use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type")]
@@ -28,12 +27,9 @@ pub enum StepState {
 #[derive(Debug, Clone)]
 pub enum AppEvent {
     Execution(bool),
-    ClearLog,
     LogMessage(String),
     StepState { state: StepState },
-    StepIndex {
-        index: usize
-    },
+    StepIndex { index: usize },
 }
 
 pub struct FrontendEventHandler;
@@ -48,25 +44,15 @@ impl EventHandler<AppEvent> for FrontendEventHandler {
             AppEvent::Execution(is_starting) => {
                 let _ = app_handle.emit("execution-status", *is_starting);
             }
-            AppEvent::ClearLog => {
-                let state = app_handle.state::<Mutex<ScenarioAppState>>();
-                let mut state = state.safe_lock();
-                state.output_log.clear();
-                let _ = app_handle.emit("log-update", ());
-            }
             AppEvent::LogMessage(message) => {
-                let state = app_handle.state::<Mutex<ScenarioAppState>>();
-                let mut state = state.safe_lock();
                 let timestamp = Local::now().format("%H:%M:%S.%3f").to_string();
-                state
-                    .output_log
-                    .push_str(&format!("[{timestamp}] {message}\n"));
-                let _ = app_handle.emit("log-update", ());
+                let message = format!("[{timestamp}] {message}");
+                let _ = app_handle.emit("log-message", message);
             }
             AppEvent::StepState { state } => {
                 let _ = app_handle.emit("step-state", state);
             }
-            AppEvent::StepIndex { index} => {
+            AppEvent::StepIndex { index } => {
                 let _ = app_handle.emit("step-index", index);
             }
         }

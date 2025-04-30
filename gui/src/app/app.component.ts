@@ -63,12 +63,18 @@ export class AppComponent implements OnDestroy {
 
   Object = Object;
 
-  executionLog = new FormControl<string>('');
   scenarioConfigPath = new FormControl<string>('');
+
   requiredFields: { [key: string]: RequiredField } = {};
   requiredFieldsFormGroup = new FormGroup<RequiredFieldsForm>({});
+  private requiredFieldsChangesSubscription?: Subscription;
+
   isExecuting = signal(false);
-  private formValueChangesSubscription?: Subscription;
+
+  executionLog = signal('');
+  private pendingLogBuffer: string[] = [];
+  private flushTimeout: ReturnType<typeof setTimeout> | undefined;
+
   resolvedVariables: ResolvedVariables = {};
   tasks: { [key: string]: Task } = {};
   steps: Step[] = [];
@@ -77,8 +83,6 @@ export class AppComponent implements OnDestroy {
   unlistenExecutionStatus?: UnlistenFn;
 
   ngOnInit(): void {
-    invoke<string>('get_log')
-      .then((log) => this.executionLog.setValue(log));
     this.fetchConfigPath()
       .then(() => Promise.all([
         this.getRequiredVariables(),
@@ -100,12 +104,13 @@ export class AppComponent implements OnDestroy {
     if (this.unlistenExecutionStatus) {
       this.unlistenExecutionStatus();
     }
+    this.flushBufferedLog();
   }
 
   private async setupFormValueChangeListener(): Promise<void> {
     this.cleanupSubscriptions();
 
-    this.formValueChangesSubscription = this.requiredFieldsFormGroup.valueChanges
+    this.requiredFieldsChangesSubscription = this.requiredFieldsFormGroup.valueChanges
       .pipe(debounceTime(300))
       .subscribe((requiredFieldsPartial) => {
         for (const name in requiredFieldsPartial) {
@@ -120,9 +125,9 @@ export class AppComponent implements OnDestroy {
   }
 
   private cleanupSubscriptions(): void {
-    if (this.formValueChangesSubscription) {
-      this.formValueChangesSubscription.unsubscribe();
-      this.formValueChangesSubscription = undefined;
+    if (this.requiredFieldsChangesSubscription) {
+      this.requiredFieldsChangesSubscription.unsubscribe();
+      this.requiredFieldsChangesSubscription = undefined;
     }
   }
 
@@ -226,12 +231,26 @@ export class AppComponent implements OnDestroy {
   }
 
   private async setupLogUpdatesListener(): Promise<void> {
-    this.unlistenLogUpdates = await listen('log-update', () => {
-      invoke<string>('get_log')
-        .then((log) => {
-          this.executionLog.setValue(log);
-        });
+    this.unlistenLogUpdates = await listen<string>('log-message', (event) => {
+      this.pendingLogBuffer.push(event.payload);
+
+      if (!this.flushTimeout) {
+        this.flushTimeout = setTimeout(() => this.flushBufferedLog(), 100);
+      }
     });
+  }
+
+  private flushBufferedLog(): void {
+    const chunk = this.pendingLogBuffer.join('\n');
+    this.executionLog.update(prev => {
+      const combined = prev === '' ? chunk : prev + '\n' + chunk;
+      const maxSize = 1_000_000; // ~1MB
+      return combined.length > maxSize
+        ? combined.slice(combined.length - maxSize)
+        : combined;
+    });
+    this.pendingLogBuffer.length = 0;
+    this.flushTimeout = undefined;
   }
 
   private async setupExecutionStatusListener(): Promise<void> {

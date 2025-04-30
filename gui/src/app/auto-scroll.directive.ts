@@ -9,45 +9,37 @@ import { Observable, Subscription } from 'rxjs';
   selector: '[autoScroll]',
   standalone: true
 })
-export class AutoScrollDirective implements OnDestroy {
+export class AutoScrollDirective {
 
-  @Input('autoScroll')
-  set source(value: Signal<unknown> | Observable<unknown>) {
-    this.sub?.unsubscribe();
-    if (isSignal(value)) {
-      this.currentSignal = value;
-      this.sub = undefined;
-    } else if (isObservable(value)) {
-      this.currentSignal = undefined;
-      this.sub = value.subscribe(() => this.scheduleScroll());
-    } else {
-      this.currentSignal = undefined;
-      this.sub = undefined;
-    }
-  }
+  @Input('autoScroll') valueChangedSignal?: Signal<unknown>;
 
-  private currentSignal?: Signal<unknown>;
-  private sub?: Subscription;
   private pending = false;
+  private autoScrollEnabled = true;
 
   constructor(
     private host: ElementRef<HTMLTextAreaElement>,
     private zone: NgZone
   ) {
     effect(() => {
-      if (this.currentSignal) {
-        this.currentSignal();
+      if (this.valueChangedSignal) {
+        this.valueChangedSignal();
         this.scheduleScroll();
       }
     });
+    zone.runOutsideAngular(() => {
+      host.nativeElement.addEventListener('scroll', () => this.onScroll());
+    });
   }
 
-  ngOnDestroy() {
-    this.sub?.unsubscribe();
+  private onScroll() {
+    const ta = this.host.nativeElement;
+    const scrollThreshold = 32;
+    const distanceFromBottom = ta.scrollHeight - ta.scrollTop - ta.clientHeight;
+    this.autoScrollEnabled = distanceFromBottom < scrollThreshold;
   }
-
+  
   private scheduleScroll() {
-    if (this.pending) return;
+    if (this.pending || !this.autoScrollEnabled) return;
 
     this.pending = true;
     this.zone.runOutsideAngular(() => {
@@ -60,8 +52,4 @@ export class AutoScrollDirective implements OnDestroy {
       });
     });
   }
-}
-
-function isObservable(o: unknown): o is Observable<unknown> {
-  return !!o && typeof (o as any).subscribe === 'function';
 }

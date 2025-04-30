@@ -22,18 +22,6 @@ pub fn get_config_path(state: State<'_, Mutex<ScenarioAppState>>) -> String {
 }
 
 #[tauri::command(async)]
-pub fn get_log(state: State<'_, Mutex<ScenarioAppState>>) -> String {
-    let state = state.safe_lock();
-    state.output_log.clone()
-}
-
-#[tauri::command(async)]
-pub fn clear_log(state: State<'_, Mutex<ScenarioAppState>>) {
-    let mut state = state.safe_lock();
-    state.clear_log();
-}
-
-#[tauri::command(async)]
 pub fn load_config(config_path: &str, state: State<'_, Mutex<ScenarioAppState>>) {
     let mut state = state.safe_lock();
     state.load_config(config_path);

@@ -4,7 +4,7 @@
 use crate::{
     app::ScenarioAppState,
     commands::{
-        clear_log, clear_state, execute_scenario, get_config_path, get_log, get_required_variables,
+        clear_state, execute_scenario, get_config_path, get_required_variables,
         get_resolved_variables, get_steps, get_tasks, load_config, save_state,
         update_required_variables,
     },
@@ -51,8 +51,6 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             save_state,
             get_config_path,
-            get_log,
-            clear_log,
             load_config,
             get_required_variables,
             update_required_variables,

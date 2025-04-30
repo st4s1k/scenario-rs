@@ -63,8 +63,8 @@
         <div class="expandable">
           <div class="expandable-content">
             <div class="log-controls">
-              <button class="log-button" ngxClipboard *ngxClipboardIfSupported
-                cbContent="{{executionLog.value || undefined}}" [container]="container">
+              <button class="log-button" ngxClipboard *ngxClipboardIfSupported [cbContent]="executionLog()"
+                [container]="container">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
                   <g fill="currentColor">
                     <path d="M11 0H0v11h3V9H2V2h7v1h2z" />
@@ -83,7 +83,7 @@
               </button>
             </div>
             <div class="log-content">
-              <textarea wrap="off" [formControl]="executionLog" [autoScroll]="executionLog.valueChanges" readonly></textarea>
+              <textarea wrap="off" [value]="executionLog()" [autoScroll]="executionLog" readonly></textarea>
             </div>
           </div>
         </div>

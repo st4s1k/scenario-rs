@@ -19,7 +19,7 @@ use std::{
     },
 };
 use tauri::AppHandle;
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{error, info, instrument, warn};
 
 /// Data structure that stores required variable values for a specific configuration path.
 ///
@@ -139,8 +139,6 @@ impl From<&ScenarioAppState> for ScenarioAppStateConfig {
 pub struct ScenarioAppState {
     /// Path to the currently loaded configuration file
     pub(crate) config_path: String,
-    /// Current log output from scenario execution
-    pub(crate) output_log: String,
     /// Handle to the Tauri application for sending events to the frontend
     pub(crate) app_handle: AppHandle,
     /// The currently loaded scenario, if any
@@ -353,7 +351,6 @@ impl ScenarioAppState {
     pub fn new(app_handle: &AppHandle) -> Self {
         Self {
             config_path: String::new(),
-            output_log: String::new(),
             app_handle: app_handle.clone(),
             scenario: None,
             is_executing: Arc::new(AtomicBool::new(false)),
@@ -696,15 +693,6 @@ impl ScenarioAppState {
         } else {
             Vec::new()
         }
-    }
-
-    /// Emits an event to clear the application log.
-    ///
-    /// This method sends a tracing event with the "clear_log" event type,
-    /// which will be processed by the event layer to clear the log.
-    #[instrument(skip_all)]
-    pub fn clear_log(&mut self) {
-        debug!(event = "clear_log");
     }
 
     /// Clears the saved application state.
