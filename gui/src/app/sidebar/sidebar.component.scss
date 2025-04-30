@@ -59,7 +59,7 @@
 
       .tab-content {
         display: grid;
-        padding: styles.$gap-10;
+        padding: styles.$gap-medium;
         overflow: auto;
       }
     }
@@ -68,12 +68,12 @@
       display: grid;
       grid-auto-flow: row;
       grid-auto-rows: min-content;
-      gap: styles.$gap-10;
+      gap: styles.$gap-medium;
 
       .variable {
         display: grid;
         grid-auto-flow: row;
-        gap: styles.$gap-5;
+        gap: styles.$gap-small;
       }
     }
 
@@ -85,7 +85,7 @@
       .task {
         display: grid;
         border-bottom: 1px solid styles.$secondary-color-lighter-10;
-        padding-bottom: styles.$gap-5;
+        padding-bottom: styles.$gap-small;
 
         &:last-child {
           border-bottom: none;
@@ -99,12 +99,12 @@
       border: none;
       border-left: 1px solid styles.$primary-color;
       background-color: transparent;
-      padding-left: 10px;
-      gap: styles.$gap-10;
+      padding-left: styles.$gap-medium;
+      gap: styles.$gap-medium;
 
       .task-item {
         display: grid;
-        gap: styles.$gap-5;
+        gap: styles.$gap-small;
       }
     }
 
@@ -121,7 +121,7 @@
         align-items: center;
         justify-items: center;
         width: 100%;
-        padding: styles.$gap-10 0;
+        padding: styles.$gap-medium 0;
         cursor: pointer;
         border-bottom: 1px solid styles.$secondary-color-lighter-20;
 

@@ -15,10 +15,10 @@ $secondary-color-lighter-70: color-mix(in srgb, $secondary-color 30%, white);
 $text-color: $secondary-color-lighter-70;
 $button-text-color: $secondary-color;
 $title-size: 30px;
-$gap-5: 5px;
-$gap-10: 10px;
-$gap-15: 15px;
-$gap-20: 20px;
+$gap-small: 5px;
+$gap-medium: 10px;
+$gap-large: 15px;
+$red: rgb(244, 67, 54);
 
 // Scrollbar styles
 ::-webkit-scrollbar {
@@ -112,7 +112,7 @@ label {
 .text-field {
     @extend .text;
 
-    height: 26px;
+    height: $field-height;
     border: none;
     border-bottom: 1px solid $primary-color;
     background-color: transparent;
@@ -121,7 +121,7 @@ label {
     &:focus {
         border: none;
         border-bottom: 1px solid $primary-color;
-        outline-offset: 5px;
+        outline-offset: $gap-small;
         outline-color: $primary-color-lighter-40;
         outline-style: solid;
     }
@@ -130,7 +130,7 @@ label {
 textarea {
     @extend .text;
 
-    padding: 10px;
+    padding: $gap-medium;
     resize: none;
 
     &:focus {
@@ -176,7 +176,7 @@ button {
     background-color: $secondary-color-lighter-2;
     color: $secondary-color-lighter-60;
     text-align: center;
-    padding: 5px;
+    padding: $gap-small;
     border: 1px solid $primary-color-lighter-40;
     position: absolute;
     z-index: 1;
@@ -187,8 +187,8 @@ button {
     &::after {
         content: " ";
         position: absolute;
-        margin-top: -5px;
-        border-width: 5px;
+        margin-top: -$gap-small;
+        border-width: $gap-small;
         border-style: solid;
         border-color: transparent transparent transparent transparent;
     }
@@ -279,14 +279,14 @@ button {
     &>.expandable {
         max-height: 1000px;
         opacity: 1;
-        margin-top: 5px;
-        margin-bottom: 5px;
+        margin-top: $gap-small;
+        margin-bottom: $gap-small;
         overflow: visible;
         transition: all 0.2s ease;
 
         &>.expandable-content {
             display: grid;
-            padding: $gap-10;
+            padding: $gap-medium;
             box-sizing: border-box;
             border: 1px solid $primary-color;
             background-color: $secondary-color-lighter-2;
