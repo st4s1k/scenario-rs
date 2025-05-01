@@ -3,7 +3,7 @@
 .execution-progress {
   display: grid;
   grid-template-columns: 1fr;
-  row-gap: styles.$gap-10;
+  row-gap: styles.$gap-medium;
 
   .empty-state {
     padding: 24px;
@@ -13,7 +13,7 @@
 
   .task.expandable-container {
     border-bottom: 1px solid styles.$secondary-color-lighter-10;
-    padding-bottom: styles.$gap-5;
+    padding-bottom: styles.$gap-small;
 
     &:last-child {
       border-bottom: none;
@@ -24,8 +24,7 @@
       width: 8px;
       height: 8px;
       outline: 1px solid styles.$primary-color;
-      outline-offset: 2px;
-      background-color: styles.$secondary-color-lighter-40;
+      border: 2px solid styles.$secondary-color;
 
       &.executing {
         background-color: rgb(100, 149, 237);
@@ -36,18 +35,18 @@
       }
 
       &.failed {
-        background-color: rgb(244, 67, 54);
+        background-color: styles.$red;
       }
     }
 
     .expandable {
       .expandable-content {
         border: none;
-        gap: styles.$gap-10;
+        gap: styles.$gap-medium;
 
         .task-item {
           display: grid;
-          gap: styles.$gap-5;
+          gap: styles.$gap-small;
 
           $progress-bar-track: styles.$secondary-color;
           $progress-bar-value: styles.$primary-color;
@@ -81,30 +80,24 @@
 
         .error-message {
           display: grid;
-          padding: 10px;
-          margin-bottom: 12px;
-          border: 1px solid rgb(244, 67, 54);
+          grid-auto-flow: row;
+          position: relative;
 
           label {
-            display: grid;
-            position: relative;
-            padding: styles.$gap-5;
-            background-color: rgb(244, 67, 54);
-            color: styles.$secondary-color;
-            font-weight: normal;
+            color: styles.$red;
+            background-color: styles.$secondary-color-lighter-2;
           }
 
           textarea {
-            $red: rgb(244, 67, 54);
-
-            color: $red;
-            font-weight: 500;
-            // overflow: hidden;
             background-color: transparent;
-            // border: none;
+            border: 1px solid styles.$red;
+            color: styles.$red;
+            margin: 0;
+            padding: styles.$gap-medium;
+            overflow: hidden;
 
             &::selection {
-              background-color: rgba($red, 0.7);
+              background-color: rgba(styles.$red, 0.7);
               color: styles.$secondary-color;
             }
           }
