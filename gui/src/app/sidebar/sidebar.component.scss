@@ -13,6 +13,8 @@
   grid-template-rows: 1fr;
   transition: width 0.2s ease;
   background-color: styles.$secondary-color-lighter-2;
+  box-sizing: border-box;
+  border-left: 1px solid styles.$secondary-color-lighter-20;
 
   &.resizing {
     transition: none;
@@ -23,6 +25,7 @@
   &.collapsed {
     width: styles.$title-size;
     min-width: styles.$title-size;
+    border: none;
 
     .resize-handle {
       display: none;
@@ -32,13 +35,12 @@
   .resize-handle {
     position: absolute;
     top: 0;
-    transform: translateX(-100%);
+    transform: translateX(-50%);
     bottom: 0;
     width: 4px;
     cursor: ew-resize;
     z-index: 10;
     transition: background-color 0.2s ease;
-    border-right: 1px solid styles.$secondary-color-lighter-20;
 
     &:hover {
       background-color: styles.$secondary-color-lighter-20;

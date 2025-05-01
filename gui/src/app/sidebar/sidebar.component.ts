@@ -124,6 +124,13 @@ export class SidebarComponent implements OnChanges {
     event.preventDefault();
   }
 
+  @HostListener('window:resize')
+  onResize(): void {
+    if (!this.isCollapsed) {
+      this.sidebarWidth = Math.min(this.sidebarWidth, window.innerWidth - 20);
+    }
+  }
+
   @HostListener('document:mousemove', ['$event'])
   onMouseMove(event: MouseEvent): void {
     if (!this.isResizing) return;
@@ -137,7 +144,7 @@ export class SidebarComponent implements OnChanges {
       this.isResizing = false;
       this.renderer.removeClass(this.document.body, 'resizing-sidebar');
     } else if (!this.isCollapsed) {
-      this.sidebarWidth = Math.max(this.minSidebarWidth, newWidth);
+      this.sidebarWidth = Math.max(this.minSidebarWidth, Math.min(newWidth, window.innerWidth - 20));
     }
 
     event.preventDefault();
