@@ -43,7 +43,7 @@ export class SidebarComponent implements OnChanges {
   ];
 
   private readonly minSidebarWidth = 40;
-  private readonly titleSize = 30;
+  private readonly titleSize = 24;
   private readonly collapseThreshold = 60;
   private readonly storageKey = 'scenario-rs-sidebar-state';
   private startX = 0;

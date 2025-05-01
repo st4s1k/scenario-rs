@@ -1,9 +1,9 @@
 // Global variables
 $titlebar-height: 30px;
-$field-height: 30px;
+$field-height: 24px;
 $primary-color: rgb(218, 165, 32); // goldenrod
 $primary-color-lighter-40: color-mix(in srgb, $primary-color 60%, white);
-$default-font-size: 14px;
+$default-font-size: 13px;
 $secondary-color: rgb(30, 30, 30);
 $secondary-color-lighter-2: color-mix(in srgb, $secondary-color 98%, white);
 $secondary-color-lighter-5: color-mix(in srgb, $secondary-color 95%, white);
@@ -14,11 +14,43 @@ $secondary-color-lighter-60: color-mix(in srgb, $secondary-color 40%, white);
 $secondary-color-lighter-70: color-mix(in srgb, $secondary-color 30%, white);
 $text-color: $secondary-color-lighter-70;
 $button-text-color: $secondary-color;
-$title-size: 30px;
+$title-size: $field-height;
 $gap-small: 5px;
 $gap-medium: 10px;
 $gap-large: 15px;
 $red: rgb(244, 67, 54);
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('./fonts/webfonts/JetBrainsMono-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('./fonts/webfonts/JetBrainsMono-ExtraBold.woff2') format('woff2');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('./fonts/webfonts/JetBrainsMono-Medium.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('./fonts/webfonts/JetBrainsMono-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
 
 // Scrollbar styles
 ::-webkit-scrollbar {
@@ -51,15 +83,15 @@ html {
     margin: 0;
     padding: 0;
     height: 100%;
+    font-weight: 500;
+    font-family: "JetBrains Mono";
+    font-size: $default-font-size;
 
     body {
         margin: 0;
         padding: 0;
         height: 100%;
         overflow: hidden;
-
-        font-family: 'Monaco', monospace;
-        font-size: $default-font-size;
         background-color: $secondary-color;
         color: $text-color;
     }
@@ -90,12 +122,13 @@ h1 {
     text-align: center;
     width: 100%;
     margin: 0;
+    font-weight: 700;
 }
 
 // Base form elements styling
 .text {
     color: $text-color;
-    font-size: $default-font-size;
+    font-size: inherit;
     background-color: $secondary-color-lighter-5;
 
     &::selection {
@@ -131,7 +164,10 @@ textarea {
 
     padding: $gap-medium;
     resize: none;
-    line-height: 1.5;
+    font-size: inherit;
+    font-family: inherit;
+    font-weight: 400;
+    line-height: 1.35;
 
     &:focus {
         outline: none;
@@ -151,7 +187,7 @@ button {
 
     font-size: inherit;
     font-family: inherit;
-    font-weight: bold;
+    font-weight: 700;
 
     &:focus,
     &:hover {
