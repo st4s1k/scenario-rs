@@ -9,7 +9,7 @@ thiserror = "2.0.12"
 regex = "1.11.1"
 ssh2 = "0.9.5"
 serde = { version = "1.0.219", features = ["derive"] }
-chrono = "0.4.40"
-toml = "0.8.20"
+chrono = "0.4.41"
+toml = "0.8.22"
 libc = "0.2"
 tracing = { version = "0.1.41", features = ["attributes"] }
