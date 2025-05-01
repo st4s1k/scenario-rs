@@ -43,7 +43,6 @@ export class SidebarComponent implements OnChanges {
   ];
 
   private readonly minSidebarWidth = 40;
-  private readonly maxSidebarWidth = 600;
   private readonly titleSize = 30;
   private readonly collapseThreshold = 60;
   private readonly storageKey = 'scenario-rs-sidebar-state';
@@ -138,7 +137,7 @@ export class SidebarComponent implements OnChanges {
       this.isResizing = false;
       this.renderer.removeClass(this.document.body, 'resizing-sidebar');
     } else if (!this.isCollapsed) {
-      this.sidebarWidth = Math.max(this.minSidebarWidth, Math.min(newWidth, this.maxSidebarWidth));
+      this.sidebarWidth = Math.max(this.minSidebarWidth, newWidth);
     }
 
     event.preventDefault();
