@@ -32,7 +32,8 @@
                     @let output = state && state.type === 'RemoteSudoState' && state.output
                     ? state.output
                     : '';
-                    <textarea class="output-text" wrap="off" [autoScroll]="item.state" readonly>{{ output }}</textarea>
+                    <textarea class="output-text" wrap="off" spellcheck="false" [autoScroll]="item.state"
+                        readonly>{{ output }}</textarea>
                 </div>
 
                 @if (item.status === 'executing') {
@@ -72,7 +73,7 @@
                 @if (item.status === 'failed') {
                 <div class="task-item error-message">
                     <label>Error</label>
-                    <textarea readonly>{{ item.errorMessage }}</textarea>
+                    <textarea spellcheck="false" readonly>{{ item.errorMessage }}</textarea>
                 </div>
                 }
             </div>
