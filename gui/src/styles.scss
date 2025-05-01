@@ -271,8 +271,8 @@ button {
             }
         }
 
-        &:hover + .expandable > .expandable-content {
-          border-color: $primary-color-lighter-40;
+        &:hover+.expandable>.expandable-content {
+            border-color: $primary-color-lighter-40;
         }
     }
 

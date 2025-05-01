@@ -111,7 +111,7 @@
     .tabs {
       display: grid;
       grid-auto-rows: min-content;
-      width: styles.$title-size - 1px;
+      width: calc(#{styles.$title-size} - 1px);
       background-color: styles.$secondary-color-lighter-5;
       border-left: 1px solid styles.$secondary-color-lighter-20;
 

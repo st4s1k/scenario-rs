@@ -58,11 +58,11 @@ $size: styles.$titlebar-height;
         }
 
         .tooltip-arrow-top {
-            transform: translateX(-50%) translateX(($size / 2) - styles.$gap-small) translateY($size + styles.$gap-small);
+            transform: translateX(-50%) translateX(calc(#{$size} / 2 - #{styles.$gap-small})) translateY(calc(#{$size} + #{styles.$gap-small}));
         }
 
         .tooltip-arrow-left {
-            transform: translateX($size + styles.$gap-small) translateY(styles.$gap-small);
+            transform: translateX(calc(#{$size} + #{styles.$gap-small})) translateY(styles.$gap-small);
         }
     }
 }
