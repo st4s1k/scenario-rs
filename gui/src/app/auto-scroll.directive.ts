@@ -1,9 +1,4 @@
-import {
-  Directive, ElementRef, Input, NgZone,
-  OnDestroy,
-  Signal, effect, isSignal
-} from '@angular/core';
-import { Observable, Subscription } from 'rxjs';
+import { Directive, ElementRef, Input, NgZone, Signal, effect } from '@angular/core';
 
 @Directive({
   selector: '[autoScroll]',
@@ -37,7 +32,7 @@ export class AutoScrollDirective {
     const distanceFromBottom = ta.scrollHeight - ta.scrollTop - ta.clientHeight;
     this.autoScrollEnabled = distanceFromBottom < scrollThreshold;
   }
-  
+
   private scheduleScroll() {
     if (this.pending || !this.autoScrollEnabled) return;
 
