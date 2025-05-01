@@ -21,6 +21,7 @@
 
     .main-content {
         display: flex;
+        align-items: center;
         flex-direction: column;
         padding: styles.$gap-large;
         gap: styles.$gap-large;
