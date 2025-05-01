@@ -106,7 +106,6 @@ h1 {
 
 label {
     color: $primary-color;
-    font-weight: bold;
 }
 
 .text-field {
@@ -132,6 +131,7 @@ textarea {
 
     padding: $gap-medium;
     resize: none;
+    line-height: 1.5;
 
     &:focus {
         outline: none;
@@ -181,7 +181,6 @@ button {
     position: absolute;
     z-index: 1;
     font-size: 12px;
-    font-weight: normal;
     transition: all 0.2s ease-in-out;
 
     &::after {
