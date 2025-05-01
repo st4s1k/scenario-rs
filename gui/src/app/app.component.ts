@@ -12,6 +12,7 @@ import { debounceTime } from 'rxjs/operators';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { AutoScrollDirective } from './auto-scroll.directive';
 import { ExecutionProgressComponent } from './execution-progress/execution-progress.component';
+import { TextFieldModule } from '@angular/cdk/text-field';
 
 interface RequiredFieldsForm {
   [key: string]: FormControl<string | null>;
@@ -54,7 +55,8 @@ export interface Step {
     NoRightClickDirective,
     SidebarComponent,
     AutoScrollDirective,
-    ExecutionProgressComponent
+    ExecutionProgressComponent,
+    TextFieldModule
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -139,7 +141,7 @@ export class AppComponent implements OnDestroy {
   }
 
   clearLog(): void {
-    invoke('clear_log')
+    this.executionLog.set('');
   }
 
   async selectRequiredFile(requiredFieldName: string): Promise<void> {

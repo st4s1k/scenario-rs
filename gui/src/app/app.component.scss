@@ -20,9 +20,9 @@
     grid-template-rows: 1fr;
 
     .main-content {
+        display: flex;
+        flex-direction: column;
         padding: styles.$gap-large;
-        display: grid;
-        grid-template-rows: auto auto auto auto auto 1fr;
         gap: styles.$gap-large;
 
         .config-section {
@@ -127,9 +127,9 @@
         }
 
         .log-section {
+            flex-grow: 1;
             display: grid;
             grid-template-rows: auto 1fr;
-            height: 100%;
 
             .expandable-content {
                 display: grid;
@@ -182,7 +182,12 @@
                 }
 
                 .log-content {
-                    display: grid;
+                    display: flex;
+
+                    textarea {
+                        flex-grow: 1;
+                        min-height: 200px;
+                    }
                 }
             }
         }
