@@ -31,7 +31,7 @@
               <div class="expandable-content">
                 <div class="task-item">
                   <label>Type:</label>
-                  <span>{{task[1].task_type}}</span>
+                  <div>{{task[1].task_type}}</div>
                 </div>
 
                 @switch (task[1].task_type) {
@@ -54,7 +54,7 @@
                 @default {
                 <div class="task-item">
                   <label>Details:</label>
-                  <span>No specific details for this task type</span>
+                  <div>No specific details for this task type</div>
                 </div>
                 }
                 }
@@ -80,7 +80,7 @@
               <div class="expandable-content">
                 <div class="task-item">
                   <label>Type:</label>
-                  <span>{{step.task.task_type}}</span>
+                  <div>{{step.task.task_type}}</div>
                 </div>
 
                 @switch (step.task.task_type) {
@@ -116,7 +116,7 @@
                           <div class="expandable-content">
                             <div class="task-item">
                               <label>Type:</label>
-                              <span>{{onFailTask.task_type}}</span>
+                              <div>{{onFailTask.task_type}}</div>
                             </div>
 
                             @switch (onFailTask.task_type) {
