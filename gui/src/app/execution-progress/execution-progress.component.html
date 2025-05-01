@@ -18,7 +18,6 @@
                 @switch (item.step.task.task_type) {
                 @case ('RemoteSudo') {
                 <div class="task-item">
-                    <label>Command</label>
                     @let command = state && state.type === 'RemoteSudoState' && state.command
                     ? state.command
                     : item.step.task.command;
@@ -26,9 +25,6 @@
                 </div>
 
                 <div class="task-item">
-                    <div>
-                        <label>Output</label>
-                    </div>
                     @let output = state && state.type === 'RemoteSudoState' && state.output
                     ? state.output
                     : '';
@@ -72,7 +68,6 @@
 
                 @if (item.status === 'failed') {
                 <div class="task-item error-message">
-                    <label>Error</label>
                     <textarea spellcheck="false" readonly>{{ item.errorMessage }}</textarea>
                 </div>
                 }
