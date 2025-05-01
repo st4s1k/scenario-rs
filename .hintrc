@@ -9,6 +9,12 @@
         "label": "off"
       }
     ],
-    "button-type": "off"
+    "button-type": "off",
+    "axe/aria": [
+      "default",
+      {
+        "aria-input-field-name": "off"
+      }
+    ]
   }
 }
