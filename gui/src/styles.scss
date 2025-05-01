@@ -139,7 +139,7 @@ textarea {
 }
 
 button {
-    width: 150px;
+    padding: 0 $gap-medium;
     height: $field-height;
 
     background-color: $primary-color;
@@ -233,7 +233,6 @@ button {
 
 // Base expandable container styles
 .expandable-container {
-    min-height: $title-size;
     width: 100%;
     display: grid;
     grid-auto-flow: row;
