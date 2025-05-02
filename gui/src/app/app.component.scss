@@ -24,7 +24,11 @@
         align-items: center;
         flex-direction: column;
         padding: styles.$gap-large;
-        gap: styles.$gap-large;
+        gap: styles.$gap-medium;
+
+        .expandable-container+.expandable-container {
+            border: none;
+        }
 
         .config-section {
             display: grid;

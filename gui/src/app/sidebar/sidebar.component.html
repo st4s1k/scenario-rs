@@ -1,5 +1,5 @@
-<div class="sidebar unselectable" [style.width.px]="sidebarWidth" [class.resizing]="isResizing" [class.collapsed]="isCollapsed"
-  appNoRightClick>
+<div class="sidebar unselectable" [style.width.px]="sidebarWidth" [class.resizing]="isResizing"
+  [class.collapsed]="isCollapsed" appNoRightClick>
   <div class="resize-handle" (mousedown)="startResize($event)"></div>
 
   <div class="sidebar-inner">
@@ -21,7 +21,10 @@
       <div class="tab-content">
         <div class="tasks">
           @for (task of Object.entries(tasks); track task[0]) {
-          <div class="task expandable-container">
+          @if ($index > 0) {
+          <div class="separator"></div>
+          }
+          <div class="expandable-container">
             <label class="expandable-title">
               {{task[1].description}}
               <input type="checkbox" checked />
@@ -70,7 +73,10 @@
         <div class="tasks">
           @if (steps && steps.length > 0) {
           @for (step of steps; track $index) {
-          <div class="task expandable-container">
+          @if ($index > 0) {
+          <div class="separator"></div>
+          }
+          <div class="expandable-container">
             <label class="expandable-title">
               [{{$index + 1}}] {{step.task.description}}
               <input type="checkbox" checked />
@@ -102,45 +108,48 @@
                 }
                 }
 
-                <div class="tasks">
-                  <label>On Fail Steps ({{step.on_fail_steps.length}}):</label>
+                <div class="task-item">
+                  <label>On-Fail Steps ({{step.on_fail_steps.length}}):</label>
                   <div class="tasks">
                     @if (step.on_fail_steps && step.on_fail_steps.length > 0) {
-                      @for (onFailTask of step.on_fail_steps; track $index) {
-                      <div class="task expandable-container">
-                        <label class="expandable-title">
-                          [{{$index + 1}}] {{onFailTask.description}}
-                          <input type="checkbox" checked />
-                        </label>
-                        <div class="expandable">
-                          <div class="expandable-content">
-                            <div class="task-item">
-                              <label>Type:</label>
-                              <div>{{onFailTask.task_type}}</div>
-                            </div>
-
-                            @switch (onFailTask.task_type) {
-                            @case ('RemoteSudo') {
-                            <div class="task-item">
-                              <label>Command:</label>
-                              <input class="text-field" type="text" [value]="onFailTask.command" readonly />
-                            </div>
-                            }
-                            @case ('SftpCopy') {
-                            <div class="task-item">
-                              <label>Source Path:</label>
-                              <input class="text-field" type="text" [value]="onFailTask.source_path" readonly />
-                            </div>
-                            <div class="task-item">
-                              <label>Destination Path:</label>
-                              <input class="text-field" type="text" [value]="onFailTask.destination_path" readonly />
-                            </div>
-                            }
-                            }
+                    @for (onFailTask of step.on_fail_steps; track $index) {
+                    @if ($index > 0) {
+                    <div class="separator"></div>
+                    }
+                    <div class="expandable-container">
+                      <label class="expandable-title">
+                        [{{$index + 1}}] {{onFailTask.description}}
+                        <input type="checkbox" checked />
+                      </label>
+                      <div class="expandable">
+                        <div class="expandable-content">
+                          <div class="task-item">
+                            <label>Type:</label>
+                            <div>{{onFailTask.task_type}}</div>
                           </div>
+
+                          @switch (onFailTask.task_type) {
+                          @case ('RemoteSudo') {
+                          <div class="task-item">
+                            <label>Command:</label>
+                            <input class="text-field" type="text" [value]="onFailTask.command" readonly />
+                          </div>
+                          }
+                          @case ('SftpCopy') {
+                          <div class="task-item">
+                            <label>Source Path:</label>
+                            <input class="text-field" type="text" [value]="onFailTask.source_path" readonly />
+                          </div>
+                          <div class="task-item">
+                            <label>Destination Path:</label>
+                            <input class="text-field" type="text" [value]="onFailTask.destination_path" readonly />
+                          </div>
+                          }
+                          }
                         </div>
                       </div>
-                      }
+                    </div>
+                    }
                     }
                   </div>
                 </div>
