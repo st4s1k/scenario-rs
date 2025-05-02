@@ -21,7 +21,7 @@ interface Step {
 }
 
 @Component({
-  selector: 'app-sidebar',
+  selector: 'sidebar',
   imports: [CommonModule],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss'

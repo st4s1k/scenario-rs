@@ -39,7 +39,7 @@ interface DisplayStep {
 type StepState = SftpCopyState | RemoteSudoState;
 
 @Component({
-  selector: 'app-execution-progress',
+  selector: 'execution-progress',
   standalone: true,
   imports: [CommonModule, AutoScrollDirective],
   templateUrl: './execution-progress.component.html',

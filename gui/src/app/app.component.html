@@ -1,5 +1,5 @@
 <div appNoRightClick>
-  <app-titlebar></app-titlebar>
+  <titlebar></titlebar>
 </div>
 
 <div class="app-container unselectable" #container appNoRightClick>
@@ -51,8 +51,8 @@
           <input type="checkbox" />
         </label>
         <div class="expandable">
-          <app-execution-progress class="expandable-content" [steps]="steps">
-          </app-execution-progress>
+          <execution-progress class="expandable-content" [steps]="steps">
+          </execution-progress>
         </div>
       </div>
 
@@ -83,12 +83,13 @@
               </button>
             </div>
             <div class="log-content">
-              <textarea wrap="off" spellcheck="false" [value]="executionLog()" [autoScroll]="executionLog" readonly></textarea>
+              <textarea wrap="off" spellcheck="false" [value]="executionLog()" [autoScroll]="executionLog"
+                readonly></textarea>
             </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <app-sidebar [resolvedVariables]="resolvedVariables" [tasks]="tasks" [steps]="steps"></app-sidebar>
+  <sidebar [resolvedVariables]="resolvedVariables" [tasks]="tasks" [steps]="steps"></sidebar>
 </div>
