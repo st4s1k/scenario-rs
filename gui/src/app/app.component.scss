@@ -4,194 +4,194 @@
   height: 100%;
   display: grid;
   grid-template-rows: auto 1fr;
-}
 
-.app-container {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  height: 100%;
-  overflow: auto;
-}
+  .app-container {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    height: 100%;
+    overflow: auto;
+  }
 
-.main-container {
-  overflow: auto;
-  height: 100%;
-  display: grid;
-  grid-template-rows: 1fr;
+  .main-container {
+    overflow: auto;
+    height: 100%;
+    display: grid;
+    grid-template-rows: 1fr;
 
-  .main-content {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    padding: styles.$gap-large;
-    gap: styles.$gap-medium;
-
-    .expandable-container+.expandable-container {
-      border: none;
-    }
-
-    .config-section {
-      display: grid;
-      width: 100%;
-      max-width: 800px;
-      justify-self: center;
-      grid-template-columns: auto minmax(100px, 1fr) auto;
-      gap: styles.$gap-medium;
+    .main-content {
+      display: flex;
       align-items: center;
-
-      label {
-        grid-column: 1;
-        text-align: left;
-      }
-
-      input {
-        grid-column: 2;
-        width: 100%;
-      }
-
-      button {
-        grid-column: 3;
-      }
-    }
-
-    .required-fields {
-      display: grid;
-      grid-template-columns: auto 1fr;
+      flex-direction: column;
+      padding: styles.$gap-large;
       gap: styles.$gap-medium;
-      align-items: start;
 
-      label {
-        align-self: center;
-        width: 100%;
-        min-width: max-content;
-        overflow: hidden;
-        text-overflow: ellipsis;
+      .expandable-container+.expandable-container {
+        border: none;
       }
 
-      .field-container {
+      .config-section {
         display: grid;
-        grid-template-columns: 1fr auto;
-        grid-column: 2;
+        width: 100%;
+        max-width: 800px;
+        justify-self: center;
+        grid-template-columns: auto minmax(100px, 1fr) auto;
         gap: styles.$gap-medium;
         align-items: center;
-      }
-    }
 
-    .execute-section {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      align-items: center;
-      grid-auto-rows: min-content;
-      gap: styles.$gap-medium;
-
-      button {
-        grid-column: 2;
-      }
-
-      .loader {
-        grid-column: 3;
-        width: 24px;
-        height: 24px;
-        display: inline-block;
-        position: relative;
-
-        &::after,
-        &::before {
-          content: '';
-          width: 24px;
-          height: 24px;
-          border: 2px solid styles.$primary-color-lighter-40;
-          position: absolute;
-          left: 0;
-          top: 0;
-          box-sizing: border-box;
-          animation: rotation 2s ease-in-out infinite;
+        label {
+          grid-column: 1;
+          text-align: left;
         }
 
-        &::after {
-          border-color: styles.$primary-color;
-          animation-delay: 1s;
+        input {
+          grid-column: 2;
+          width: 100%;
         }
 
-        @keyframes rotation {
-          0% {
-            transform: rotate(0deg);
-          }
-
-          100% {
-            transform: rotate(360deg);
-          }
+        button {
+          grid-column: 3;
         }
       }
-    }
 
-    .execution-progress-section {
-      display: grid;
-      grid-template-rows: auto 1fr;
-      overflow: none;
-    }
-
-    .log-section {
-      flex-grow: 1;
-      display: grid;
-      grid-template-rows: auto 1fr;
-
-      .expandable-content {
+      .required-fields {
         display: grid;
         grid-template-columns: auto 1fr;
-        gap: styles.$gap-small;
+        gap: styles.$gap-medium;
+        align-items: start;
 
-        .log-controls {
+        label {
+          align-self: center;
+          width: 100%;
+          min-width: max-content;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .field-container {
           display: grid;
-          grid-template-rows: auto 1fr auto;
-          gap: styles.$gap-small;
+          grid-template-columns: 1fr auto;
+          grid-column: 2;
+          gap: styles.$gap-medium;
+          align-items: center;
+        }
+      }
 
-          .log-button {
-            position: relative;
-            width: 22px;
-            height: 22px;
-            padding: 0px;
-            color: styles.$primary-color;
-            background-color: transparent;
-            outline-style: none;
-            border: 1px solid transparent;
+      .execute-section {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        grid-auto-rows: min-content;
+        gap: styles.$gap-medium;
 
-            svg {
-              display: block;
-              width: 16px;
-              margin: auto;
-              aspect-ratio: 1;
+        button {
+          grid-column: 2;
+        }
+
+        .loader {
+          grid-column: 3;
+          width: 24px;
+          height: 24px;
+          display: inline-block;
+          position: relative;
+
+          &::after,
+          &::before {
+            content: '';
+            width: 24px;
+            height: 24px;
+            border: 2px solid styles.$primary-color-lighter-40;
+            position: absolute;
+            left: 0;
+            top: 0;
+            box-sizing: border-box;
+            animation: rotation 2s ease-in-out infinite;
+          }
+
+          &::after {
+            border-color: styles.$primary-color;
+            animation-delay: 1s;
+          }
+
+          @keyframes rotation {
+            0% {
+              transform: rotate(0deg);
             }
 
-            &:active {
-              background-color: styles.$secondary-color-lighter-5;
-
-              &:focus,
-              &:hover {
-                border: 1px solid styles.$secondary-color-lighter-10;
-              }
-
-              svg {
-                scale: 0.95;
-              }
-            }
-
-            &:hover {
-              color: styles.$primary-color-lighter-40;
-            }
-
-            .tooltip-arrow-left {
-              transform: translate(22px, -20px);
+            100% {
+              transform: rotate(360deg);
             }
           }
         }
+      }
 
-        .log-content {
-          display: flex;
+      .execution-progress-section {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        overflow: none;
+      }
 
-          textarea {
-            flex-grow: 1;
-            min-height: 200px;
+      .log-section {
+        flex-grow: 1;
+        display: grid;
+        grid-template-rows: auto 1fr;
+
+        .expandable-content {
+          display: grid;
+          grid-template-columns: auto 1fr;
+          gap: styles.$gap-small;
+
+          .log-controls {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: styles.$gap-small;
+
+            .log-button {
+              position: relative;
+              width: 22px;
+              height: 22px;
+              padding: 0px;
+              color: styles.$primary-color;
+              background-color: transparent;
+              outline-style: none;
+              border: 1px solid transparent;
+
+              svg {
+                display: block;
+                width: 16px;
+                margin: auto;
+                aspect-ratio: 1;
+              }
+
+              &:active {
+                background-color: styles.$secondary-color-lighter-5;
+
+                &:focus,
+                &:hover {
+                  border: 1px solid styles.$secondary-color-lighter-10;
+                }
+
+                svg {
+                  scale: 0.95;
+                }
+              }
+
+              &:hover {
+                color: styles.$primary-color-lighter-40;
+              }
+
+              .tooltip-arrow-left {
+                transform: translate(22px, -20px);
+              }
+            }
+          }
+
+          .log-content {
+            display: flex;
+
+            textarea {
+              flex-grow: 1;
+              min-height: 200px;
+            }
           }
         }
       }
