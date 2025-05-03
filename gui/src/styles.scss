@@ -79,257 +79,257 @@ html {
     overflow: hidden;
     background-color: $secondary-color;
     color: $text-color;
-  }
-}
 
-// Global styles for specific states
-.resizing-sidebar {
-  cursor: ew-resize !important;
-  -webkit-user-select: none;
-  user-select: none;
+    // Global styles for specific states
+    .resizing-sidebar {
+      cursor: ew-resize !important;
+      -webkit-user-select: none;
+      user-select: none;
 
-  * {
-    cursor: ew-resize !important;
-  }
-}
-
-// Utility classes
-.unselectable {
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-h1 {
-  text-align: center;
-  width: 100%;
-  margin: 0;
-  font-weight: 700;
-}
-
-// Base form elements styling
-.text {
-  color: $text-color;
-  font-size: inherit;
-  background-color: $secondary-color-lighter-5;
-
-  &::selection {
-    background-color: $primary-color-lighter-40;
-    color: $secondary-color;
-  }
-}
-
-label {
-  color: $primary-color;
-}
-
-.text-field {
-  @extend .text;
-
-  height: $field-height;
-  border: none;
-  border-bottom: 1px solid $primary-color;
-  background-color: transparent;
-  font-family: inherit;
-
-  &:focus {
-    border: none;
-    border-bottom: 1px solid $primary-color;
-    outline-offset: $gap-small;
-    outline-color: $primary-color-lighter-40;
-    outline-style: solid;
-  }
-}
-
-textarea {
-  @extend .text;
-
-  padding: $gap-medium;
-  resize: none;
-  font-size: inherit;
-  font-family: inherit;
-  font-weight: inherit;
-  line-height: 1.5;
-
-  &:focus {
-    outline: none;
-  }
-}
-
-button {
-  padding: 0 $gap-medium;
-  height: $field-height;
-
-  background-color: $primary-color;
-  color: $button-text-color;
-
-  border-style: none;
-  outline-offset: -3px;
-  outline: 2px solid $secondary-color;
-
-  font-size: inherit;
-  font-family: inherit;
-  font-weight: 700;
-
-  &:focus,
-  &:hover {
-    background-color: $primary-color-lighter-40;
-    outline-offset: -4px;
-    outline: 3px double $secondary-color;
-  }
-
-  &:active {
-    color: $primary-color;
-    background-color: $secondary-color;
-    outline: 1px solid $primary-color;
-    border: 1px solid $primary-color;
-  }
-}
-
-// Tooltip styles
-.tooltip {
-  opacity: 0;
-  visibility: hidden;
-  width: max-content;
-  background-color: $secondary-color-lighter-2;
-  color: $secondary-color-lighter-60;
-  text-align: center;
-  padding: $gap-small;
-  border: 1px solid $primary-color-lighter-40;
-  position: absolute;
-  z-index: 1;
-  font-size: $font-size-small;
-  font-weight: 400;
-  transition: all 0.2s ease-in-out;
-
-  &::after {
-    content: " ";
-    position: absolute;
-    margin-top: -$gap-small;
-    border-width: $gap-small;
-    border-style: solid;
-    border-color: transparent transparent transparent transparent;
-  }
-}
-
-.tooltip-arrow-top {
-  @extend .tooltip;
-
-  &::after {
-    bottom: 100%;
-    left: 50%;
-    border-color: transparent transparent $primary-color-lighter-40 transparent;
-  }
-}
-
-.tooltip-arrow-left {
-  @extend .tooltip;
-
-  &::after {
-    right: 100%;
-    top: 50%;
-    border-color: transparent $primary-color-lighter-40 transparent transparent;
-  }
-}
-
-*:has(>.tooltip) {
-  &:hover {
-    .tooltip {
-      visibility: visible;
-      opacity: 1;
-      transition-delay: 0.5s;
-    }
-
-    &:active {
-      .tooltip {
-        opacity: 0;
-        transition: none;
+      * {
+        cursor: ew-resize !important;
       }
     }
-  }
-}
 
-// Base expandable container styles
-.separator {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: $gap-medium;
-
-  &::before {
-    content: '';
-    width: 100%;
-    height: 50%;
-    border-bottom: 1px solid $secondary-color-lighter-10;
-  }
-}
-
-.expandable-container {
-  width: 100%;
-  display: grid;
-  grid-auto-flow: row;
-
-  &>.expandable-title {
-    min-height: $title-size;
-    height: $title-size;
-    cursor: pointer;
-    display: grid;
-    grid-auto-flow: column;
-    justify-items: start;
-    align-items: center;
-    justify-content: start;
-    gap: $gap-small;
-    padding-bottom: $gap-small;
-
-    input[type="checkbox"] {
-      display: none;
+    // Utility classes
+    .unselectable {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
     }
 
-    &:has(input[type="checkbox"]) {
+    h1 {
+      text-align: center;
+      width: 100%;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    // Base form elements styling
+    .text {
+      color: $text-color;
+      font-size: inherit;
+      background-color: $secondary-color-lighter-5;
+
+      &::selection {
+        background-color: $primary-color-lighter-40;
+        color: $secondary-color;
+      }
+    }
+
+    label {
+      color: $primary-color;
+    }
+
+    .text-field {
+      @extend .text;
+
+      height: $field-height;
+      border: none;
+      border-bottom: 1px solid $primary-color;
+      background-color: transparent;
+      font-family: inherit;
+
+      &:focus {
+        border: none;
+        border-bottom: 1px solid $primary-color;
+        outline-offset: $gap-small;
+        outline-color: $primary-color-lighter-40;
+        outline-style: solid;
+      }
+    }
+
+    textarea {
+      @extend .text;
+
+      padding: $gap-medium;
+      resize: none;
+      font-size: inherit;
+      font-family: inherit;
+      font-weight: inherit;
+      line-height: 1.5;
+
+      &:focus {
+        outline: none;
+      }
+    }
+
+    button {
+      padding: 0 $gap-medium;
+      height: $field-height;
+
+      background-color: $primary-color;
+      color: $button-text-color;
+
+      border-style: none;
+      outline-offset: -3px;
+      outline: 2px solid $secondary-color;
+
+      font-size: inherit;
+      font-family: inherit;
+      font-weight: 700;
 
       &:focus,
       &:hover {
-        color: $primary-color-lighter-40;
+        background-color: $primary-color-lighter-40;
+        outline-offset: -4px;
+        outline: 3px double $secondary-color;
       }
 
-      &:before {
-        content: '[-]';
-      }
-    }
-
-    &:has(input[type="checkbox"]:checked) {
-      padding-bottom: 0;
-
-      &:before {
-        content: '[+]';
+      &:active {
+        color: $primary-color;
+        background-color: $secondary-color;
+        outline: 1px solid $primary-color;
+        border: 1px solid $primary-color;
       }
     }
 
-    &:hover+.expandable>.expandable-content {
-      border-color: $primary-color-lighter-40;
-    }
-  }
-
-  &>.expandable {
-    opacity: 1;
-    overflow: visible;
-
-    &>.expandable-content {
-      display: grid;
-      padding: $gap-medium;
-      gap: $gap-medium;
-      box-sizing: border-box;
-      border: 1px solid $primary-color;
+    // Tooltip styles
+    .tooltip {
+      opacity: 0;
+      visibility: hidden;
+      width: max-content;
       background-color: $secondary-color-lighter-2;
-      width: 100%;
-      height: 100%;
-    }
-  }
+      color: $secondary-color-lighter-60;
+      text-align: center;
+      padding: $gap-small;
+      border: 1px solid $primary-color-lighter-40;
+      position: absolute;
+      z-index: 1;
+      font-size: $font-size-small;
+      font-weight: 400;
+      transition: all 0.2s ease-in-out;
 
-  &>.expandable-title:has(input[type="checkbox"]:checked)+.expandable {
-    display: none;
+      &::after {
+        content: " ";
+        position: absolute;
+        margin-top: -$gap-small;
+        border-width: $gap-small;
+        border-style: solid;
+        border-color: transparent transparent transparent transparent;
+      }
+    }
+
+    .tooltip-arrow-top {
+      @extend .tooltip;
+
+      &::after {
+        bottom: 100%;
+        left: 50%;
+        border-color: transparent transparent $primary-color-lighter-40 transparent;
+      }
+    }
+
+    .tooltip-arrow-left {
+      @extend .tooltip;
+
+      &::after {
+        right: 100%;
+        top: 50%;
+        border-color: transparent $primary-color-lighter-40 transparent transparent;
+      }
+    }
+
+    *:has(>.tooltip) {
+      &:hover {
+        .tooltip {
+          visibility: visible;
+          opacity: 1;
+          transition-delay: 0.5s;
+        }
+
+        &:active {
+          .tooltip {
+            opacity: 0;
+            transition: none;
+          }
+        }
+      }
+    }
+
+    // Base expandable container styles
+    .separator {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: $gap-medium;
+
+      &::before {
+        content: '';
+        width: 100%;
+        height: 50%;
+        border-bottom: 1px solid $secondary-color-lighter-10;
+      }
+    }
+
+    .expandable-container {
+      width: 100%;
+      display: grid;
+      grid-auto-flow: row;
+
+      &>.expandable-title {
+        min-height: $title-size;
+        height: $title-size;
+        cursor: pointer;
+        display: grid;
+        grid-auto-flow: column;
+        justify-items: start;
+        align-items: center;
+        justify-content: start;
+        gap: $gap-small;
+        padding-bottom: $gap-small;
+
+        input[type="checkbox"] {
+          display: none;
+        }
+
+        &:has(input[type="checkbox"]) {
+
+          &:focus,
+          &:hover {
+            color: $primary-color-lighter-40;
+          }
+
+          &:before {
+            content: '[-]';
+          }
+        }
+
+        &:has(input[type="checkbox"]:checked) {
+          padding-bottom: 0;
+
+          &:before {
+            content: '[+]';
+          }
+        }
+
+        &:hover+.expandable>.expandable-content {
+          border-color: $primary-color-lighter-40;
+        }
+      }
+
+      &>.expandable {
+        opacity: 1;
+        overflow: visible;
+
+        &>.expandable-content {
+          display: grid;
+          padding: $gap-medium;
+          gap: $gap-medium;
+          box-sizing: border-box;
+          border: 1px solid $primary-color;
+          background-color: $secondary-color-lighter-2;
+          width: 100%;
+          height: 100%;
+        }
+      }
+
+      &>.expandable-title:has(input[type="checkbox"]:checked)+.expandable {
+        display: none;
+      }
+    }
   }
 }
