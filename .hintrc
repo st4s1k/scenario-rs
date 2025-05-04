@@ -15,6 +15,7 @@
       {
         "aria-input-field-name": "off"
       }
-    ]
+    ],
+    "axe/name-role-value": "off"
   }
 }
