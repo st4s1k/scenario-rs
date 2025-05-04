@@ -1,60 +1,62 @@
-@use '../../../styles.scss' as styles;
+@use '../../../styles.scss';
 
-@mixin block-variant($color, $bg-color) {
-  label {
-    color: $color;
-    border-color: $color;
-  }
-
-  .content {
-    background-color: $bg-color;
-    border-color: $color;
-  }
-}
-
-.block {
-  display: grid;
-  position: relative;
-  padding-top: styles.$gap-medium;
-
-  label {
-    position: absolute;
-    left: styles.$gap-small;
-    font-size: styles.$font-size-small;
-    background-color: styles.$secondary-color-lighter-2;
-    border-width: 1px;
-    border-style: solid;
-    padding: 0 styles.$gap-small;
-    z-index: 1;
-  }
-
-  .content {
-    display: grid;
-    padding: styles.$gap-small;
-    padding-top: styles.$gap-medium;
-    border-width: 1px;
-    border-style: solid;
-  }
-
-  &.primary {
-    $color: styles.$primary-color;
-    $bg-color: styles.$secondary-color-lighter-5;
-    @include block-variant($color, $bg-color);
-  }
-
-  &.secondary {
-    $color: styles.$secondary-color-lighter-60;
-    $bg-color: styles.$secondary-color-lighter-5;
-    @include block-variant($color, $bg-color);
+:host {
+  @mixin block-variant($color, $bg-color) {
+    label {
+      color: $color;
+      border-color: $color;
+    }
 
     .content {
-      border-color: styles.$secondary-color-lighter-40;
+      background-color: $bg-color;
+      border-color: $color;
     }
   }
 
-  &.error {
-    $color: styles.$red;
-    $bg-color: transparent;
-    @include block-variant($color, $bg-color);
+  .block {
+    display: grid;
+    position: relative;
+    padding-top: styles.$gap-medium;
+
+    label {
+      position: absolute;
+      left: styles.$gap-small;
+      font-size: styles.$font-size-small;
+      background-color: styles.$secondary-color-lighter-2;
+      border-width: 1px;
+      border-style: solid;
+      padding: 0 styles.$gap-small;
+      z-index: 1;
+    }
+
+    .content {
+      display: grid;
+      padding: styles.$gap-small;
+      padding-top: styles.$gap-medium;
+      border-width: 1px;
+      border-style: solid;
+    }
+
+    &.primary {
+      $color: styles.$primary-color;
+      $bg-color: styles.$secondary-color-lighter-5;
+      @include block-variant($color, $bg-color);
+    }
+
+    &.secondary {
+      $color: styles.$secondary-color-lighter-60;
+      $bg-color: styles.$secondary-color-lighter-5;
+      @include block-variant($color, $bg-color);
+
+      .content {
+        border-color: styles.$secondary-color-lighter-40;
+      }
+    }
+
+    &.error {
+      $color: styles.$red;
+      $bg-color: transparent;
+      @include block-variant($color, $bg-color);
+    }
   }
 }
