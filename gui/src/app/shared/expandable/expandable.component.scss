@@ -1,0 +1,71 @@
+@use '../../../styles.scss' as styles;
+
+:host {
+  display: block;
+  width: 100%;
+
+  .expandable-separator {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: styles.$gap-medium;
+
+    &::before {
+      content: '';
+      width: 100%;
+      height: 50%;
+      border-bottom: 1px solid styles.$secondary-color-lighter-10;
+    }
+  }
+
+  .expandable-container {
+    width: 100%;
+    display: grid;
+    grid-auto-rows: auto 1fr;
+
+    .expandable-header {
+      min-height: styles.$title-size;
+      height: styles.$title-size;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: styles.$gap-small;
+      cursor: pointer;
+
+      &:hover {
+        .expandable-icon {
+          color: styles.$primary-color-lighter-40;
+        }
+
+        .expandable-label {
+          color: styles.$primary-color-lighter-40;
+        }
+      }
+
+      input[type="checkbox"] {
+        display: none;
+      }
+
+      .expandable-icon {
+        color: styles.$primary-color;
+      }
+
+      .expandable-label {
+        color: styles.$primary-color;
+        font-weight: normal;
+        cursor: pointer;
+      }
+    }
+
+    .expandable-content {
+      display: grid;
+      opacity: 1;
+      overflow: visible;
+      margin-top: styles.$gap-small;
+
+      &.hidden {
+        display: none;
+      }
+    }
+  }
+}

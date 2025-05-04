@@ -1,0 +1,14 @@
+<div class="expandable-container">
+  @if (showSeparator) {
+  <div class="expandable-separator"></div>
+  }
+  <div class="expandable-header" (click)="toggleExpanded($event)">
+    <div class="expandable-icon">{{expanded ? '[-]' : '[+]'}}</div>
+    <ng-content select="[beforeLabel]"></ng-content>
+    <label class="expandable-label">{{label}}</label>
+    <input type="checkbox" [checked]="!expanded" aria-hidden="true" tabindex="-1" />
+  </div>
+  <div class="expandable-content" [class.hidden]="!expanded">
+    <ng-content></ng-content>
+  </div>
+</div>
