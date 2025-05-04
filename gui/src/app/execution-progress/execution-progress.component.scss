@@ -1,22 +1,14 @@
 @use '../../styles.scss';
 
-.execution-progress {
-  display: grid;
-  grid-template-columns: 1fr;
-  row-gap: styles.$gap-medium;
+:host {
+  .execution-progress {
+    display: grid;
+    grid-template-columns: 1fr;
 
-  .empty-state {
-    padding: 24px;
-    text-align: center;
-    color: styles.$secondary-color-lighter-60;
-  }
-
-  .task.expandable-container {
-    border-bottom: 1px solid styles.$secondary-color-lighter-10;
-    padding-bottom: styles.$gap-small;
-
-    &:last-child {
-      border-bottom: none;
+    .empty-state {
+      padding: styles.$gap-large;
+      text-align: center;
+      color: styles.$secondary-color-lighter-60;
     }
 
     .status-indicator {
@@ -25,6 +17,7 @@
       height: 8px;
       outline: 1px solid styles.$primary-color;
       border: 2px solid styles.$secondary-color;
+      margin: 0 styles.$gap-small;
 
       &.executing {
         background-color: rgb(100, 149, 237);
@@ -39,65 +32,84 @@
       }
     }
 
-    .expandable {
-      .expandable-content {
-        border: none;
+    .task {
+      display: grid;
+      padding: styles.$gap-medium;
+      gap: styles.$gap-medium;
+
+      .task-item {
+        display: grid;
         gap: styles.$gap-medium;
 
-        .task-item {
-          display: grid;
-          gap: styles.$gap-small;
+        .progress-bar {
+          $progress-track-color: styles.$secondary-color;
+          $progress-fill-color: styles.$primary-color;
 
-          $progress-bar-track: styles.$secondary-color;
-          $progress-bar-value: styles.$primary-color;
+          position: relative;
+          overflow: hidden;
+          height: 20px;
 
-          .progress-bar {
-            position: relative;
-            width: 100%;
-            height: 20px;
-            background: $progress-bar-track;
-            border: 1px solid $progress-bar-value;
+          &::before,
+          &::after {
+            content: attr(data-content);
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            font-size: styles.$font-size-small;
+            font-weight: 700;
+          }
+
+          &::before {
+            z-index: 1;
+            color: $progress-fill-color;
+            background: $progress-track-color;
+            border: 1px solid $progress-fill-color;
+            box-sizing: border-box;
+          }
+
+          &::after {
+            z-index: 2;
+            color: $progress-track-color;
+            background: $progress-fill-color;
+            outline: 2px solid $progress-track-color;
             outline-offset: -3px;
-            outline: 2px solid $progress-bar-track;
-            overflow: hidden;
-
-            .fill {
-              height: 100%;
-              background: $progress-bar-value;
-              transition: width 0.2s ease;
-            }
-
-            .label {
-              position: absolute;
-              inset: 0;
-              display: grid;
-              place-items: center;
-              font-size: 12px;
-              pointer-events: none;
-            }
+            clip-path: inset(0 calc(100% - var(--progress-percentage, 0%)) 0 0);
+            transition: clip-path 0.2s ease;
           }
         }
 
-        .error-message {
-          display: grid;
-          grid-auto-flow: row;
-          position: relative;
+        info-block {
+          .text-field {
+            height: auto;
+            border: none;
 
-          label {
-            color: styles.$red;
-            background-color: styles.$secondary-color-lighter-2;
+            &:focus {
+              outline: none;
+            }
           }
 
           textarea {
+            background-color: styles.$secondary-color-lighter-5;
+            border: none;
+            padding: styles.$gap-small;
+            field-sizing: content;
+          }
+
+          &.output textarea {
+            max-height: 200px;
+          }
+
+          &.error textarea {
             background-color: transparent;
-            border: 1px solid styles.$red;
             color: styles.$red;
-            margin: 0;
-            padding: styles.$gap-medium;
-            overflow: hidden;
+
+            $selection-color: color-mix(in srgb, styles.$red 70%, styles.$secondary-color-lighter-2);
 
             &::selection {
-              background-color: rgba(styles.$red, 0.7);
+              background-color: $selection-color;
               color: styles.$secondary-color;
             }
           }
@@ -144,18 +156,18 @@
       }
     }
   }
-}
 
-@keyframes pulse {
-  0% {
-    opacity: 0.7;
-  }
+  @keyframes pulse {
+    0% {
+      opacity: 0.7;
+    }
 
-  50% {
-    opacity: 0.2;
-  }
+    50% {
+      opacity: 0.2;
+    }
 
-  100% {
-    opacity: 0.7;
+    100% {
+      opacity: 0.7;
+    }
   }
 }

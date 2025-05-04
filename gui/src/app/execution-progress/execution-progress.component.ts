@@ -1,10 +1,11 @@
-import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, Input, OnChanges, OnDestroy, signal, SimpleChanges, ViewChild, WritableSignal } from '@angular/core';
-import { StepEvent } from '../models/step-state.model';
+import { Component, Input, OnDestroy, signal, WritableSignal, OnChanges, SimpleChanges, AfterViewInit } from '@angular/core';
 import { Step } from '../app.component';
-import { listen, UnlistenFn } from '@tauri-apps/api/event';
-import { startWith } from 'rxjs';
+import { CommonModule } from '@angular/common';
 import { AutoScrollDirective } from '../auto-scroll.directive';
+import { InfoBlockComponent } from '../shared/info-block/info-block.component';
+import { ExpandableComponent } from '../shared/expandable/expandable.component';
+import { listen, UnlistenFn } from '@tauri-apps/api/event';
+import { StepEvent } from '../models/step-state.model';
 
 type StepStatus = 'executing' | 'completed' | 'failed' | 'pending';
 
@@ -40,8 +41,12 @@ type StepState = SftpCopyState | RemoteSudoState;
 
 @Component({
   selector: 'execution-progress',
-  standalone: true,
-  imports: [CommonModule, AutoScrollDirective],
+  imports: [
+    CommonModule,
+    AutoScrollDirective,
+    InfoBlockComponent,
+    ExpandableComponent
+  ],
   templateUrl: './execution-progress.component.html',
   styleUrl: './execution-progress.component.scss'
 })
