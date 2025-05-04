@@ -10,7 +10,4 @@ import { Component, Input, ContentChild, ElementRef } from '@angular/core';
 export class InfoBlockComponent {
   @Input() label: string = '';
   @Input() color: 'primary' | 'secondary' | 'error' = 'primary';
-  @Input() class: string = '';
-
-  @ContentChild('content') content?: ElementRef;
 }
