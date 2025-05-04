@@ -13,6 +13,8 @@ import { SidebarComponent } from './sidebar/sidebar.component';
 import { AutoScrollDirective } from './auto-scroll.directive';
 import { ExecutionProgressComponent } from './execution-progress/execution-progress.component';
 import { TextFieldModule } from '@angular/cdk/text-field';
+import { ExpandableComponent } from './shared/expandable/expandable.component';
+import { TooltipComponent } from './shared/tooltip/tooltip.component';
 
 interface RequiredFieldsForm {
   [key: string]: FormControl<string | null>;
@@ -56,7 +58,9 @@ export interface Step {
     SidebarComponent,
     AutoScrollDirective,
     ExecutionProgressComponent,
-    TextFieldModule
+    TextFieldModule,
+    ExpandableComponent,
+    TooltipComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -66,6 +70,10 @@ export class AppComponent implements OnDestroy {
   Object = Object;
 
   scenarioConfigPath = new FormControl<string>('');
+
+  requiredFieldsExpanded = true;
+  executionProgressExpanded = true;
+  logExpanded = true;
 
   requiredFields: { [key: string]: RequiredField } = {};
   requiredFieldsFormGroup = new FormGroup<RequiredFieldsForm>({});

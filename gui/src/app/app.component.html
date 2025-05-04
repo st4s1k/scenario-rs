@@ -15,14 +15,10 @@
         <button (click)="selectConfigFile()">Select</button>
       </div>
 
-      <div class="expandable-container">
-        @if ((requiredFields | keyvalue).length > 0) {
-        <label class="expandable-title">
-          Required fields:
-          <input type="checkbox" />
-        </label>
-        <div class="expandable">
-          <form class="expandable-content required-fields" [formGroup]="requiredFieldsFormGroup">
+      @if ((requiredFields | keyvalue).length > 0) {
+      <expandable label="Required fields:" [(expanded)]="requiredFieldsExpanded">
+        <div class="section">
+          <form class="required-fields" [formGroup]="requiredFieldsFormGroup">
             @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
             @if (!requiredField.value.read_only) {
             <label>{{requiredField.value.label}}</label>
@@ -36,8 +32,8 @@
             }
           </form>
         </div>
-        }
-      </div>
+      </expandable>
+      }
 
       <div class="execute-section">
         <button (click)="executeScenario()">Execute Scenario</button>
@@ -46,41 +42,33 @@
         }
       </div>
 
-      <div class="execution-progress-section expandable-container">
-        <label class="expandable-title">Execution progress:
-          <input type="checkbox" />
-        </label>
-        <div class="expandable">
-          <execution-progress class="expandable-content" [steps]="steps">
+      <expandable label="Execution progress:" [(expanded)]="executionProgressExpanded">
+        <div class="section">
+          <execution-progress [steps]="steps">
           </execution-progress>
         </div>
-      </div>
+      </expandable>
 
-      <div class="log-section expandable-container">
-        <label class="expandable-title">Execution log:
-          <input type="checkbox" />
-        </label>
-        <div class="expandable">
-          <div class="expandable-content">
+      <expandable class="log-section" label="Execution log:" [(expanded)]="logExpanded">
+        <div class="section">
+          <div class="log">
             <div class="log-controls">
-              <button class="log-button" ngxClipboard *ngxClipboardIfSupported [cbContent]="executionLog()"
+              <div class="log-button" ngxClipboard *ngxClipboardIfSupported [cbContent]="executionLog()"
                 [container]="container">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-                  <g fill="currentColor">
-                    <path d="M11 0H0v11h3V9H2V2h7v1h2z" />
-                    <path d="M16 5H5v11h11zm-9 9V7h7v7z" />
-                  </g>
+                  <path fill="currentColor" d="M11 0H0v11h3V9H2V2h7v1h2z" />
+                  <path fill="currentColor" d="M16 5H5v11h11zm-9 9V7h7v7z" />
                 </svg>
-                <span class="tooltip-arrow-left">Copy log</span>
-              </button>
+                <tooltip text="Copy log" arrow="left"></tooltip>
+              </div>
               <div><!-- Empty div for spacing: auto 1fr auto --></div>
-              <button class="log-button" (click)="clearLog()">
+              <div class="log-button" (click)="clearLog()">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="20 15 40 52">
                   <path fill="currentColor" d="M52 33v29H28V33H52 M57 28H23v39h34V28L57 28z" />
                   <path fill="currentColor" d="M45 20v-3H35v3H20v5h40v-5H45z" />
                 </svg>
-                <span class="tooltip-arrow-left">Clear log</span>
-              </button>
+                <tooltip text="Clear log" arrow="left"></tooltip>
+              </div>
             </div>
             <div class="log-content">
               <textarea wrap="off" spellcheck="false" [value]="executionLog()" [autoScroll]="executionLog"
@@ -88,7 +76,7 @@
             </div>
           </div>
         </div>
-      </div>
+      </expandable>
     </div>
   </div>
   <sidebar [resolvedVariables]="resolvedVariables" [tasks]="tasks" [steps]="steps"></sidebar>
