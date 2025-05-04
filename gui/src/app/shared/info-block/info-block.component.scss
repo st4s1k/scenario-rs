@@ -2,12 +2,12 @@
 
 :host {
   @mixin block-variant($color, $bg-color) {
-    label {
+    >label {
       color: $color;
       border-color: $color;
     }
 
-    .content {
+    >.content {
       background-color: $bg-color;
       border-color: $color;
     }
@@ -48,7 +48,7 @@
       $bg-color: styles.$secondary-color-lighter-5;
       @include block-variant($color, $bg-color);
 
-      .content {
+      >.content {
         border-color: styles.$secondary-color-lighter-40;
       }
     }
