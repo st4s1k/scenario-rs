@@ -3,67 +3,69 @@
 :host {
   display: fixed;
   width: 100vw;
-}
 
-$size: styles.$titlebar-height;
+  $size: styles.$titlebar-height;
 
-.titlebar {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto auto auto;
-  height: $size;
-  background: styles.$secondary-color-lighter-5;
-  border-bottom: 1px solid styles.$secondary-color-lighter-20;
-  box-sizing: border-box;
-
-  #spacer {
-    flex: 1;
-  }
-
-  .button {
+  .titlebar {
     display: grid;
-    position: relative;
-    place-content: center;
-    width: $size;
+    grid-template-columns: auto 1fr auto auto auto auto;
     height: $size;
-    background-repeat: no-repeat;
-    background-position: center;
-    transition: background-color 0.2s;
+    background: styles.$secondary-color-lighter-5;
+    border-bottom: 1px solid styles.$secondary-color-lighter-20;
+    box-sizing: border-box;
 
-    svg {
-      width: 14px;
-      height: 14px;
-      color: rgba(255, 255, 255, 0.5);
+    #spacer {
+      flex: 1;
     }
 
-    &#save {
-      svg {
-        width: 20px;
-        height: 20px;
-      }
-    }
-
-    &:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    &#close:hover {
-      background-color: rgba(255, 0, 0, 0.8);
+    .button {
+      display: grid;
+      position: relative;
+      place-content: center;
+      width: $size;
+      height: $size;
+      background-repeat: no-repeat;
+      background-position: center;
+      transition: background-color 0.2s;
 
       svg {
-        color: rgba(255, 255, 255, 0.8);
+        width: 14px;
+        height: 14px;
+        color: rgba(255, 255, 255, 0.5);
       }
-    }
 
-    &:active {
-      background-color: rgba(255, 255, 255, 0.2);
-    }
+      &#save {
+        svg {
+          width: 20px;
+          height: 20px;
+        }
+      }
 
-    .tooltip-arrow-top {
-      transform: translateX(-50%) translateX(calc(#{$size} / 2 - #{styles.$gap-small})) translateY(calc(#{$size} + #{styles.$gap-small}));
-    }
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
 
-    .tooltip-arrow-left {
-      transform: translateX(calc(#{$size} + #{styles.$gap-small})) translateY(styles.$gap-small);
+      &#close:hover {
+        background-color: rgba(255, 0, 0, 0.8);
+
+        svg {
+          color: rgba(255, 255, 255, 0.8);
+        }
+      }
+
+      &:active {
+        background-color: rgba(255, 255, 255, 0.2);
+      }
+
+      tooltip[arrow="top"] {
+        justify-self: center;
+        top: $size;
+      }
+
+      tooltip[arrow="left"] {
+        top: styles.$gap-small;
+        left: $size;
+      }
     }
   }
 }
