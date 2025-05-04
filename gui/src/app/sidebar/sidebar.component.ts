@@ -1,5 +1,6 @@
 import { Component, Input, HostListener, OnChanges, Renderer2, Inject } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
+import { ExpandableComponent } from '../shared/expandable/expandable.component';
 
 interface TabConfig {
   id: string;
@@ -22,7 +23,7 @@ interface Step {
 
 @Component({
   selector: 'sidebar',
-  imports: [CommonModule],
+  imports: [CommonModule, ExpandableComponent],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss'
 })
@@ -35,6 +36,14 @@ export class SidebarComponent implements OnChanges {
   sidebarWidth = 30;
   isResizing = false;
   isCollapsed = true;
+
+  taskExpandedMap: { [key: string]: boolean } = {};
+  stepExpandedMap: { [index: number]: boolean } = {};
+  stepOnFailExpandedMap: { [key: string]: boolean } = {};
+
+  getOnFailStepKey(parentIndex: number, onFailIndex: number): string {
+    return `${parentIndex}-${onFailIndex}`;
+  }
 
   tabsConfig: TabConfig[] = [
     { id: 'steps', title: 'Steps' },
