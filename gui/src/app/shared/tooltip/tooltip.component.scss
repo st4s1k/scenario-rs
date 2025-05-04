@@ -1,0 +1,53 @@
+@use '../../../styles.scss';
+
+:host {
+  opacity: 0;
+  visibility: hidden;
+  width: max-content;
+  background-color: styles.$secondary-color-lighter-2;
+  color: styles.$secondary-color-lighter-60;
+  text-align: center;
+  padding: styles.$gap-small;
+  border: 1px solid styles.$primary-color-lighter-40;
+  position: absolute;
+  z-index: 1;
+  font-size: styles.$font-size-small;
+  font-weight: 400;
+  transition: all 0.2s ease-in-out;
+
+  &.visible {
+    visibility: visible;
+    opacity: 1;
+    transition-delay: 0.5s;
+  }
+
+  &:not(.transition) {
+    transition: none;
+  }
+
+  &::after {
+    content: " ";
+    position: absolute;
+    border: styles.$gap-small solid transparent;
+  }
+
+  &.arrow-top {
+    margin-top: styles.$gap-small;
+
+    &::after {
+      bottom: 100%;
+      left: calc(50% - styles.$gap-small);
+      border-color: transparent transparent styles.$primary-color-lighter-40 transparent;
+    }
+  }
+
+  &.arrow-left {
+    margin-left: styles.$gap-small;
+
+    &::after {
+      right: 100%;
+      top: calc(50% - styles.$gap-small);
+      border-color: transparent styles.$primary-color-lighter-40 transparent transparent;
+    }
+  }
+}
