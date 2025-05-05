@@ -82,6 +82,8 @@
         }
 
         info-block {
+          background-color: styles.$secondary-color-lighter-5;
+
           .text-field {
             height: auto;
             border: none;
@@ -92,7 +94,6 @@
           }
 
           textarea {
-            background-color: styles.$secondary-color-lighter-5;
             border: none;
             padding: styles.$gap-small;
             field-sizing: content;
@@ -102,15 +103,19 @@
             max-height: 200px;
           }
 
-          &.error textarea {
+          &.error {
             background-color: transparent;
-            color: styles.$red;
 
-            $selection-color: color-mix(in srgb, styles.$red 70%, styles.$secondary-color-lighter-2);
+            textarea {
+              background-color: transparent;
+              color: styles.$red;
 
-            &::selection {
-              background-color: $selection-color;
-              color: styles.$secondary-color;
+              $selection-color: color-mix(in srgb, styles.$red 70%, styles.$secondary-color-lighter-2);
+
+              &::selection {
+                background-color: $selection-color;
+                color: styles.$secondary-color;
+              }
             }
           }
         }

@@ -1,22 +1,13 @@
 @use '../../../styles.scss';
 
 :host {
-  @mixin block-variant($color, $bg-color) {
-    >label {
-      color: $color;
-      border-color: $color;
-    }
-
-    >.content {
-      background-color: $bg-color;
-      border-color: $color;
-    }
-  }
+  margin-top: styles.$gap-medium;
 
   .block {
     display: grid;
     position: relative;
     padding-top: styles.$gap-medium;
+    margin-top: -#{styles.$gap-medium};
 
     label {
       position: absolute;
@@ -37,16 +28,23 @@
       border-style: solid;
     }
 
+    @mixin block-variant($color) {
+      >label {
+        color: $color;
+        border-color: $color;
+      }
+
+      >.content {
+        border-color: $color;
+      }
+    }
+
     &.primary {
-      $color: styles.$primary-color;
-      $bg-color: styles.$secondary-color-lighter-5;
-      @include block-variant($color, $bg-color);
+      @include block-variant(styles.$primary-color);
     }
 
     &.secondary {
-      $color: styles.$secondary-color-lighter-60;
-      $bg-color: styles.$secondary-color-lighter-5;
-      @include block-variant($color, $bg-color);
+      @include block-variant(styles.$secondary-color-lighter-60);
 
       >.content {
         border-color: styles.$secondary-color-lighter-40;
@@ -54,9 +52,7 @@
     }
 
     &.error {
-      $color: styles.$red;
-      $bg-color: transparent;
-      @include block-variant($color, $bg-color);
+      @include block-variant(styles.$red);
     }
   }
 }
