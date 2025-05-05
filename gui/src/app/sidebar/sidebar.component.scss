@@ -83,20 +83,34 @@
       grid-auto-rows: min-content;
       min-width: max-content;
 
+      expandable.expanded {
+        margin-bottom: styles.$gap-small;
+      }
+
       .task {
         display: grid;
-        padding: styles.$gap-small styles.$gap-medium;
-        padding-right: 0;
-        gap: styles.$gap-small;
-        box-sizing: border-box;
-        border-left: 1px solid styles.$secondary-color-lighter-20;
-        background-color: styles.$secondary-color-lighter-2;
-        width: 100%;
-        height: 100%;
+        padding-bottom: styles.$gap-small;
+        border: none;
+        gap: styles.$gap-medium;
 
         .task-item {
           display: grid;
           gap: styles.$gap-small;
+        }
+
+        info-block {
+          &[variant='primary'] {
+            background-color: styles.$secondary-color-lighter-5;
+          }
+
+          .text-field {
+            height: auto;
+            border: none;
+
+            &:focus {
+              outline: none;
+            }
+          }
         }
       }
     }

@@ -1,6 +1,7 @@
 import { Component, Input, HostListener, OnChanges, Renderer2, Inject } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { ExpandableComponent } from '../shared/expandable/expandable.component';
+import { InfoBlockComponent } from '../shared/info-block/info-block.component';
 
 interface TabConfig {
   id: string;
@@ -23,7 +24,11 @@ interface Step {
 
 @Component({
   selector: 'sidebar',
-  imports: [CommonModule, ExpandableComponent],
+  imports: [
+    CommonModule,
+    ExpandableComponent,
+    InfoBlockComponent
+  ],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss'
 })
@@ -39,7 +44,8 @@ export class SidebarComponent implements OnChanges {
 
   taskExpandedMap: { [key: string]: boolean } = {};
   stepExpandedMap: { [index: number]: boolean } = {};
-  stepOnFailExpandedMap: { [key: string]: boolean } = {};
+  onFailExpandedMap: { [index: number]: boolean } = {};
+  onFailStepExpandedMap: { [key: string]: boolean } = {};
 
   getOnFailStepKey(parentIndex: number, onFailIndex: number): string {
     return `${parentIndex}-${onFailIndex}`;
