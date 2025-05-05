@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, HostBinding } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -12,6 +12,7 @@ export class ExpandableComponent {
   @Input() expanded: boolean = true;
   @Input() showSeparator: boolean = false;
   @Output() expandedChange = new EventEmitter<boolean>();
+  @HostBinding('class.expanded') get isExpanded() { return this.expanded; }
 
   toggleExpanded(event: MouseEvent): void {
     event.preventDefault();
