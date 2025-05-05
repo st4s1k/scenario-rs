@@ -1,7 +1,5 @@
 <div class="expandable-container" [ngClass]="variant">
-  @if (showSeparator) {
-  <div class="expandable-separator"></div>
-  }
+  <div class="expandable-separator" [class.hidden]="!showSeparator"></div>
   <div class="expandable-header" (click)="toggleExpanded($event)">
     <div class="expandable-icon">{{expanded ? '[-]' : '[+]'}}</div>
     <ng-content select="[beforeLabel]"></ng-content>

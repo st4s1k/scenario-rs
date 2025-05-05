@@ -4,24 +4,29 @@
   display: block;
   width: 100%;
 
-  .expandable-separator {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    width: 100%;
-    height: styles.$gap-medium;
-
-    &::before {
-      content: '';
-      width: 100%;
-      height: 50%;
-      border-bottom: 1px solid styles.$secondary-color-lighter-10;
-    }
-  }
-
   .expandable-container {
     width: 100%;
     display: grid;
     grid-template-rows: auto auto 1fr;
+
+    .expandable-separator {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      width: 100%;
+      height: styles.$gap-medium;
+  
+      &::before {
+        content: '';
+        width: 100%;
+        height: 50%;
+        border-bottom: 1px solid styles.$secondary-color-lighter-10;
+      }
+  
+      &.hidden {
+        visibility: hidden;
+        height: 0;
+      }
+    }
 
     @mixin variant($color) {
       .expandable-header {
