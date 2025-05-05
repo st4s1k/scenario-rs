@@ -12,7 +12,7 @@
       @switch (item.step.task.task_type) {
       @case ('RemoteSudo') {
       <div class="task-item">
-        <info-block label="Command" color="primary">
+        <info-block label="Command" variant="primary">
           @let command = state && state.type === 'RemoteSudoState' && state.command
           ? state.command
           : item.step.task.command;
@@ -24,7 +24,7 @@
         @let output = state && state.type === 'RemoteSudoState' && state.output
         ? state.output
         : '';
-        <info-block class="output" label="Output" color="secondary">
+        <info-block class="output" label="Output" variant="secondary">
           <textarea wrap="off" spellcheck="false" [autoScroll]="item.state" readonly>{{ output }}</textarea>
         </info-block>
       </div>
@@ -37,14 +37,14 @@
       }
       @case ('SftpCopy') {
       <div class="task-item">
-        <info-block label="Source" color="primary">
+        <info-block label="Source" variant="primary">
           @let source = state && state.type === 'SftpCopyState'
           ? state.source
           : item.step.task.source_path;
           <input class="text-field" type="text" [value]="source" readonly>
         </info-block>
 
-        <info-block label="Destination" color="primary">
+        <info-block label="Destination" variant="primary">
           @let destination = state && state.type === 'SftpCopyState'
           ? state.destination
           : item.step.task.destination_path;
@@ -65,7 +65,7 @@
 
       @if (item.status === 'failed') {
       <div class="task-item">
-        <info-block class="error" label="Error" color="error">
+        <info-block class="error" label="Error" variant="error">
           <textarea spellcheck="false" readonly>{{ item.errorMessage }}</textarea>
         </info-block>
       </div>
