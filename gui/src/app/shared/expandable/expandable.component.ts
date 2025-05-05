@@ -9,6 +9,7 @@ import { CommonModule } from '@angular/common';
 })
 export class ExpandableComponent {
   @Input() label: string = '';
+  @Input() variant: 'primary' | 'error' = 'primary';
   @Input() expanded: boolean = true;
   @Input() showSeparator: boolean = false;
   @Output() expandedChange = new EventEmitter<boolean>();

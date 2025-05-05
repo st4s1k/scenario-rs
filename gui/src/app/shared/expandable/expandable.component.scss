@@ -23,6 +23,30 @@
     display: grid;
     grid-auto-rows: auto 1fr;
 
+    @mixin variant($color) {
+      .expandable-header {
+        $hover-color: color-mix(in srgb, $color 60%, white);
+
+        label,
+        .expandable-icon {
+          color: $color;
+        }
+
+        &:hover label,
+        &:hover .expandable-icon {
+          color: $hover-color;
+        }
+      }
+    }
+
+    &.primary {
+      @include variant(styles.$primary-color);
+    }
+
+    &.error {
+      @include variant(styles.$red);
+    }
+
     .expandable-header {
       min-height: styles.$title-size;
       height: styles.$title-size;
@@ -31,16 +55,6 @@
       align-items: center;
       gap: styles.$gap-small;
       cursor: pointer;
-
-      &:hover {
-        .expandable-icon {
-          color: styles.$primary-color-lighter-40;
-        }
-
-        .expandable-label {
-          color: styles.$primary-color-lighter-40;
-        }
-      }
 
       input[type="checkbox"] {
         display: none;
@@ -51,8 +65,6 @@
       }
 
       .expandable-label {
-        color: styles.$primary-color;
-        font-weight: normal;
         cursor: pointer;
       }
     }
