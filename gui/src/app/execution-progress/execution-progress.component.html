@@ -4,7 +4,7 @@
   } @else {
   @for (item of displaySteps.slice(0, currentStepIndex() + 1); track item.index) {
   <expandable [label]="'[' + (item.index + 1) + '] ' + item.step.task.description"
-    [expanded]="item.index === currentStepIndex()" [showSeparator]="$index > 0">
+    [(expanded)]="displaySteps[$index].expanded" [showSeparator]="$index > 0 && !displaySteps[$index - 1].expanded">
     <div class="status-indicator" [ngClass]="item.status" beforeLabel></div>
     <div class="task">
       @let state = item.state();

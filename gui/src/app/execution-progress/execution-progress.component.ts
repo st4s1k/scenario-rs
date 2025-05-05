@@ -35,6 +35,7 @@ interface DisplayStep {
   state: WritableSignal<StepState | undefined>;
   status: StepStatus;
   errorMessage?: string;
+  expanded: boolean;
 }
 
 type StepState = SftpCopyState | RemoteSudoState;
@@ -106,7 +107,8 @@ export class ExecutionProgressComponent implements OnChanges, OnDestroy, AfterVi
         step,
         state: signal(undefined),
         status: 'pending',
-        errorMessage: undefined
+        errorMessage: undefined,
+        expanded: false
       } as DisplayStep));
     }
   }
@@ -130,11 +132,13 @@ export class ExecutionProgressComponent implements OnChanges, OnDestroy, AfterVi
     this.displaySteps[index] = {
       ...this.displaySteps[index],
       status: this.getDisplayStatus(stepEvent),
-      errorMessage: stepEvent.type === 'StepFailed' ? stepEvent.message : undefined
+      errorMessage: stepEvent.type === 'StepFailed' ? stepEvent.message : undefined,
+      expanded: true
     };
     const oldDisplayState = this.displaySteps[index].state();
     const newDisplayState = this.updateDisplayState(oldDisplayState, stepEvent);
     this.displaySteps[index].state.set(newDisplayState);
+    this.displaySteps.slice(0, index).forEach((step) => (step.expanded = false));
   }
 
   private updateDisplayState(
