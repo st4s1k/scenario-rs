@@ -12,7 +12,9 @@ export class ExpandableComponent {
   @Input() variant: 'primary' | 'error' = 'primary';
   @Input() expanded: boolean = true;
   @Input() showSeparator: boolean = false;
+  @Input() nested: boolean = false;
   @Output() expandedChange = new EventEmitter<boolean>();
+  @HostBinding('class.nested') get isNested() { return this.nested; }
   @HostBinding('class.expanded') get isExpanded() { return this.expanded; }
 
   toggleExpanded(event: MouseEvent): void {

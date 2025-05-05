@@ -5,8 +5,8 @@
   width: 100%;
 
   .expandable-separator {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr auto;
     width: 100%;
     height: styles.$gap-medium;
 
@@ -21,7 +21,7 @@
   .expandable-container {
     width: 100%;
     display: grid;
-    grid-auto-rows: auto 1fr;
+    grid-template-rows: auto auto 1fr;
 
     @mixin variant($color) {
       .expandable-header {
@@ -50,8 +50,8 @@
     .expandable-header {
       min-height: styles.$title-size;
       height: styles.$title-size;
-      display: flex;
-      flex-direction: row;
+      display: grid;
+      grid-template-columns: auto auto 1fr;
       align-items: center;
       gap: styles.$gap-small;
       cursor: pointer;
@@ -61,7 +61,10 @@
       }
 
       .expandable-icon {
-        color: styles.$primary-color;
+        display: block;
+        width: styles.$title-size;
+        height: styles.$title-size;
+        place-content: center;
       }
 
       .expandable-label {
@@ -71,12 +74,39 @@
 
     .expandable-content {
       display: grid;
+      grid-template-columns: auto 1fr;
       opacity: 1;
       overflow: visible;
+      gap: styles.$gap-small;
       margin-top: styles.$gap-small;
 
       &.hidden {
         display: none;
+      }
+
+      .expandable-nesting-indicator {
+        width: styles.$title-size;
+
+        &:after {
+          content: '';
+          display: block;
+          height: 100%;
+          box-sizing: border-box;
+          border-right: 1px solid styles.$secondary-color-lighter-20;
+          width: 50%;
+        }
+      }
+
+      &.nested {
+        margin-top: 0;
+
+        >.expandable-nesting-indicator {
+          width: calc(#{styles.$title-size} / 2);
+
+          &:after {
+            width: 100%;
+          }
+        }
       }
     }
   }
