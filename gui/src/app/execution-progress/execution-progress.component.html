@@ -2,20 +2,20 @@
   @if (currentStepIndex() == -1 || displaySteps.length === 0) {
   <div class="empty-state">No steps to display</div>
   } @else {
-  @for (item of displaySteps.slice(0, currentStepIndex() + 1); track item.index) {
-  <expandable [label]="'[' + (item.index + 1) + '] ' + item.step.task.description"
-    [(expanded)]="displaySteps[$index].expanded" [showSeparator]="$index > 0 && !displaySteps[$index - 1].expanded">
-    <div class="status-indicator" [ngClass]="item.status" beforeLabel></div>
+  @for (step of displaySteps.slice(0, currentStepIndex() + 1); track step.index) {
+  <expandable [label]="'[' + (step.index + 1) + '] ' + step.task.description" [(expanded)]="step.expanded"
+    [showSeparator]="$index > 0 && !displaySteps[$index - 1].expanded">
+    <div class="status-indicator" [ngClass]="step.status" beforeLabel></div>
     <div class="task">
-      @let state = item.state();
+      @let state = step.state();
 
-      @switch (item.step.task.task_type) {
+      @switch (step.task.task_type) {
       @case ('RemoteSudo') {
       <div class="task-item">
         <info-block label="Command" variant="primary">
           @let command = state && state.type === 'RemoteSudoState' && state.command
           ? state.command
-          : item.step.task.command;
+          : step.task.command;
           <input class="text-field" type="text" [value]="command" readonly />
         </info-block>
       </div>
@@ -25,11 +25,11 @@
         ? state.output
         : '';
         <info-block class="output" label="Output" variant="secondary">
-          <textarea wrap="off" spellcheck="false" [autoScroll]="item.state" readonly>{{ output }}</textarea>
+          <textarea wrap="off" spellcheck="false" [autoScroll]="step.state" readonly>{{ output }}</textarea>
         </info-block>
       </div>
 
-      @if (item.status === 'executing') {
+      @if (step.status === 'executing') {
       <div class="executing-indicator">
         <div class="dot-pulse"></div>
       </div>
@@ -40,14 +40,14 @@
         <info-block label="Source" variant="primary">
           @let source = state && state.type === 'SftpCopyState'
           ? state.source
-          : item.step.task.source_path;
+          : step.task.source_path;
           <input class="text-field" type="text" [value]="source" readonly>
         </info-block>
 
         <info-block label="Destination" variant="primary">
           @let destination = state && state.type === 'SftpCopyState'
           ? state.destination
-          : item.step.task.destination_path;
+          : step.task.destination_path;
           <input class="text-field" type="text" [value]="destination" readonly />
         </info-block>
 
@@ -63,10 +63,10 @@
       }
       }
 
-      @if (item.status === 'failed') {
+      @if (step.status === 'failed') {
       <div class="task-item">
         <info-block class="error" label="Error" variant="error">
-          <textarea spellcheck="false" readonly>{{ item.errorMessage }}</textarea>
+          <textarea spellcheck="false" readonly>{{ step.errorMessage }}</textarea>
         </info-block>
       </div>
       }

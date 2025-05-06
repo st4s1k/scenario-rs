@@ -43,8 +43,8 @@
       </div>
 
       <expandable label="Execution progress:" [(expanded)]="executionProgressExpanded">
-        <div class="section">
-          <execution-progress [steps]="steps">
+        <div class="section"> 
+          <execution-progress [tasks]="orderedTasks">
           </execution-progress>
         </div>
       </expandable>
