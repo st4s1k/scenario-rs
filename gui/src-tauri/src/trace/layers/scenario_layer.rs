@@ -27,6 +27,10 @@ impl EventLayer for ScenarioEventLayer {
         event.record(&mut visitor);
 
         const SCENARIO_PREFIX: &str = "[SCN] ";
+        let on_fail = match ctx.event_scope(event) {
+            Some(mut scope) => scope.any(|span| span.name() == "on_fail_steps"),
+            None => false,
+        };
 
         if let Some(event_type) = &visitor.event_type {
             match event_type.as_str() {
@@ -38,6 +42,7 @@ impl EventLayer for ScenarioEventLayer {
                         )));
 
                         self.sender.send_event(AppEvent::StepState {
+                            on_fail,
                             state: StepState::StepFailed {
                                 message: error.to_string(),
                             },
@@ -49,6 +54,7 @@ impl EventLayer for ScenarioEventLayer {
                         )));
 
                         self.sender.send_event(AppEvent::StepState {
+                            on_fail,
                             state: StepState::StepFailed {
                                 message: "Scenario execution failed".to_string(),
                             },
@@ -81,12 +87,13 @@ impl EventLayer for ScenarioEventLayer {
                             "{}[{task_number}/{total_steps}] {description}",
                             SCENARIO_PREFIX
                         )));
-                        self.sender.send_event(AppEvent::StepIndex { index });
+                        self.sender.send_event(AppEvent::StepIndex { on_fail, index });
                     }
                 }
                 "step_completed" => {
                     if let Some(index) = visitor.index {
                         self.sender.send_event(AppEvent::StepState {
+                            on_fail,
                             state: StepState::StepCompleted { index },
                         });
                     }
@@ -118,6 +125,7 @@ impl EventLayer for ScenarioEventLayer {
                         }
 
                         self.sender.send_event(AppEvent::StepState {
+                            on_fail,
                             state: StepState::RemoteSudoOutput {
                                 command: command.to_owned(),
                                 output: output.to_owned(),
@@ -159,6 +167,7 @@ impl EventLayer for ScenarioEventLayer {
                         )));
 
                         self.sender.send_event(AppEvent::StepState {
+                            on_fail,
                             state: StepState::SftpCopyProgress {
                                 source: source.to_owned(),
                                 destination: destination.to_owned(),

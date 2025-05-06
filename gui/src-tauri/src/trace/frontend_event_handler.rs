@@ -28,8 +28,8 @@ pub enum StepState {
 pub enum AppEvent {
     Execution(bool),
     LogMessage(String),
-    StepState { state: StepState },
-    StepIndex { index: usize },
+    StepState { on_fail: bool, state: StepState },
+    StepIndex { on_fail: bool, index: usize },
 }
 
 pub struct FrontendEventHandler;
@@ -49,11 +49,19 @@ impl EventHandler<AppEvent> for FrontendEventHandler {
                 let message = format!("[{timestamp}] {message}");
                 let _ = app_handle.emit("log-message", message);
             }
-            AppEvent::StepState { state } => {
-                let _ = app_handle.emit("step-state", state);
+            AppEvent::StepState { on_fail, state } => {
+                let event_name = match *on_fail {
+                    true => "on-fail-step-state",
+                    false => "step-state",
+                };
+                let _ = app_handle.emit(event_name, state);
             }
-            AppEvent::StepIndex { index } => {
-                let _ = app_handle.emit("step-index", index);
+            AppEvent::StepIndex { on_fail, index } => {
+                let event_name = match *on_fail {
+                    true => "on-fail-step-index",
+                    false => "step-index",
+                };
+                let _ = app_handle.emit(event_name, index);
             }
         }
     }
