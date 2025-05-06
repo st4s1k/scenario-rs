@@ -98,19 +98,7 @@ where
             return;
         }
 
-        let mut visitor = ScenarioEventVisitor {
-            event_type: None,
-            description: None,
-            index: None,
-            total_steps: None,
-            command: None,
-            output: None,
-            error: None,
-            source: None,
-            destination: None,
-            current: None,
-            total: None,
-        };
+        let mut visitor = ScenarioEventVisitor::default();
 
         event.record(&mut visitor);
 
