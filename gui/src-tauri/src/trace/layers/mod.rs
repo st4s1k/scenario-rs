@@ -1,6 +1,7 @@
 pub use app_layer::AppEventLayer;
 pub use scenario_layer::ScenarioEventLayer;
-use tracing::Event;
+use tracing::{Event, Subscriber};
+use tracing_subscriber::{layer::Context, registry::LookupSpan};
 
 mod app_layer;
 mod scenario_layer;
@@ -42,5 +43,8 @@ pub trait EventLayer {
     /// # Arguments
     ///
     /// * `event` - A reference to the tracing event to process
-    fn process_event(&self, event: &Event<'_>);
+    /// * `ctx` - The context in which the event occurred
+    fn process_event<S>(&self, event: &Event<'_>, ctx: Context<'_, S>)
+    where
+        S: Subscriber + for<'a> LookupSpan<'a>;
 }

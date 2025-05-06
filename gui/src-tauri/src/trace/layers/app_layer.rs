@@ -4,6 +4,7 @@ use crate::{
 };
 use std::sync::mpsc::Sender;
 use tracing::Event;
+use tracing_subscriber::layer::Context;
 
 /// A tracing layer that processes application events and forwards them as `AppEvent`s.
 ///
@@ -85,7 +86,7 @@ impl AppEventLayer {
 
 impl EventLayer for AppEventLayer {
     /// Processes a tracing event and potentially forwards it as an `AppEvent`.
-    fn process_event(&self, event: &Event<'_>) {
+    fn process_event<S>(&self, event: &Event<'_>, _ctx: Context<'_, S>) {
         let mut visitor = AppEventVisitor::default();
 
         event.record(&mut visitor);
@@ -106,7 +107,7 @@ mod tests {
     };
     use std::sync::mpsc;
     use tracing::{event, subscriber, Event, Level, Subscriber};
-    use tracing_subscriber::{layer::Context, prelude::*, Layer, Registry};
+    use tracing_subscriber::{layer::Context, prelude::*, registry::LookupSpan, Layer, Registry};
 
     #[test]
     fn test_appelayer_initialization_with_new() {
@@ -154,9 +155,12 @@ mod tests {
     // Test helpers
     struct TestAppEventLayer(AppEventLayer);
 
-    impl<S: Subscriber> Layer<S> for TestAppEventLayer {
-        fn on_event(&self, event: &Event<'_>, _ctx: Context<'_, S>) {
-            self.0.process_event(event);
+    impl<S> Layer<S> for TestAppEventLayer
+    where
+        S: Subscriber + for<'a> LookupSpan<'a>,
+    {
+        fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
+            self.0.process_event(event, ctx);
         }
     }
 }

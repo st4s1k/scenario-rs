@@ -24,16 +24,16 @@ impl<S> Layer<S> for FrontendLayer
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
-    fn on_event(&self, event: &Event<'_>, _ctx: Context<'_, S>) {
+    fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
         let module_path = match event.metadata().module_path() {
             Some(path) => path,
             None => return,
         };
 
         if module_path.starts_with("scenario_rs_core::") {
-            self.scenario_layer.process_event(event);
+            self.scenario_layer.process_event(event, ctx);
         } else if module_path.starts_with("scenario_rs_gui::") {
-            self.app_layer.process_event(event);
+            self.app_layer.process_event(event, ctx);
         }
     }
 }

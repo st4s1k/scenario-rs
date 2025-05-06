@@ -4,7 +4,8 @@ use crate::{
 };
 use scenario_rs::trace::ScenarioEventVisitor;
 use std::sync::mpsc::Sender;
-use tracing::{error, Event};
+use tracing::{error, Event, Subscriber};
+use tracing_subscriber::{layer::Context, registry::LookupSpan};
 
 pub struct ScenarioEventLayer {
     pub sender: Sender<AppEvent>,
@@ -17,7 +18,10 @@ impl ScenarioEventLayer {
 }
 
 impl EventLayer for ScenarioEventLayer {
-    fn process_event(&self, event: &Event<'_>) {
+    fn process_event<S>(&self, event: &Event<'_>, ctx: Context<'_, S>)
+    where
+        S: Subscriber + for<'a> LookupSpan<'a>,
+    {
         let mut visitor = ScenarioEventVisitor::default();
 
         event.record(&mut visitor);
