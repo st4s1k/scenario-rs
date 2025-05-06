@@ -57,6 +57,7 @@ export class ExecutionProgressComponent implements OnChanges, OnDestroy, AfterVi
   Math = Math;
 
   @Input() tasks: Task[] = [];
+  @Input() variant: 'primary' | 'error' = 'primary';
 
   currentStepIndex = signal(-1);
   displaySteps: DisplayStep[] = [];

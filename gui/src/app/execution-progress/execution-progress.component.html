@@ -3,7 +3,7 @@
   <div class="empty-state">No steps to display</div>
   } @else {
   @for (step of displaySteps.slice(0, currentStepIndex() + 1); track step.index) {
-  <expandable [label]="'[' + (step.index + 1) + '] ' + step.task.description" [(expanded)]="step.expanded"
+  <expandable [ngClass]="variant" [label]="'[' + (step.index + 1) + '] ' + step.task.description" [(expanded)]="step.expanded"
     [showSeparator]="$index > 0 && !displaySteps[$index - 1].expanded">
     <div class="status-indicator" [ngClass]="step.status" beforeLabel></div>
     <div class="task">
