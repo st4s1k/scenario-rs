@@ -11,10 +11,12 @@ use crate::{
     trace::{AppEvent, FrontendLayer},
     utils::SafeLock,
 };
-use ::tracing::Level;
 use std::sync::Mutex;
 use tauri::Manager;
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use tracing::Level;
+use tracing_subscriber::{
+    filter::LevelFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt, Layer,
+};
 
 mod app;
 mod commands;
@@ -25,15 +27,17 @@ fn main() {
     let (frontend_tx, frontend_rx) = std::sync::mpsc::channel::<AppEvent>();
 
     tracing_subscriber::registry()
-        .with(fmt::layer().compact().with_target(false))
         .with(
-            EnvFilter::from_default_env().add_directive(if cfg!(debug_assertions) {
-                Level::TRACE.into()
-            } else {
-                Level::INFO.into()
-            }),
+            fmt::layer()
+                .compact()
+                .with_target(false)
+                .with_filter(LevelFilter::from_level(if cfg!(debug_assertions) {
+                    Level::TRACE
+                } else {
+                    Level::INFO
+                })),
         )
-        .with(FrontendLayer::from(frontend_tx))
+        .with(FrontendLayer::from(frontend_tx).with_filter(LevelFilter::from_level(Level::TRACE)))
         .init();
 
     tauri::Builder::default()
