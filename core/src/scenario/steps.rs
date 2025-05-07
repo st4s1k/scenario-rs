@@ -5,7 +5,7 @@
 
 use crate::{
     config::steps::StepsConfig,
-    scenario::{errors::StepsError, step::Step, task::Task, tasks::Tasks, variables::Variables},
+    scenario::{errors::StepsError, step::Step, tasks::Tasks, variables::Variables},
     session::Session,
 };
 use std::ops::{Deref, DerefMut};
@@ -120,9 +120,9 @@ impl TryFrom<(&Tasks, &StepsConfig)> for Steps {
     /// * `Err(StepsError)` - If any referenced task doesn't exist or other validation errors occur
     fn try_from((tasks, config): (&Tasks, &StepsConfig)) -> Result<Self, Self::Error> {
         let mut steps = Vec::new();
-        for step_config in config.deref() {
+        for (index, step_config) in config.deref().iter().enumerate() {
             steps.push(
-                Step::try_from((tasks, step_config))
+                Step::try_from((index, tasks, step_config))
                     .map_err(StepsError::CannotCreateStepFromConfig)?,
             );
         }
@@ -153,7 +153,11 @@ impl Steps {
     ///
     /// * `Ok(())` - If all steps executed successfully
     /// * `Err(StepsError)` - If any step failed to execute
-    #[instrument(skip_all, name = "steps")]
+    #[instrument(
+        name = "steps",
+        skip_all,
+        fields(steps.total = self.len())
+    )]
     pub(crate) fn execute(
         &self,
         session: &Session,
@@ -165,51 +169,9 @@ impl Steps {
 
         debug!(scenario.event = "steps_started");
 
-        for (index, step) in self.iter().enumerate() {
-            let total_steps = self.len();
-            let description = step.task.description().to_string();
-
-            debug!(
-                scenario.event = "step_started",
-                step.index = index,
-                steps.total = total_steps,
-                task.description = description
-            );
-
-            let error_message = step.task.error_message().to_string();
-
-            let task_result = match &step.task {
-                Task::RemoteSudo { remote_sudo, .. } => remote_sudo
-                    .execute(session, variables)
-                    .map_err(|error| {
-                        StepsError::CannotExecuteRemoteSudoCommand(error, error_message.clone())
-                    })
-                    .map_err(|error| {
-                        debug!(scenario.event = "error", scenario.error = %error);
-                        error
-                    }),
-                Task::SftpCopy { sftp_copy, .. } => sftp_copy
-                    .execute(session, variables)
-                    .map_err(|error| {
-                        StepsError::CannotExecuteSftpCopyCommand(error, error_message.clone())
-                    })
-                    .map_err(|error| {
-                        debug!(scenario.event = "error", scenario.error = %error);
-                        error
-                    }),
-            };
-
-            if let Err(error) = task_result {
-                step.execute_on_fail_steps(session, &variables)
-                    .map_err(StepsError::CannotExecuteOnFailSteps)
-                    .map_err(|error| {
-                        debug!(scenario.event = "error", scenario.error = %error);
-                        error
-                    })?;
-                return Err(error);
-            }
-
-            debug!(scenario.event = "step_completed", step.index = index);
+        for step in self.iter() {
+            step.execute(step, session, variables)
+                .map_err(StepsError::CannotExecuteStep)?;
         }
 
         debug!(scenario.event = "steps_completed");

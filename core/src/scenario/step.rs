@@ -10,6 +10,7 @@ use crate::{
     },
     session::Session,
 };
+use tracing::{debug, instrument};
 
 /// A single step to be executed as part of a scenario.
 ///
@@ -70,7 +71,7 @@ use crate::{
 /// };
 ///
 /// // Create the step
-/// let mut step = Step::try_from((&tasks, &step_config)).unwrap();
+/// let mut step = Step::try_from((0, &tasks, &step_config)).unwrap();
 ///
 /// // Create on_fail steps manually using the public API
 /// let mut on_fail_steps = OnFailSteps::default();
@@ -83,13 +84,15 @@ use crate::{
 /// ```
 #[derive(Clone, Debug)]
 pub struct Step {
+    /// The index of the step in the scenario
+    pub(crate) index: usize,
     /// The primary task to be executed
     pub(crate) task: Task,
     /// Steps to execute if the primary task fails
     pub(crate) on_fail_steps: OnFailSteps,
 }
 
-impl TryFrom<(&Tasks, &StepConfig)> for Step {
+impl TryFrom<(usize, &Tasks, &StepConfig)> for Step {
     type Error = StepError;
 
     /// Attempts to create a Step instance from tasks and step configuration.
@@ -99,6 +102,7 @@ impl TryFrom<(&Tasks, &StepConfig)> for Step {
     ///
     /// # Arguments
     ///
+    /// * `index` - The index of the step in the scenario
     /// * `tasks` - Collection of available tasks
     /// * `step_config` - Configuration for this step
     ///
@@ -106,7 +110,9 @@ impl TryFrom<(&Tasks, &StepConfig)> for Step {
     ///
     /// * `Ok(Step)` - If the referenced task exists and on-fail steps are valid
     /// * `Err(StepError)` - If the referenced task doesn't exist or on-fail steps are invalid
-    fn try_from((tasks, step_config): (&Tasks, &StepConfig)) -> Result<Self, Self::Error> {
+    fn try_from(
+        (index, tasks, step_config): (usize, &Tasks, &StepConfig),
+    ) -> Result<Self, Self::Error> {
         let on_fail_steps = match step_config.on_fail.as_ref() {
             Some(config) => OnFailSteps::try_from((tasks, config))
                 .map_err(StepError::CannotCreateOnFailStepsFromConfig)?,
@@ -114,6 +120,7 @@ impl TryFrom<(&Tasks, &StepConfig)> for Step {
         };
 
         Ok(Step {
+            index,
             task: tasks.get(&step_config.task).cloned().ok_or_else(|| {
                 StepError::CannotCreateTaskFromConfig(step_config.task.to_string())
             })?,
@@ -123,6 +130,11 @@ impl TryFrom<(&Tasks, &StepConfig)> for Step {
 }
 
 impl Step {
+    /// Returns the index of the step in the scenario.
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
     /// Returns a reference to the step's task.
     pub fn task(&self) -> &Task {
         &self.task
@@ -133,21 +145,57 @@ impl Step {
         &self.on_fail_steps
     }
 
-    /// Executes the on-fail steps for this step.
-    ///
-    /// This method is called when the primary task fails, to perform any
-    /// necessary cleanup or recovery actions.
-    ///
-    /// # Arguments
-    ///
-    /// * `session` - The SSH session for executing remote operations
-    /// * `variables` - Variables to use for placeholder resolution
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(())` - If all on-fail steps executed successfully
-    /// * `Err(StepError)` - If any on-fail step failed to execute
-    pub(crate) fn execute_on_fail_steps(
+    #[instrument(
+        name = "step"
+        skip_all,
+        fields(step.index = self.index)
+    )]
+    pub(crate) fn execute(
+        &self,
+        step: &Step,
+        session: &Session,
+        variables: &Variables,
+    ) -> Result<(), StepError> {
+        let description = step.task.description().to_string();
+
+        debug!(
+            scenario.event = "step_started",
+            task.description = description
+        );
+
+        let error_message = step.task.error_message().to_string();
+
+        let task_result = match &step.task {
+            Task::RemoteSudo { remote_sudo, .. } => remote_sudo
+                .execute(session, variables)
+                .map_err(|error| {
+                    StepError::CannotExecuteRemoteSudoCommand(error, error_message.clone())
+                })
+                .map_err(|error| {
+                    debug!(scenario.event = "error", scenario.error = %error);
+                    error
+                }),
+            Task::SftpCopy { sftp_copy, .. } => sftp_copy
+                .execute(session, variables)
+                .map_err(|error| {
+                    StepError::CannotExecuteSftpCopyCommand(error, error_message.clone())
+                })
+                .map_err(|error| {
+                    debug!(scenario.event = "error", scenario.error = %error);
+                    error
+                }),
+        };
+
+        if let Err(error) = task_result {
+            step.execute_on_fail_steps(session, &variables)?;
+            return Err(error);
+        }
+
+        debug!(scenario.event = "step_completed");
+        Ok(())
+    }
+
+    fn execute_on_fail_steps(
         &self,
         session: &Session,
         variables: &Variables,
@@ -155,6 +203,10 @@ impl Step {
         self.on_fail_steps
             .execute(session, variables)
             .map_err(StepError::CannotExecuteOnFailSteps)
+            .map_err(|error| {
+                debug!(scenario.event = "error", scenario.error = %error);
+                error
+            })
     }
 }
 
@@ -180,7 +232,7 @@ mod tests {
         };
 
         // When
-        let result = Step::try_from((&tasks, &config));
+        let result = Step::try_from((0, &tasks, &config));
 
         // Then
         assert!(result.is_ok());
@@ -199,7 +251,7 @@ mod tests {
         };
 
         // When
-        let result = Step::try_from((&tasks, &config));
+        let result = Step::try_from((0, &tasks, &config));
 
         // Then
         assert!(result.is_ok());
@@ -218,7 +270,7 @@ mod tests {
         };
 
         // When
-        let result = Step::try_from((&tasks, &config));
+        let result = Step::try_from((0, &tasks, &config));
 
         // Then
         assert!(result.is_err());
@@ -241,7 +293,7 @@ mod tests {
         };
 
         // When
-        let result = Step::try_from((&tasks, &config));
+        let result = Step::try_from((0, &tasks, &config));
 
         // Then
         assert!(result.is_err());
@@ -258,7 +310,7 @@ mod tests {
         };
 
         // When
-        let step = Step::try_from((&tasks, &config)).unwrap();
+        let step = Step::try_from((0, &tasks, &config)).unwrap();
 
         // Then
         assert_eq!(step.task().description(), "Test task 1");
@@ -273,7 +325,7 @@ mod tests {
             task: "task1".to_string(),
             on_fail: Some(OnFailStepsConfig::from(vec!["task2".to_string()])),
         };
-        let original = Step::try_from((&tasks, &config)).unwrap();
+        let original = Step::try_from((0, &tasks, &config)).unwrap();
 
         // When
         let cloned = original.clone();

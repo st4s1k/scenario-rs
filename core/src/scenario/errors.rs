@@ -134,6 +134,13 @@ pub enum StepsError {
     #[error("Cannot create Step from config:\n{0}")]
     CannotCreateStepFromConfig(StepError),
 
+    #[error("Cannot execute step:\n{0}")]
+    CannotExecuteStep(#[source] StepError),
+}
+
+/// Errors that can occur when creating or executing a single step.
+#[derive(Error, Debug)]
+pub enum StepError {
     /// Failed to execute a RemoteSudo command.
     #[error("Cannot execute RemoteSudo command:\n{1}:\n{0}")]
     CannotExecuteRemoteSudoCommand(#[source] RemoteSudoError, String),
@@ -142,14 +149,6 @@ pub enum StepsError {
     #[error("Cannot execute SftpCopy command:\n{1}:\n{0}")]
     CannotExecuteSftpCopyCommand(#[source] SftpCopyError, String),
 
-    /// Failed to execute on-fail steps after a step failure.
-    #[error("Cannot execute on-fail steps:\n{0}")]
-    CannotExecuteOnFailSteps(#[source] StepError),
-}
-
-/// Errors that can occur when creating or executing a single step.
-#[derive(Error, Debug)]
-pub enum StepError {
     /// Failed to create on-fail steps from their configuration.
     #[error("Cannot create OnFailSteps from config:\n{0}")]
     CannotCreateOnFailStepsFromConfig(#[source] OnFailError),
@@ -349,10 +348,9 @@ mod tests {
             PlaceholderResolutionError::CannotResolvePlaceholders("cmd".to_string());
         let remote_sudo_error =
             RemoteSudoError::CannotResolveCommandPlaceholders(placeholder_error);
-        let steps_error = StepsError::CannotExecuteRemoteSudoCommand(
-            remote_sudo_error,
-            "Install App".to_string(),
-        );
+        let step_error =
+            StepError::CannotExecuteRemoteSudoCommand(remote_sudo_error, "Install App".to_string());
+        let steps_error = StepsError::CannotCreateStepFromConfig(step_error);
 
         // When
         let error_message = format!("{}", steps_error);
