@@ -1,14 +1,17 @@
 use crate::{
     config::on_fail::OnFailStepsConfig,
-    scenario::{errors::OnFailError, task::Task, tasks::Tasks, variables::Variables},
+    scenario::{
+        errors::OnFailError, on_fail_step::OnFailStep, task::Task, tasks::Tasks,
+        variables::Variables,
+    },
     session::Session,
 };
 use std::ops::{Deref, DerefMut};
 use tracing::{debug, instrument};
 
-/// Represents a collection of tasks that will be executed when a scenario fails.
+/// Represents a collection of on-fail steps that will be executed when a scenario step fails.
 ///
-/// This struct wraps a vector of `Task` instances that are executed in sequence
+/// This struct wraps a vector of `OnFailStep` instances that are executed in sequence
 /// when the main scenario execution encounters an error.
 ///
 /// # Examples
@@ -16,7 +19,7 @@ use tracing::{debug, instrument};
 /// Creating an empty set of on-fail steps:
 ///
 /// ```
-/// use scenario_rs_core::scenario::on_fail::OnFailSteps;
+/// use scenario_rs_core::scenario::on_fail_steps::OnFailSteps;
 ///
 /// // Create an empty set of recovery steps
 /// let on_fail_steps = OnFailSteps::default();
@@ -29,7 +32,8 @@ use tracing::{debug, instrument};
 /// use std::collections::HashMap;
 /// use scenario_rs_core::{
 ///     scenario::{
-///         on_fail::OnFailSteps,
+///         on_fail_step::OnFailStep,
+///         on_fail_steps::OnFailSteps,
 ///         task::Task,
 ///         tasks::Tasks
 ///     },
@@ -58,19 +62,20 @@ use tracing::{debug, instrument};
 ///
 /// // Create empty on_fail_steps and add tasks manually
 /// let mut on_fail_steps = OnFailSteps::default();
-/// for name in task_names {
+/// for (idx, name) in task_names.iter().enumerate() {
 ///     if let Some(task) = tasks.get(&name) {
-///         on_fail_steps.push(task.clone());
+///        let on_fail_step = OnFailStep::from((idx, task));
+///         on_fail_steps.push(on_fail_step);
 ///     }
 /// }
 ///
 /// assert_eq!(on_fail_steps.len(), 1);
 /// ```
 #[derive(Clone, Debug)]
-pub struct OnFailSteps(Vec<Task>);
+pub struct OnFailSteps(Vec<OnFailStep>);
 
 impl Deref for OnFailSteps {
-    type Target = Vec<Task>;
+    type Target = Vec<OnFailStep>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -87,8 +92,8 @@ impl TryFrom<(&Tasks, &OnFailStepsConfig)> for OnFailSteps {
     type Error = OnFailError;
 
     fn try_from((tasks, config): (&Tasks, &OnFailStepsConfig)) -> Result<Self, Self::Error> {
-        let mut on_fail_tasks: Vec<Task> = Vec::new();
-        for config_step in config.deref() {
+        let mut on_fail_steps: Vec<OnFailStep> = Vec::new();
+        for (index, config_step) in config.deref().iter().enumerate() {
             let task: Task = tasks
                 .get(config_step)
                 .cloned()
@@ -97,9 +102,10 @@ impl TryFrom<(&Tasks, &OnFailStepsConfig)> for OnFailSteps {
                     debug!(scenario.event = "error", scenario.error = %error);
                     error
                 })?;
-            on_fail_tasks.push(task);
+            let on_fail_step = OnFailStep::from((index, task));
+            on_fail_steps.push(on_fail_step);
         }
-        Ok(OnFailSteps(on_fail_tasks))
+        Ok(OnFailSteps(on_fail_steps))
     }
 }
 
@@ -124,7 +130,11 @@ impl OnFailSteps {
     ///
     /// * `Ok(())` if all on-fail tasks executed successfully
     /// * `Err(OnFailError)` if any on-fail task failed to execute
-    #[instrument(skip_all, name = "on_fail_steps")]
+    #[instrument(
+        name = "on_fail_steps",
+        skip_all,
+        fields(on_fail_steps.total = self.len())
+    )]
     pub(crate) fn execute(
         &self,
         session: &Session,
@@ -136,32 +146,8 @@ impl OnFailSteps {
 
         debug!(scenario.event = "on_fail_steps_started");
 
-        for (index, on_fail_task) in self.iter().enumerate() {
-            debug!(
-                scenario.event = "on_fail_step_started",
-                on_fail_step.index = index,
-                on_fail_steps.total = self.len(),
-                task.description = on_fail_task.description()
-            );
-
-            match on_fail_task {
-                Task::RemoteSudo { remote_sudo, .. } => remote_sudo
-                    .execute(session, variables)
-                    .map_err(OnFailError::CannotOnFailRemoteSudo)
-                    .map_err(|error| {
-                        debug!(scenario.event = "error", scenario.error = %error);
-                        error
-                    })?,
-                Task::SftpCopy { sftp_copy, .. } => sftp_copy
-                    .execute(session, variables)
-                    .map_err(OnFailError::CannotOnFailSftpCopy)
-                    .map_err(|error| {
-                        debug!(scenario.event = "error", scenario.error = %error);
-                        error
-                    })?,
-            }
-
-            debug!(scenario.event = "on_fail_step_completed");
+        for step in self.iter() {
+            step.execute(session, variables)?;
         }
 
         debug!(scenario.event = "on_fail_steps_completed");
@@ -177,9 +163,15 @@ mod tests {
             on_fail::OnFailStepsConfig,
             task::{TaskConfig, TaskType},
         },
-        scenario::on_fail::{OnFailError, OnFailSteps},
-        scenario::{sftp_copy::SftpCopy, task::Task, tasks::Tasks, variables::Variables},
-        session::Session,
+        scenario::{
+            on_fail_step::OnFailStep,
+            on_fail_steps::{OnFailError, OnFailSteps},
+            sftp_copy::SftpCopy,
+            task::Task,
+            tasks::Tasks,
+            variables::Variables,
+        },
+       session::Session,
     };
     use std::collections::HashMap;
 
@@ -243,11 +235,11 @@ mod tests {
     #[test]
     fn test_on_fail_steps_deref() {
         // Given
-        let vec = vec![create_remote_sudo_task()];
+        let vec = vec![create_remote_sudo_step()];
         let on_fail_steps = OnFailSteps(vec.clone());
 
         // When
-        let task_description = on_fail_steps[0].description();
+        let task_description = on_fail_steps[0].task.description();
 
         // Then
         assert_eq!(on_fail_steps.len(), 1);
@@ -260,10 +252,10 @@ mod tests {
     #[test]
     fn test_on_fail_steps_deref_mut() {
         // Given
-        let mut on_fail_steps = OnFailSteps(vec![create_remote_sudo_task()]);
+        let mut on_fail_steps = OnFailSteps(vec![create_remote_sudo_step()]);
 
         // When
-        on_fail_steps.push(create_sftp_copy_task());
+        on_fail_steps.push(create_sftp_copy_step());
 
         // Then
         assert_eq!(
@@ -271,7 +263,7 @@ mod tests {
             2,
             "Should be able to modify through DerefMut"
         );
-        assert_eq!(on_fail_steps[1].description(), "Test task 2");
+        assert_eq!(on_fail_steps[1].task.description(), "Test task 2");
     }
 
     #[test]
@@ -308,7 +300,10 @@ mod tests {
             error_message: "Failed".to_string(),
         };
 
-        let on_fail_steps = OnFailSteps(vec![failing_task]);
+        let on_fail_steps = OnFailSteps(vec![OnFailStep {
+            index: 0,
+            task: failing_task,
+        }]);
         let session = Session::default();
         let variables = Variables::default();
 
@@ -353,6 +348,20 @@ mod tests {
             },
         };
         Task::from(&config)
+    }
+
+    fn create_remote_sudo_step() -> OnFailStep {
+        OnFailStep {
+            index: 0,
+            task: create_remote_sudo_task(),
+        }
+    }
+
+    fn create_sftp_copy_step() -> OnFailStep {
+        OnFailStep {
+            index: 0,
+            task: create_sftp_copy_task(),
+        }
     }
 
     fn create_valid_on_fail_config() -> OnFailStepsConfig {

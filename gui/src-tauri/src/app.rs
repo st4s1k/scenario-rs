@@ -283,6 +283,7 @@ impl From<&Step> for StepDTO {
         let on_fail_tasks: Vec<TaskDTO> = step
             .on_fail_steps()
             .iter()
+            .map(|on_fail_step| on_fail_step.task())
             .map(|task| TaskDTO::from(task))
             .collect();
 

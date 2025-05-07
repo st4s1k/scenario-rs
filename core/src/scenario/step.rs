@@ -6,7 +6,7 @@
 use crate::{
     config::step::StepConfig,
     scenario::{
-        errors::StepError, on_fail::OnFailSteps, task::Task, tasks::Tasks, variables::Variables,
+        errors::StepError, on_fail_steps::OnFailSteps, task::Task, tasks::Tasks, variables::Variables,
     },
     session::Session,
 };
@@ -30,7 +30,8 @@ use tracing::{debug, instrument};
 ///         step::Step,
 ///         task::Task,
 ///         tasks::Tasks,
-///         on_fail::OnFailSteps
+///         on_fail_step::OnFailStep,
+///         on_fail_steps::OnFailSteps
 ///     },
 ///     config::task::{TaskConfig, TaskType}
 /// };
@@ -76,7 +77,8 @@ use tracing::{debug, instrument};
 /// // Create on_fail steps manually using the public API
 /// let mut on_fail_steps = OnFailSteps::default();
 /// if let Some(cleanup_task) = tasks.get("cleanup") {
-///     on_fail_steps.push(cleanup_task.clone());
+///     let on_fail_step = OnFailStep::from((0, cleanup_task));
+///     on_fail_steps.push(on_fail_step);
 /// }
 ///
 /// // Verify the step properties
