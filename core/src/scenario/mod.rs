@@ -163,7 +163,7 @@ impl TryFrom<ScenarioConfig> for Scenario {
         let execute = Execute::try_from((&tasks, &config.execute))
             .map_err(ScenarioError::CannotCreateExecuteFromConfig)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?;
 
@@ -199,7 +199,7 @@ impl TryFrom<PathBuf> for Scenario {
         let config = ScenarioConfig::try_from(path)
             .map_err(ScenarioError::CannotCreateScenarioFromConfig)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?;
         Scenario::try_from(config)
@@ -230,21 +230,21 @@ impl Scenario {
     /// If any step fails, execution is stopped and an error is logged.
     #[instrument(skip_all, name = "scenario")]
     pub fn execute(&self) {
-        debug!(event = "scenario_started");
+        debug!(scenario.event = "scenario_started");
 
         let session = match Session::new(&self.server, &self.credentials) {
             Ok(session) => session,
             Err(error) => {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 return;
             }
         };
 
-        debug!(event = "session_created");
+        debug!(scenario.event = "session_created");
 
         match self.execute.steps.execute(&session, &self.variables) {
-            Ok(_) => debug!(event = "scenario_completed"),
-            Err(error) => debug!(event = "error", error = %error),
+            Ok(_) => debug!(scenario.event = "scenario_completed"),
+            Err(error) => debug!(scenario.event = "error", scenario.error = %error),
         }
     }
 }

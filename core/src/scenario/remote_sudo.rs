@@ -70,7 +70,11 @@ impl RemoteSudo {
     ///
     /// `Ok(())` if the command executed successfully with exit code 0,
     /// otherwise an appropriate `RemoteSudoError`
-    #[instrument(skip_all, name = "remote_sudo")]
+    #[instrument(
+        name = "remote_sudo",
+        skip_all,
+        fields(remote_sudo.command)
+    )]
     pub(crate) fn execute(
         &self,
         session: &Session,
@@ -80,17 +84,23 @@ impl RemoteSudo {
             .resolve_placeholders(&self.command)
             .map_err(RemoteSudoError::CannotResolveCommandPlaceholders)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(
+                    scenario.event = "error",
+                    scenario.error = %error,
+                    remote_sudo.command = self.command
+                );
                 error
             })?;
 
-        debug!(event = "remote_sudo_started", command = command);
+        tracing::Span::current().record("remote_sudo.command", &command);
+
+        debug!(scenario.event = "remote_sudo_started");
 
         let channel = session
             .channel_session()
             .map_err(RemoteSudoError::CannotEstablishSessionChannel)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?;
 
@@ -98,13 +108,13 @@ impl RemoteSudo {
             .lock()
             .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?
             .exec(&command)
             .map_err(RemoteSudoError::CannotExecuteRemoteCommand)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?;
 
@@ -113,44 +123,47 @@ impl RemoteSudo {
             .lock()
             .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?
             .read_to_string(&mut output)
             .map_err(RemoteSudoError::CannotReadChannelOutput)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?;
 
-        debug!(event = "remote_sudo_output", command, output);
+        debug!(
+            scenario.event = "remote_sudo_output",
+            remote_sudo.output = output
+        );
 
         let exit_status = channel
             .lock()
             .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?
             .exit_status()
             .map_err(RemoteSudoError::CannotObtainRemoteCommandExitStatus)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?;
 
         if exit_status != 0 {
             debug!(
-                event = "error",
-                error = "Remote command failed with non-zero exit status",
-                status = exit_status
+                scenario.event = "error",
+                scenario.error = "Remote command failed with non-zero exit status",
+                remote_sudo.exit_status = exit_status as i64
             );
             return Err(RemoteSudoError::RemoteCommandFailedWithStatusCode(
                 exit_status,
             ));
         }
 
-        debug!(event = "remote_sudo_completed");
+        debug!(scenario.event = "remote_sudo_completed");
 
         Ok(())
     }

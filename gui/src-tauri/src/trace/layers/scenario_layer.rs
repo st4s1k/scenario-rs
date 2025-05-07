@@ -4,7 +4,8 @@ use crate::{
 };
 use scenario_rs::trace::ScenarioEventVisitor;
 use std::sync::mpsc::Sender;
-use tracing::{error, Event, Subscriber};
+use tracing::span::Record;
+use tracing::{error, span::Attributes, Event, Id, Subscriber};
 use tracing_subscriber::{layer::Context, registry::LookupSpan};
 
 pub struct ScenarioEventLayer {
@@ -18,6 +19,28 @@ impl ScenarioEventLayer {
 }
 
 impl EventLayer for ScenarioEventLayer {
+    fn on_new_span<S>(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>)
+    where
+        S: Subscriber + for<'a> LookupSpan<'a>,
+    {
+        let mut visitor = ScenarioEventVisitor::default();
+        attrs.record(&mut visitor);
+        if let Some(span) = ctx.span(id) {
+            span.extensions_mut().insert(visitor);
+        }
+    }
+
+    fn on_record<S>(&self, id: &Id, record: &Record<'_>, ctx: Context<'_, S>)
+    where
+        S: Subscriber + for<'a> LookupSpan<'a>,
+    {
+        if let Some(span) = ctx.span(id) {
+            if let Some(v) = span.extensions_mut().get_mut::<ScenarioEventVisitor>() {
+                record.record(v);
+            }
+        }
+    }
+
     fn process_event<S>(&self, event: &Event<'_>, ctx: Context<'_, S>)
     where
         S: Subscriber + for<'a> LookupSpan<'a>,
@@ -26,25 +49,33 @@ impl EventLayer for ScenarioEventLayer {
 
         event.record(&mut visitor);
 
+        if let Some(scope) = ctx.event_scope(event) {
+            for span in scope.from_root() {
+                if let Some(extra) = span.extensions().get::<ScenarioEventVisitor>() {
+                    visitor.merge(extra);
+                }
+            }
+        }
+
         const SCENARIO_PREFIX: &str = "[SCN] ";
         let on_fail = match ctx.event_scope(event) {
             Some(mut scope) => scope.any(|span| span.name() == "on_fail_steps"),
             None => false,
         };
 
-        if let Some(event_type) = &visitor.event_type {
-            match event_type.as_str() {
+        if let Some(scenario_event) = &visitor.scenario_event {
+            match scenario_event.as_str() {
                 "error" => {
-                    if let Some(error) = &visitor.error {
+                    if let Some(scenario_error) = &visitor.scenario_error {
                         self.sender.send_event(AppEvent::LogMessage(format!(
-                            "{}{error}",
+                            "{}{scenario_error}",
                             SCENARIO_PREFIX
                         )));
 
                         self.sender.send_event(AppEvent::StepState {
                             on_fail,
                             state: StepState::StepFailed {
-                                message: error.to_string(),
+                                message: scenario_error.to_string(),
                             },
                         });
                     } else {
@@ -78,20 +109,21 @@ impl EventLayer for ScenarioEventLayer {
                 }
                 "step_started" => {
                     if let (Some(index), Some(total_steps), Some(description)) = (
-                        visitor.index,
-                        visitor.total_steps,
-                        visitor.description.as_ref(),
+                        visitor.step_index,
+                        visitor.steps_total,
+                        visitor.task_description.as_ref(),
                     ) {
                         let task_number = index + 1;
                         self.sender.send_event(AppEvent::LogMessage(format!(
                             "{}[{task_number}/{total_steps}] {description}",
                             SCENARIO_PREFIX
                         )));
-                        self.sender.send_event(AppEvent::StepIndex { on_fail, index });
+                        self.sender
+                            .send_event(AppEvent::StepIndex { on_fail, index });
                     }
                 }
                 "step_completed" => {
-                    if let Some(index) = visitor.index {
+                    if let Some(index) = visitor.step_index {
                         self.sender.send_event(AppEvent::StepState {
                             on_fail,
                             state: StepState::StepCompleted { index },
@@ -99,7 +131,7 @@ impl EventLayer for ScenarioEventLayer {
                     }
                 }
                 "remote_sudo_started" => {
-                    if let Some(command) = &visitor.command {
+                    if let Some(command) = &visitor.remote_sudo_command {
                         self.sender.send_event(AppEvent::LogMessage(format!(
                             "{}Executing: {command}",
                             SCENARIO_PREFIX
@@ -107,7 +139,9 @@ impl EventLayer for ScenarioEventLayer {
                     }
                 }
                 "remote_sudo_output" => {
-                    if let (Some(command), Some(output)) = (&visitor.command, &visitor.output) {
+                    if let (Some(command), Some(output)) =
+                        (&visitor.remote_sudo_command, &visitor.remote_sudo_output)
+                    {
                         let output = output.trim();
                         let truncated_output = output
                             .chars()
@@ -134,9 +168,10 @@ impl EventLayer for ScenarioEventLayer {
                     }
                 }
                 "sftp_copy_started" => {
-                    if let (Some(source), Some(destination)) =
-                        (visitor.source.as_ref(), visitor.destination.as_ref())
-                    {
+                    if let (Some(source), Some(destination)) = (
+                        visitor.sftp_copy_source.as_ref(),
+                        visitor.sftp_copy_destination.as_ref(),
+                    ) {
                         self.sender.send_event(AppEvent::LogMessage(format!(
                             "{}Source: {source}",
                             SCENARIO_PREFIX
@@ -155,10 +190,10 @@ impl EventLayer for ScenarioEventLayer {
                 }
                 "sftp_copy_progress" => {
                     if let (Some(current), Some(total), Some(source), Some(destination)) = (
-                        visitor.current,
-                        visitor.total,
-                        visitor.source.as_ref(),
-                        visitor.destination.as_ref(),
+                        visitor.sftp_copy_progress_current,
+                        visitor.sftp_copy_progress_total,
+                        visitor.sftp_copy_source.as_ref(),
+                        visitor.sftp_copy_destination.as_ref(),
                     ) {
                         let percentage = (current as f64 / total as f64) * 100.0;
                         self.sender.send_event(AppEvent::LogMessage(format!(
@@ -191,9 +226,9 @@ impl EventLayer for ScenarioEventLayer {
                 }
                 "on_fail_step_started" => {
                     if let (Some(index), Some(total_steps), Some(description)) = (
-                        visitor.index,
-                        visitor.total_steps,
-                        visitor.description.as_ref(),
+                        visitor.step_index,
+                        visitor.steps_total,
+                        visitor.task_description.as_ref(),
                     ) {
                         let task_number = index + 1;
                         self.sender.send_event(AppEvent::LogMessage(format!(
@@ -210,7 +245,7 @@ impl EventLayer for ScenarioEventLayer {
                 "steps_completed" => {}
                 "on_fail_step_completed" => {}
                 _ => {
-                    error!("Unrecognized event type: {}", event_type);
+                    error!("Unrecognized event type: {}", scenario_event);
                 }
             }
         }

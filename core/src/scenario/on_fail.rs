@@ -94,7 +94,7 @@ impl TryFrom<(&Tasks, &OnFailStepsConfig)> for OnFailSteps {
                 .cloned()
                 .ok_or_else(|| OnFailError::InvalidOnFailStep(config_step.clone()))
                 .map_err(|error| {
-                    debug!(event = "error", error = %error);
+                    debug!(scenario.event = "error", scenario.error = %error);
                     error
                 })?;
             on_fail_tasks.push(task);
@@ -134,14 +134,14 @@ impl OnFailSteps {
             return Ok(());
         }
 
-        debug!(event = "on_fail_steps_started");
+        debug!(scenario.event = "on_fail_steps_started");
 
         for (index, on_fail_task) in self.iter().enumerate() {
             debug!(
-                event = "on_fail_step_started",
-                index,
-                total_steps = self.len(),
-                description = on_fail_task.description()
+                scenario.event = "on_fail_step_started",
+                on_fail_step.index = index,
+                on_fail_steps.total = self.len(),
+                task.description = on_fail_task.description()
             );
 
             match on_fail_task {
@@ -149,22 +149,22 @@ impl OnFailSteps {
                     .execute(session, variables)
                     .map_err(OnFailError::CannotOnFailRemoteSudo)
                     .map_err(|error| {
-                        debug!(event = "error", error = %error);
+                        debug!(scenario.event = "error", scenario.error = %error);
                         error
                     })?,
                 Task::SftpCopy { sftp_copy, .. } => sftp_copy
                     .execute(session, variables)
                     .map_err(OnFailError::CannotOnFailSftpCopy)
                     .map_err(|error| {
-                        debug!(event = "error", error = %error);
+                        debug!(scenario.event = "error", scenario.error = %error);
                         error
                     })?,
             }
 
-            debug!(event = "on_fail_step_completed");
+            debug!(scenario.event = "on_fail_step_completed");
         }
 
-        debug!(event = "on_fail_steps_completed");
+        debug!(scenario.event = "on_fail_steps_completed");
 
         Ok(())
     }

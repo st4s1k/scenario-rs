@@ -3,7 +3,8 @@ use crate::trace::{
     AppEvent,
 };
 use std::sync::mpsc::Sender;
-use tracing::{Event, Subscriber};
+use tracing::span::Record;
+use tracing::{span::Attributes, Event, Id, Subscriber};
 use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 
 pub struct FrontendLayer {
@@ -24,6 +25,30 @@ impl<S> Layer<S> for FrontendLayer
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
+    fn on_new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
+        let Some(metadata) = ctx.metadata(id) else {
+            return;
+        };
+        let Some(module_path) = metadata.module_path() else {
+            return;
+        };
+        if module_path.starts_with("scenario_rs_core::") {
+            self.scenario_layer.on_new_span(attrs, id, ctx);
+        }
+    }
+
+    fn on_record(&self, id: &Id, record: &Record<'_>, ctx: Context<'_, S>) {
+        let Some(metadata) = ctx.metadata(id) else {
+            return;
+        };
+        let Some(module_path) = metadata.module_path() else {
+            return;
+        };
+        if module_path.starts_with("scenario_rs_core::") {
+            self.scenario_layer.on_record(id, record, ctx);
+        }
+    }
+
     fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
         let module_path = match event.metadata().module_path() {
             Some(path) => path,

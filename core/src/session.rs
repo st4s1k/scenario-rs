@@ -4,7 +4,7 @@ use crate::{
     utils::{ArcMutex, Wrap},
 };
 use std::{net::TcpStream, path::Path};
-use tracing::debug;
+use tracing::{debug, instrument, trace};
 
 /// Defines operations for executing commands on a remote server via SSH.
 ///
@@ -315,30 +315,35 @@ impl Session {
     /// # Returns
     /// * `Ok(Session)` if the connection was established successfully
     /// * `Err` if there was an error connecting or authenticating
+    #[instrument(
+        name = "create_session",
+        skip_all,
+        fields(
+            session.host = server.host,
+            session.port = server.port,
+            session.username = credentials.username
+        )
+    )]
     fn create_session(server: &Server, credentials: &Credentials) -> Result<Session, ssh2::Error> {
-        let host = &server.host;
-        let port = &server.port;
-
-        debug!(
-            event = "create_session_started",
-            host = host,
-            port = port,
-            username = credentials.username,
-            password = credentials.password.as_deref().unwrap_or("<ssh-agent>")
+        trace!(
+            scenario.event = "create_session_started",
+            session.password = credentials.password.as_deref().unwrap_or("<ssh-agent>")
         );
 
+        let host = &server.host;
+        let port = &server.port;
         let tcp = TcpStream::connect(&format!("{host}:{port}")).map_err(|error| {
-            debug!(event = "error", error = %error);
+            debug!(scenario.event = "error", scenario.error = %error);
             ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO))
         })?;
 
         let mut real_session = ssh2::Session::new().map_err(|error| {
-            debug!(event = "error", error = %error);
+            debug!(scenario.event = "error", scenario.error = %error);
             error
         })?;
         real_session.set_tcp_stream(tcp);
         real_session.handshake().map_err(|error| {
-            debug!(event = "error", error = %error);
+            debug!(scenario.event = "error", scenario.error = %error);
             error
         })?;
 
@@ -349,16 +354,16 @@ impl Session {
             Some(pwd) => real_session
                 .userauth_password(username, pwd)
                 .map_err(|error| {
-                    debug!(event = "error", error = %error);
+                    debug!(scenario.event = "error", scenario.error = %error);
                     error
                 })?,
             None => real_session.userauth_agent(username).map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?,
         }
 
-        debug!(event = "create_session_completed");
+        debug!(scenario.event = "create_session_completed");
 
         Ok(Session {
             inner: SessionType::Real(real_session),
@@ -376,16 +381,22 @@ impl Session {
     ///
     /// # Returns
     /// * `Ok(Session)` with a mock session
+    #[instrument(
+        name = "create_mock_session",
+        skip_all,
+        fields(
+            session.host = server.host,
+            session.port = server.port,
+            session.username = credentials.username,
+        )
+    )]
     fn create_mock_session(
         server: &Server,
         credentials: &Credentials,
     ) -> Result<Session, ssh2::Error> {
-        debug!(
-            event = "created_mock_session",
-            host = server.host,
-            port = server.port,
-            username = credentials.username,
-            password = credentials.password.as_deref().unwrap_or("<ssh-agent>")
+        trace!(
+            scenario.event = "created_mock_session",
+            session.password = credentials.password.as_deref().unwrap_or("<ssh-agent>")
         );
 
         std::thread::sleep(std::time::Duration::from_millis(100));

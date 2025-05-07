@@ -102,16 +102,16 @@ where
 
         event.record(&mut visitor);
 
-        let event_type = visitor.event_type.unwrap();
+        let scenario_event = visitor.scenario_event.unwrap();
 
-        match event_type.as_str() {
+        match scenario_event.as_str() {
             "error" => {
                 let mut bars = self.progress_bars.lock().unwrap();
                 for (_, bar) in bars.drain() {
                     bar.finish_and_clear();
                 }
 
-                if let Some(error) = visitor.error {
+                if let Some(error) = visitor.scenario_error {
                     error!("{}", error);
                 } else {
                     error!("{}", "Scenario execution error".red());
@@ -124,9 +124,11 @@ where
                 info!("{}", "Scenario completed successfully!".green());
             }
             "step_started" => {
-                if let (Some(index), Some(total), Some(desc)) =
-                    (visitor.index, visitor.total_steps, visitor.description)
-                {
+                if let (Some(index), Some(total), Some(desc)) = (
+                    visitor.step_index,
+                    visitor.steps_total,
+                    visitor.task_description,
+                ) {
                     info!(
                         "{}=[{}] {}=[{}] {}=[{}]",
                         "STEP".yellow(),
@@ -139,12 +141,12 @@ where
                 }
             }
             "remote_sudo_started" => {
-                if let Some(cmd) = visitor.command {
+                if let Some(cmd) = visitor.remote_sudo_command {
                     info!("{}=[{}]", "CMD".yellow(), cmd.bright_cyan());
                 }
             }
             "remote_sudo_output" => {
-                if let Some(output) = visitor.output {
+                if let Some(output) = visitor.remote_sudo_output {
                     let trimmed = output.trim();
 
                     info!("{}", trimmed.chars().take(1000).collect::<String>().trim());
@@ -155,7 +157,9 @@ where
                 }
             }
             "sftp_copy_started" => {
-                if let (Some(source), Some(destination)) = (visitor.source, visitor.destination) {
+                if let (Some(source), Some(destination)) =
+                    (visitor.sftp_copy_source, visitor.sftp_copy_destination)
+                {
                     info!("{}=[{}]", "SRC".yellow(), source.bright_cyan());
                     info!("{}=[{}]", "DST".yellow(), destination.bright_cyan());
                     let sftp_id = format!("sftp_{}_{}", source, destination);
@@ -163,17 +167,19 @@ where
                 }
             }
             "sftp_copy_completed" => {
-                if let (Some(source), Some(destination)) = (visitor.source, visitor.destination) {
+                if let (Some(source), Some(destination)) =
+                    (visitor.sftp_copy_source, visitor.sftp_copy_destination)
+                {
                     let sftp_id = format!("sftp_{}_{}", source, destination);
                     self.finish_progress_bar(&sftp_id, "SFTP copy completed");
                 }
             }
             "sftp_copy_progress" => {
                 if let (Some(current), Some(total), Some(source), Some(destination)) = (
-                    visitor.current,
-                    visitor.total,
-                    visitor.source,
-                    visitor.destination,
+                    visitor.sftp_copy_progress_current,
+                    visitor.sftp_copy_progress_total,
+                    visitor.sftp_copy_source,
+                    visitor.sftp_copy_destination,
                 ) {
                     let sftp_id = format!("sftp_{}_{}", source, destination);
                     let pb = self.get_or_create_progress_bar(&sftp_id);
@@ -190,9 +196,11 @@ where
                 info!("{}", "On-fail steps completed".green());
             }
             "on_fail_step_started" => {
-                if let (Some(index), Some(total), Some(desc)) =
-                    (visitor.index, visitor.total_steps, visitor.description)
-                {
+                if let (Some(index), Some(total), Some(desc)) = (
+                    visitor.on_fail_step_index,
+                    visitor.on_fail_steps_total,
+                    visitor.task_description,
+                ) {
                     info!(
                         "{}=[{}] {}=[{}] {}=[{}]",
                         "STEP".yellow(),
@@ -213,7 +221,7 @@ where
             "steps_completed" => {}
             "on_fail_step_completed" => {}
             _ => {
-                error!("Unrecognized event type: {}", event_type);
+                error!("Unrecognized event type: {}", scenario_event);
             }
         }
     }
@@ -302,7 +310,7 @@ mod tests {
         let _guard = subscriber::set_default(subscriber);
 
         // When
-        error!(event = "error", error = "Test error");
+        error!(scenario.event = "error", scenario.error = "Test error");
 
         // Then
         assert_eq!(progress_bars.lock().unwrap().len(), 0);
@@ -318,9 +326,9 @@ mod tests {
 
         // When
         info!(
-            event = "sftp_copy_started",
-            source = "/local/file.txt",
-            destination = "/remote/file.txt"
+            scenario.event = "sftp_copy_started",
+            sftp_copy.source = "/local/file.txt",
+            sftp_copy.destination = "/remote/file.txt"
         );
 
         // Then
@@ -340,11 +348,11 @@ mod tests {
 
         // When
         info!(
-            event = "sftp_copy_progress",
-            source = "/local/file.txt",
-            destination = "/remote/file.txt",
-            current = 50u64,
-            total = 200u64
+            scenario.event = "sftp_copy_progress",
+            sftp_copy.source = "/local/file.txt",
+            sftp_copy.destination = "/remote/file.txt",
+            sftp_copy.progress.current = 50u64,
+            sftp_copy.progress.total = 200u64
         );
 
         // Then
@@ -365,9 +373,9 @@ mod tests {
 
         // When
         info!(
-            event = "sftp_copy_completed",
-            source = "/local/file.txt",
-            destination = "/remote/file.txt"
+            scenario.event = "sftp_copy_completed",
+            sftp_copy.source = "/local/file.txt",
+            sftp_copy.destination = "/remote/file.txt"
         );
 
         // Then

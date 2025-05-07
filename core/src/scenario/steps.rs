@@ -163,17 +163,17 @@ impl Steps {
             return Ok(());
         }
 
-        debug!(event = "steps_started");
+        debug!(scenario.event = "steps_started");
 
         for (index, step) in self.iter().enumerate() {
             let total_steps = self.len();
             let description = step.task.description().to_string();
 
             debug!(
-                event = "step_started",
-                index = index,
-                total_steps = total_steps,
-                description = description
+                scenario.event = "step_started",
+                step.index = index,
+                steps.total = total_steps,
+                task.description = description
             );
 
             let error_message = step.task.error_message().to_string();
@@ -185,7 +185,7 @@ impl Steps {
                         StepsError::CannotExecuteRemoteSudoCommand(error, error_message.clone())
                     })
                     .map_err(|error| {
-                        debug!(event = "error", error = %error);
+                        debug!(scenario.event = "error", scenario.error = %error);
                         error
                     }),
                 Task::SftpCopy { sftp_copy, .. } => sftp_copy
@@ -194,7 +194,7 @@ impl Steps {
                         StepsError::CannotExecuteSftpCopyCommand(error, error_message.clone())
                     })
                     .map_err(|error| {
-                        debug!(event = "error", error = %error);
+                        debug!(scenario.event = "error", scenario.error = %error);
                         error
                     }),
             };
@@ -203,16 +203,16 @@ impl Steps {
                 step.execute_on_fail_steps(session, &variables)
                     .map_err(StepsError::CannotExecuteOnFailSteps)
                     .map_err(|error| {
-                        debug!(event = "error", error = %error);
+                        debug!(scenario.event = "error", scenario.error = %error);
                         error
                     })?;
                 return Err(error);
             }
 
-            debug!(event = "step_completed", index);
+            debug!(scenario.event = "step_completed", step.index = index);
         }
 
-        debug!(event = "steps_completed");
+        debug!(scenario.event = "steps_completed");
         Ok(())
     }
 }

@@ -67,7 +67,14 @@ impl SftpCopy {
     /// # Returns
     ///
     /// `Ok(())` if the copy completed successfully, otherwise an appropriate `SftpCopyError`
-    #[instrument(skip_all, name = "sftp_copy")]
+    #[instrument(
+        name = "sftp_copy",
+        skip_all,
+        fields(
+            sftp_copy.source,
+            sftp_copy.destination
+        )
+    )]
     pub(crate) fn execute(
         &self,
         session: &Session,
@@ -77,27 +84,37 @@ impl SftpCopy {
             .resolve_placeholders(&self.source_path)
             .map_err(SftpCopyError::CannotResolveSourcePathPlaceholders)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(
+                    scenario.event = "error",
+                    scenario.error = %error,
+                    sftp_copy.source = self.source_path,
+                    sftp_copy.destination = self.destination_path
+                );
                 error
             })?;
         let resolved_destination = variables
             .resolve_placeholders(&self.destination_path)
             .map_err(SftpCopyError::CannotResolveDestinationPathPlaceholders)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(
+                    scenario.event = "error",
+                    scenario.error = %error,
+                    sftp_copy.source = resolved_source,
+                    sftp_copy.destination = self.destination_path
+                );
                 error
             })?;
 
-        debug!(
-            event = "sftp_copy_started",
-            source = %resolved_source,
-            destination = %resolved_destination
-        );
+        tracing::Span::current()
+            .record("sftp_copy.source", resolved_source.as_str())
+            .record("sftp_copy.destination", resolved_destination.as_str());
+
+        debug!(scenario.event = "sftp_copy_started");
 
         let mut source_file = File::open(&resolved_source)
             .map_err(SftpCopyError::CannotOpenSourceFile)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?;
 
@@ -105,7 +122,7 @@ impl SftpCopy {
             .sftp()
             .map_err(SftpCopyError::CannotOpenChannelAndInitializeSftp)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?;
 
@@ -113,13 +130,13 @@ impl SftpCopy {
             .lock()
             .map_err(|_| SftpCopyError::CannotGetALockOnSftpChannel)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?
             .create(Path::new(&resolved_destination))
             .map_err(SftpCopyError::CannotCreateDestinationFile)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?;
 
@@ -127,7 +144,7 @@ impl SftpCopy {
             .metadata()
             .map_err(SftpCopyError::CannotReadSourceFile)
             .map_err(|error| {
-                debug!(event = "error", error = %error);
+                debug!(scenario.event = "error", scenario.error = %error);
                 error
             })?
             .len();
@@ -139,7 +156,7 @@ impl SftpCopy {
                 .read(&mut buffer)
                 .map_err(SftpCopyError::CannotReadSourceFile)
                 .map_err(|error| {
-                    debug!(event = "error", error = %error);
+                    debug!(scenario.event = "error", scenario.error = %error);
                     error
                 })?;
             if bytes_read == 0 {
@@ -150,22 +167,20 @@ impl SftpCopy {
                 .write_all(&buffer[..bytes_read])
                 .map_err(SftpCopyError::CannotWriteDestinationFile)
                 .map_err(|error| {
-                    debug!(event = "error", error = %error);
+                    debug!(scenario.event = "error", scenario.error = %error);
                     error
                 })?;
 
             current_bytes += bytes_read as u64;
 
             trace!(
-                event = "sftp_copy_progress",
-                current = current_bytes,
-                total = total_bytes,
-                source = %resolved_source,
-                destination = %resolved_destination
+                scenario.event = "sftp_copy_progress",
+                sftp_copy.progress.current = current_bytes,
+                sftp_copy.progress.total = total_bytes,
             );
         }
 
-        debug!(event = "sftp_copy_completed", source = %resolved_source, destination = %resolved_destination);
+        debug!(scenario.event = "sftp_copy_completed");
 
         Ok(())
     }

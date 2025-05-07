@@ -1,6 +1,7 @@
 pub use app_layer::AppEventLayer;
 pub use scenario_layer::ScenarioEventLayer;
-use tracing::{Event, Subscriber};
+use tracing::span::Record;
+use tracing::{Event, Id, Subscriber};
 use tracing_subscriber::{layer::Context, registry::LookupSpan};
 
 mod app_layer;
@@ -34,6 +35,40 @@ mod scenario_layer;
 /// // The layer can now be used to process tracing events
 /// ```
 pub trait EventLayer {
+    /// Processes a new span event.
+    ///
+    /// This method is called when a new span is created. Implementations
+    /// should handle the span creation event according to their specific
+    /// requirements.
+    ///
+    /// # Arguments
+    ///
+    /// * `_attrs` - A reference to the attributes of the new span
+    /// * `_id` - The ID of the new span
+    /// * `_ctx` - The context in which the span was created
+    fn on_new_span<S>(&self, _attrs: &tracing::span::Attributes<'_>, _id: &Id, _ctx: Context<'_, S>)
+    where
+        S: Subscriber + for<'a> LookupSpan<'a>,
+    {
+    }
+
+    /// Processes on record event.
+    ///
+    /// This method is called when a record is created. Implementations
+    /// should handle the record creation event according to their specific
+    /// requirements.
+    ///
+    /// # Arguments
+    ///
+    /// * `_id` - A reference to the ID of the record
+    /// * `_record` - A reference to the record
+    /// * `_ctx` - The context in which the record was created
+    fn on_record<S>(&self, _id: &Id, _record: &Record<'_>, _ctx: Context<'_, S>)
+    where
+        S: Subscriber + for<'a> LookupSpan<'a>,
+    {
+    }
+
     /// Processes a tracing event.
     ///
     /// This method is called when a tracing event occurs. Implementations

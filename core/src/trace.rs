@@ -35,11 +35,13 @@ use tracing::{
 ///         target: module_path!(),
 ///         level: tracing::metadata::Level::INFO,
 ///         fields: &[
-///              "event",
-///             "description",
-///             "command",
-///             "index",
-///             "total_steps",
+///             "scenario.event",
+///             "task.description",
+///             "remote_sudo.command",
+///             "step.index",
+///             "steps.total",
+///             "on_fail_step.index",
+///             "on_fail_steps.total",
 ///         ],
 ///         callsite: &TEST_CALLSITE,
 ///         kind: tracing::metadata::Kind::SPAN,
@@ -52,43 +54,50 @@ use tracing::{
 /// let mut visitor = ScenarioEventVisitor::default();
 ///
 /// // Record string fields
-/// visitor.record_str(&field("event"), "step_started");
-/// visitor.record_str(&field("description"), "Installing dependencies");
-/// visitor.record_str(&field("command"), "apt-get install -y nginx");
+/// visitor.record_str(&field("scenario.event"), "step_started");
+/// visitor.record_str(&field("task.description"), "Installing dependencies");
+/// visitor.record_str(&field("remote_sudo.command"), "apt-get install -y nginx");
 ///
 /// // Record numeric fields
-/// visitor.record_u64(&field("index"), 1);
-/// visitor.record_u64(&field("total_steps"), 5);
+/// visitor.record_u64(&field("step.index"), 1);
+/// visitor.record_u64(&field("steps.total"), 5);
 ///
 /// // Access the collected fields
-/// assert_eq!(visitor.event_type.unwrap(), "step_started");
-/// assert_eq!(visitor.description.unwrap(), "Installing dependencies");
-/// assert_eq!(visitor.index.unwrap(), 1);
-/// assert_eq!(visitor.total_steps.unwrap(), 5);
+/// assert_eq!(visitor.scenario_event.unwrap(), "step_started");
+/// assert_eq!(visitor.task_description.unwrap(), "Installing dependencies");
+/// assert_eq!(visitor.step_index.unwrap(), 1);
+/// assert_eq!(visitor.steps_total.unwrap(), 5);
 /// ```
+#[derive(Debug, Clone)]
 pub struct ScenarioEventVisitor {
     /// Type of the scenario event (e.g., "step_started", "task_completed")
-    pub event_type: Option<String>,
-    /// Human-readable description of the event
-    pub description: Option<String>,
-    /// Current step/task index in a sequence
-    pub index: Option<usize>,
-    /// Total number of steps in the current operation
-    pub total_steps: Option<usize>,
-    /// Command being executed, if applicable
-    pub command: Option<String>,
-    /// Output from command execution
-    pub output: Option<String>,
+    pub scenario_event: Option<String>,
     /// Error message if an error occurred
-    pub error: Option<String>,
+    pub scenario_error: Option<String>,
+    /// Human-readable description of the event
+    pub task_description: Option<String>,
+    /// Command being executed, if applicable
+    pub remote_sudo_command: Option<String>,
+    /// Output from command execution
+    pub remote_sudo_output: Option<String>,
+    /// Exit status of the command, if applicable
+    pub remote_sudo_exit_status: Option<i64>,
     /// Source path for file transfer operations
-    pub source: Option<String>,
+    pub sftp_copy_source: Option<String>,
     /// Destination path for file transfer operations
-    pub destination: Option<String>,
+    pub sftp_copy_destination: Option<String>,
     /// Current progress value (e.g., bytes transferred)
-    pub current: Option<u64>,
+    pub sftp_copy_progress_current: Option<u64>,
     /// Total expected progress value
-    pub total: Option<u64>,
+    pub sftp_copy_progress_total: Option<u64>,
+    /// Current step/task index in a sequence
+    pub step_index: Option<usize>,
+    /// Total number of steps in the current operation
+    pub steps_total: Option<usize>,
+    /// Current on-fail step index in a sequence
+    pub on_fail_step_index: Option<usize>,
+    /// Total number of on-fail steps
+    pub on_fail_steps_total: Option<usize>,
 }
 
 impl ScenarioEventVisitor {
@@ -102,106 +111,117 @@ impl ScenarioEventVisitor {
     /// use scenario_rs_core::trace::ScenarioEventVisitor;
     ///
     /// let visitor = ScenarioEventVisitor::new();
-    /// assert!(visitor.event_type.is_none());
-    /// assert!(visitor.description.is_none());
+    /// assert!(visitor.scenario_event.is_none());
+    /// assert!(visitor.task_description.is_none());
     /// ```
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn merge(&mut self, other: &Self) {
+        macro_rules! fill {
+            ($field:ident) => {
+                if self.$field.is_none() {
+                    self.$field = other.$field.clone();
+                }
+            };
+        }
+        fill!(scenario_event);
+        fill!(scenario_error);
+        fill!(task_description);
+        fill!(remote_sudo_command);
+        fill!(remote_sudo_output);
+        fill!(remote_sudo_exit_status);
+        fill!(sftp_copy_source);
+        fill!(sftp_copy_destination);
+        fill!(sftp_copy_progress_current);
+        fill!(sftp_copy_progress_total);
+        fill!(step_index);
+        fill!(steps_total);
+        fill!(on_fail_step_index);
+        fill!(on_fail_steps_total);
     }
 }
 
 impl Default for ScenarioEventVisitor {
     fn default() -> Self {
         ScenarioEventVisitor {
-            event_type: None,
-            description: None,
-            index: None,
-            total_steps: None,
-            command: None,
-            output: None,
-            error: None,
-            source: None,
-            destination: None,
-            current: None,
-            total: None,
+            scenario_event: None,
+            scenario_error: None,
+            task_description: None,
+            remote_sudo_command: None,
+            remote_sudo_output: None,
+            remote_sudo_exit_status: None,
+            sftp_copy_source: None,
+            sftp_copy_destination: None,
+            sftp_copy_progress_current: None,
+            sftp_copy_progress_total: None,
+            step_index: None,
+            steps_total: None,
+            on_fail_step_index: None,
+            on_fail_steps_total: None,
         }
     }
 }
 
 impl Visit for ScenarioEventVisitor {
-    /// Records string values from tracing events.
-    ///
-    /// This method processes string fields from tracing events and stores them
-    /// in the appropriate field based on the field name.
-    ///
-    /// # Arguments
-    ///
-    /// * `field` - The field metadata containing the field name
-    /// * `value` - The string value to record
     fn record_str(&mut self, field: &Field, value: &str) {
         match field.name() {
-            "event" => self.event_type = Some(value.to_string()),
-            "description" => self.description = Some(value.to_string()),
-            "command" => self.command = Some(value.to_string()),
-            "output" => self.output = Some(value.to_string()),
-            "error" => self.error = Some(value.to_string()),
-            "source" => self.source = Some(value.to_string()),
-            "destination" => self.destination = Some(value.to_string()),
             "message" => {}
-            "host" => {}
-            "username" => {}
-            "password" => {}
+            "session.host" => {}
+            "session.username" => {}
+            "session.password" => {}
+            "scenario.event" => self.scenario_event = Some(value.to_string()),
+            "scenario.error" => self.scenario_error = Some(value.to_string()),
+            "task.description" => self.task_description = Some(value.to_string()),
+            "remote_sudo.command" => self.remote_sudo_command = Some(value.to_string()),
+            "remote_sudo.output" => self.remote_sudo_output = Some(value.to_string()),
+            "sftp_copy.source" => self.sftp_copy_source = Some(value.to_string()),
+            "sftp_copy.destination" => self.sftp_copy_destination = Some(value.to_string()),
             _ => {
                 error!("Unrecognized field: {}", field.name());
             }
         }
     }
 
-    /// Records debug-formatted values from tracing events.
-    ///
-    /// This method processes fields that implement `Debug` and attempts to
-    /// convert and store them in the appropriate field based on the field name.
-    ///
-    /// # Arguments
-    ///
-    /// * `field` - The field metadata containing the field name
-    /// * `value` - The debug-formattable value to record
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
         let value_str = format!("{:?}", value).trim_matches('"').to_string();
         match field.name() {
-            "error" => self.error = Some(value_str),
-            "event" => self.event_type = Some(value_str),
-            "description" => self.description = Some(value_str),
-            "command" => self.command = Some(value_str),
-            "output" => self.output = Some(value_str),
-            "source" => self.source = Some(value_str),
-            "destination" => self.destination = Some(value_str),
             "message" => {}
-            "host" => {}
-            "username" => {}
-            "password" => {}
+            "session.host" => {}
+            "session.username" => {}
+            "session.password" => {}
+            "scenario.event" => self.scenario_event = Some(value_str),
+            "scenario.error" => self.scenario_error = Some(value_str),
+            "task.description" => self.task_description = Some(value_str),
+            "remote_sudo.command" => self.remote_sudo_command = Some(value_str),
+            "remote_sudo.output" => self.remote_sudo_output = Some(value_str),
+            "sftp_copy.source" => self.sftp_copy_source = Some(value_str),
+            "sftp_copy.destination" => self.sftp_copy_destination = Some(value_str),
             _ => {
                 error!("Unrecognized field: {}", field.name());
             }
         }
     }
 
-    /// Records unsigned 64-bit integer values from tracing events.
-    ///
-    /// This method processes numeric fields and stores them in the appropriate
-    /// field based on the field name.
-    ///
-    /// # Arguments
-    ///
-    /// * `field` - The field metadata containing the field name
-    /// * `value` - The u64 value to record
     fn record_u64(&mut self, field: &Field, value: u64) {
         match field.name() {
-            "index" => self.index = Some(value as usize),
-            "total_steps" => self.total_steps = Some(value as usize),
-            "current" => self.current = Some(value),
-            "total" => self.total = Some(value),
-            "port" => {}
+            "session.port" => {}
+            "sftp_copy.progress.current" => self.sftp_copy_progress_current = Some(value),
+            "sftp_copy.progress.total" => self.sftp_copy_progress_total = Some(value),
+            "step.index" => self.step_index = Some(value as usize),
+            "steps.total" => self.steps_total = Some(value as usize),
+            "on_fail_step.index" => self.on_fail_step_index = Some(value as usize),
+            "on_fail_steps.total" => self.on_fail_steps_total = Some(value as usize),
+            _ => {
+                error!("Unrecognized field: {}", field.name());
+            }
+        }
+    }
+
+    fn record_i64(&mut self, field: &Field, _value: i64) {
+        match field.name() {
+            "remote_sudo.exit_status" => {}
             _ => {
                 error!("Unrecognized field: {}", field.name());
             }
@@ -220,17 +240,20 @@ mod tests {
         let visitor = ScenarioEventVisitor::new();
 
         // Then
-        assert!(visitor.event_type.is_none());
-        assert!(visitor.description.is_none());
-        assert!(visitor.index.is_none());
-        assert!(visitor.total_steps.is_none());
-        assert!(visitor.command.is_none());
-        assert!(visitor.output.is_none());
-        assert!(visitor.error.is_none());
-        assert!(visitor.source.is_none());
-        assert!(visitor.destination.is_none());
-        assert!(visitor.current.is_none());
-        assert!(visitor.total.is_none());
+        assert!(visitor.scenario_event.is_none());
+        assert!(visitor.scenario_error.is_none());
+        assert!(visitor.task_description.is_none());
+        assert!(visitor.remote_sudo_command.is_none());
+        assert!(visitor.remote_sudo_output.is_none());
+        assert!(visitor.remote_sudo_exit_status.is_none());
+        assert!(visitor.sftp_copy_source.is_none());
+        assert!(visitor.sftp_copy_destination.is_none());
+        assert!(visitor.sftp_copy_progress_current.is_none());
+        assert!(visitor.sftp_copy_progress_total.is_none());
+        assert!(visitor.step_index.is_none());
+        assert!(visitor.steps_total.is_none());
+        assert!(visitor.on_fail_step_index.is_none());
+        assert!(visitor.on_fail_steps_total.is_none());
     }
 
     #[test]
@@ -239,23 +262,26 @@ mod tests {
         let mut visitor = ScenarioEventVisitor::default();
 
         // When
-        visitor.record_str(&field("event"), "step_started");
-        visitor.record_str(&field("description"), "Installing dependencies");
-        visitor.record_str(&field("command"), "apt-get update");
-        visitor.record_str(&field("output"), "Reading package lists...");
-        visitor.record_str(&field("error"), "Connection failed");
-        visitor.record_str(&field("source"), "/local/file.txt");
-        visitor.record_str(&field("destination"), "/remote/file.txt");
+        visitor.record_str(&field("scenario.event"), "step_started");
+        visitor.record_str(&field("scenario.error"), "Connection failed");
+        visitor.record_str(&field("task.description"), "Installing dependencies");
+        visitor.record_str(&field("remote_sudo.command"), "apt-get update");
+        visitor.record_str(&field("remote_sudo.output"), "Reading package lists...");
+        visitor.record_str(&field("sftp_copy.source"), "/local/file.txt");
+        visitor.record_str(&field("sftp_copy.destination"), "/remote/file.txt");
         visitor.record_str(&field("ignored_field"), "Should be ignored");
 
         // Then
-        assert_eq!(visitor.event_type.unwrap(), "step_started");
-        assert_eq!(visitor.description.unwrap(), "Installing dependencies");
-        assert_eq!(visitor.command.unwrap(), "apt-get update");
-        assert_eq!(visitor.output.unwrap(), "Reading package lists...");
-        assert_eq!(visitor.error.unwrap(), "Connection failed");
-        assert_eq!(visitor.source.unwrap(), "/local/file.txt");
-        assert_eq!(visitor.destination.unwrap(), "/remote/file.txt");
+        assert_eq!(visitor.scenario_event.unwrap(), "step_started");
+        assert_eq!(visitor.task_description.unwrap(), "Installing dependencies");
+        assert_eq!(visitor.remote_sudo_command.unwrap(), "apt-get update");
+        assert_eq!(
+            visitor.remote_sudo_output.unwrap(),
+            "Reading package lists..."
+        );
+        assert_eq!(visitor.scenario_error.unwrap(), "Connection failed");
+        assert_eq!(visitor.sftp_copy_source.unwrap(), "/local/file.txt");
+        assert_eq!(visitor.sftp_copy_destination.unwrap(), "/remote/file.txt");
     }
 
     #[test]
@@ -264,17 +290,34 @@ mod tests {
         let mut visitor = ScenarioEventVisitor::default();
 
         // When
-        visitor.record_u64(&field("index"), 2);
-        visitor.record_u64(&field("total_steps"), 5);
-        visitor.record_u64(&field("current"), 1024);
-        visitor.record_u64(&field("total"), 4096);
+        visitor.record_u64(&field("sftp_copy.progress.current"), 1024);
+        visitor.record_u64(&field("sftp_copy.progress.total"), 4096);
+        visitor.record_u64(&field("step.index"), 2);
+        visitor.record_u64(&field("steps.total"), 5);
+        visitor.record_u64(&field("on_fail_step.index"), 1);
+        visitor.record_u64(&field("on_fail_steps.total"), 3);
         visitor.record_u64(&field("ignored_field"), 42);
 
         // Then
-        assert_eq!(visitor.index.unwrap(), 2);
-        assert_eq!(visitor.total_steps.unwrap(), 5);
-        assert_eq!(visitor.current.unwrap(), 1024);
-        assert_eq!(visitor.total.unwrap(), 4096);
+        assert_eq!(visitor.sftp_copy_progress_current.unwrap(), 1024);
+        assert_eq!(visitor.sftp_copy_progress_total.unwrap(), 4096);
+        assert_eq!(visitor.step_index.unwrap(), 2);
+        assert_eq!(visitor.steps_total.unwrap(), 5);
+        assert_eq!(visitor.on_fail_step_index.unwrap(), 1);
+        assert_eq!(visitor.on_fail_steps_total.unwrap(), 3);
+    }
+
+    #[test]
+    fn test_visitor_record_i64() {
+        // Given
+        let mut visitor = ScenarioEventVisitor::default();
+
+        // When
+        visitor.record_i64(&field("remote_sudo.exit_status"), 0);
+        visitor.record_i64(&field("ignored_field"), -1);
+
+        // Then
+        assert_eq!(visitor.remote_sudo_exit_status.unwrap(), 0);
     }
 
     #[test]
@@ -283,23 +326,26 @@ mod tests {
         let mut visitor = ScenarioEventVisitor::default();
 
         // When
-        visitor.record_debug(&field("event"), &"step_started");
-        visitor.record_debug(&field("description"), &"Installing dependencies");
-        visitor.record_debug(&field("command"), &"apt-get update");
-        visitor.record_debug(&field("output"), &"Reading package lists...");
-        visitor.record_debug(&field("error"), &"Connection failed");
-        visitor.record_debug(&field("source"), &"/local/file.txt");
-        visitor.record_debug(&field("destination"), &"/remote/file.txt");
+        visitor.record_debug(&field("scenario.event"), &"step_started");
+        visitor.record_debug(&field("scenario.error"), &"Connection failed");
+        visitor.record_debug(&field("task.description"), &"Installing dependencies");
+        visitor.record_debug(&field("remote_sudo.command"), &"apt-get update");
+        visitor.record_debug(&field("remote_sudo.output"), &"Reading package lists...");
+        visitor.record_debug(&field("sftp_copy.source"), &"/local/file.txt");
+        visitor.record_debug(&field("sftp_copy.destination"), &"/remote/file.txt");
         visitor.record_debug(&field("ignored_field"), &"Should be ignored");
 
         // Then
-        assert_eq!(visitor.event_type.unwrap(), "step_started");
-        assert_eq!(visitor.description.unwrap(), "Installing dependencies");
-        assert_eq!(visitor.command.unwrap(), "apt-get update");
-        assert_eq!(visitor.output.unwrap(), "Reading package lists...");
-        assert_eq!(visitor.error.unwrap(), "Connection failed");
-        assert_eq!(visitor.source.unwrap(), "/local/file.txt");
-        assert_eq!(visitor.destination.unwrap(), "/remote/file.txt");
+        assert_eq!(visitor.scenario_event.unwrap(), "step_started");
+        assert_eq!(visitor.scenario_error.unwrap(), "Connection failed");
+        assert_eq!(visitor.task_description.unwrap(), "Installing dependencies");
+        assert_eq!(visitor.remote_sudo_command.unwrap(), "apt-get update");
+        assert_eq!(
+            visitor.remote_sudo_output.unwrap(),
+            "Reading package lists..."
+        );
+        assert_eq!(visitor.sftp_copy_source.unwrap(), "/local/file.txt");
+        assert_eq!(visitor.sftp_copy_destination.unwrap(), "/remote/file.txt");
     }
 
     #[test]
@@ -308,10 +354,10 @@ mod tests {
         let mut visitor = ScenarioEventVisitor::default();
 
         // When
-        visitor.record_debug(&field("index"), &"not_a_number");
+        visitor.record_debug(&field("step.index"), &"not_a_number");
 
         // Then
-        assert!(visitor.index.is_none());
+        assert!(visitor.step_index.is_none());
     }
 
     #[test]
@@ -320,9 +366,20 @@ mod tests {
         let visitor = ScenarioEventVisitor::default();
 
         // Then
-        assert!(visitor.event_type.is_none());
-        assert!(visitor.description.is_none());
-        assert!(visitor.index.is_none());
+        assert!(visitor.scenario_event.is_none());
+        assert!(visitor.scenario_error.is_none());
+        assert!(visitor.task_description.is_none());
+        assert!(visitor.remote_sudo_command.is_none());
+        assert!(visitor.remote_sudo_output.is_none());
+        assert!(visitor.remote_sudo_exit_status.is_none());
+        assert!(visitor.sftp_copy_source.is_none());
+        assert!(visitor.sftp_copy_destination.is_none());
+        assert!(visitor.sftp_copy_progress_current.is_none());
+        assert!(visitor.sftp_copy_progress_total.is_none());
+        assert!(visitor.step_index.is_none());
+        assert!(visitor.steps_total.is_none());
+        assert!(visitor.on_fail_step_index.is_none());
+        assert!(visitor.on_fail_steps_total.is_none());
     }
 
     // Test helpers
@@ -343,18 +400,26 @@ mod tests {
             target: module_path!(),
             level: tracing::metadata::Level::INFO,
             fields: &[
-                    "event",
-                    "description",
-                    "command",
-                    "index",
-                    "total_steps",
-                    "output",
-                    "error",
-                    "source",
-                    "destination",
+                    "scenario.event",
+                    "scenario.error",
+                    "task.description",
+
+                    "remote_sudo.command",
+                    "remote_sudo.output",
+                    "remote_sudo.exit_status",
+
+                    "sftp_copy.source",
+                    "sftp_copy.destination",
+                    "sftp_copy.progress.current",
+                    "sftp_copy.progress.total",
+
+                    "step.index",
+                    "steps.total",
+
+                    "on_fail_step.index",
+                    "on_fail_steps.total",
+
                     "ignored_field",
-                    "current",
-                    "total",
             ],
             callsite: &TEST_CALLSITE,
             kind: tracing::metadata::Kind::SPAN,

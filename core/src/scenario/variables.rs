@@ -237,8 +237,8 @@ impl Variables {
             .filter(|(_, value)| value.is_blank())
             .for_each(|(key, _)| {
                 debug!(
-                    event = "error",
-                    error = format!("Variable '{}' has a blank value", key)
+                    scenario.event = "error",
+                    scenario.error = format!("Variable '{}' has a blank value", key)
                 );
             });
 
