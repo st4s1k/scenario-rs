@@ -1,5 +1,5 @@
 import { Component, Input, OnDestroy, signal, WritableSignal, OnChanges, SimpleChanges, AfterViewInit } from '@angular/core';
-import { Task } from '../app.component';
+import { Step } from '../app.component';
 import { CommonModule } from '@angular/common';
 import { AutoScrollDirective } from '../auto-scroll.directive';
 import { InfoBlockComponent } from '../shared/info-block/info-block.component';
@@ -30,8 +30,7 @@ interface RemoteSudoState extends BaseStepState {
 }
 
 interface DisplayStep {
-  index: number;
-  task: Task;
+  step: Step;
   state: WritableSignal<StepState | undefined>;
   status: StepStatus;
   errorMessage?: string;
@@ -56,7 +55,7 @@ export class ExecutionProgressComponent implements OnChanges, OnDestroy, AfterVi
   Object = Object;
   Math = Math;
 
-  @Input() tasks: Task[] = [];
+  @Input() steps: Step[] = [];
   @Input() variant: 'primary' | 'error' = 'primary';
 
   currentStepIndex = signal(-1);
@@ -83,7 +82,7 @@ export class ExecutionProgressComponent implements OnChanges, OnDestroy, AfterVi
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes["tasks"]) {
+    if (changes["steps"]) {
       this.initializeDisplaySteps();
     }
   }
@@ -100,12 +99,11 @@ export class ExecutionProgressComponent implements OnChanges, OnDestroy, AfterVi
   }
 
   private initializeDisplaySteps() {
-    if (this.tasks.length === 0) {
+    if (this.steps.length === 0) {
       this.displaySteps = [];
     } else {
-      this.displaySteps = this.tasks.map((task, index) => ({
-        index,
-        task,
+      this.displaySteps = this.steps.map((step) => ({
+        step,
         state: signal(undefined),
         status: 'pending',
         errorMessage: undefined,
