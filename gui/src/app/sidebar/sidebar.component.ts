@@ -2,24 +2,11 @@ import { Component, Input, HostListener, OnChanges, Renderer2, Inject } from '@a
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { ExpandableComponent } from '../shared/expandable/expandable.component';
 import { InfoBlockComponent } from '../shared/info-block/info-block.component';
+import { Step, Task } from '../app.component';
 
 interface TabConfig {
   id: string;
   title: string;
-}
-
-interface Task {
-  description: string;
-  error_message: string;
-  task_type: string;
-  command?: string;
-  source_path?: string;
-  destination_path?: string;
-}
-
-interface Step {
-  task: Task;
-  on_fail_steps: Task[];
 }
 
 @Component({

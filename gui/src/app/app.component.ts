@@ -42,9 +42,15 @@ export interface Task {
   destination_path?: string;
 }
 
-export interface Step {
+export interface OnFailStep {
+  index: number;
   task: Task;
-  on_fail_steps: Task[];
+}
+
+export interface Step {
+  index: number;
+  task: Task;
+  on_fail_steps: OnFailStep[];
 }
 
 @Component({

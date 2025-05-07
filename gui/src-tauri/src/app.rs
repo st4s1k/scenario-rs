@@ -1,5 +1,6 @@
 use crate::trace::{self, AppEvent, FrontendEventHandler};
 use scenario_rs::{
+    scenario::on_fail_step::OnFailStep,
     scenario::{
         step::Step,
         task::Task,
@@ -229,71 +230,6 @@ pub struct TaskDTO {
     destination_path: Option<String>,
 }
 
-/// Data Transfer Object for a step in a scenario.
-///
-/// This structure is used to transfer step information between
-/// the backend and the frontend UI. It contains the task to execute
-/// and any on-fail tasks that should run if the main task fails.
-///
-/// # Examples
-///
-/// ```
-/// use scenario_rs_gui::app::{StepDTO, TaskDTO};
-///
-/// let main_task = TaskDTO {
-///     description: "Install package".to_string(),
-///     error_message: "Failed to install".to_string(),
-///     task_type: "RemoteSudo".to_string(),
-///     command: Some("apt-get install -y nginx".to_string()),
-///     source_path: None,
-///     destination_path: None,
-/// };
-///
-/// let step = StepDTO {
-///     task: main_task,
-///     on_fail_steps: Vec::new(),
-/// };
-/// ```
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct StepDTO {
-    /// The main task to execute
-    task: TaskDTO,
-    /// Tasks to execute if the main task fails
-    on_fail_steps: Vec<TaskDTO>,
-}
-
-/// Implementation of `From<&Step>` for `StepDTO` to convert Step objects to DTOs.
-///
-/// This implementation handles the conversion of a `Step` object from the core library
-/// into the `StepDTO` data transfer object used by the GUI frontend. It transforms
-/// both the main task and any on-fail tasks into their respective DTO representations.
-///
-/// # Examples
-///
-/// ```no_run
-/// use scenario_rs::scenario::step::Step;
-/// use scenario_rs_gui::app::StepDTO;
-///
-/// fn convert_step(step: &Step) -> StepDTO {
-///     StepDTO::from(step)
-/// }
-/// ```
-impl From<&Step> for StepDTO {
-    fn from(step: &Step) -> Self {
-        let on_fail_tasks: Vec<TaskDTO> = step
-            .on_fail_steps()
-            .iter()
-            .map(|on_fail_step| on_fail_step.task())
-            .map(|task| TaskDTO::from(task))
-            .collect();
-
-        Self {
-            task: TaskDTO::from(step.task()),
-            on_fail_steps: on_fail_tasks,
-        }
-    }
-}
-
 impl From<&Task> for TaskDTO {
     fn from(task: &Task) -> Self {
         match task {
@@ -321,6 +257,111 @@ impl From<&Task> for TaskDTO {
                 source_path: Some(sftp_copy.source_path().to_string()),
                 destination_path: Some(sftp_copy.destination_path().to_string()),
             },
+        }
+    }
+}
+
+/// Data Transfer Object for an on-fail step in a scenario.
+///
+/// This structure is used to transfer on-fail step information between
+/// the backend and the frontend UI. It contains the task to execute
+/// if the main task fails, along with its index and total count.
+///
+/// # Examples
+/// ```
+/// use scenario_rs_gui::app::OnFailStepDTO;
+///
+/// let on_fail_step = OnFailStepDTO {
+///    index: 1,
+///    total: 2,
+///    task: TaskDTO {
+///       description: "Retry connection".to_string(),
+///       error_message: "Failed to retry".to_string(),
+///       task_type: "RemoteSudo".to_string(),
+///       command: Some("sudo systemctl restart network".to_string()),
+///     },
+///  };
+/// ```
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct OnFailStepDTO {
+    /// Index of the on-fail step in the step
+    index: usize,
+    /// The on-fail task to execute
+    task: TaskDTO,
+}
+
+impl From<&OnFailStep> for OnFailStepDTO {
+    fn from(on_fail_step: &OnFailStep) -> Self {
+        Self {
+            index: on_fail_step.index(),
+            task: TaskDTO::from(on_fail_step.task()),
+        }
+    }
+}
+
+/// Data Transfer Object for a step in a scenario.
+///
+/// This structure is used to transfer step information between
+/// the backend and the frontend UI. It contains the task to execute
+/// and any on-fail tasks that should run if the main task fails.
+///
+/// # Examples
+///
+/// ```
+/// use scenario_rs_gui::app::{StepDTO, TaskDTO};
+///
+/// let main_task = TaskDTO {
+///     description: "Install package".to_string(),
+///     error_message: "Failed to install".to_string(),
+///     task_type: "RemoteSudo".to_string(),
+///     command: Some("apt-get install -y nginx".to_string()),
+///     source_path: None,
+///     destination_path: None,
+/// };
+///
+/// let step = StepDTO {
+///     task: main_task,
+///     on_fail_steps: Vec::new(),
+/// };
+/// ```
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct StepDTO {
+    /// Index of the step in the scenario
+    index: usize,
+    /// The main task to execute
+    task: TaskDTO,
+    /// Tasks to execute if the main task fails
+    on_fail_steps: Vec<OnFailStepDTO>,
+}
+
+/// Implementation of `From<&Step>` for `StepDTO` to convert Step objects to DTOs.
+///
+/// This implementation handles the conversion of a `Step` object from the core library
+/// into the `StepDTO` data transfer object used by the GUI frontend. It transforms
+/// both the main task and any on-fail tasks into their respective DTO representations.
+///
+/// # Examples
+///
+/// ```no_run
+/// use scenario_rs::scenario::step::Step;
+/// use scenario_rs_gui::app::StepDTO;
+///
+/// fn convert_step(step: &Step) -> StepDTO {
+///     StepDTO::from(step)
+/// }
+/// ```
+impl From<&Step> for StepDTO {
+    fn from(step: &Step) -> Self {
+        let on_fail_steps: Vec<OnFailStepDTO> = step
+            .on_fail_steps()
+            .iter()
+            .map(|on_fail_step| OnFailStepDTO::from(on_fail_step))
+            .collect();
+
+        Self {
+            index: step.index(),
+            task: TaskDTO::from(step.task()),
+            on_fail_steps,
         }
     }
 }

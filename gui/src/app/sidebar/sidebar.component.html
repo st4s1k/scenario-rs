@@ -60,10 +60,10 @@
       <div class="tab-content">
         <div class="tasks">
           @if (steps && steps.length > 0) {
-          @for (step of steps; let stepIndex = $index; track stepIndex) {
-          <expandable [label]="'[' + (stepIndex + 1) + '] ' + step.task.description"
-            [(expanded)]="stepExpandedMap[stepIndex]"
-            [showSeparator]="stepIndex > 0 && !stepExpandedMap[stepIndex - 1]">
+          @for (step of steps; track step.index) {
+          <expandable [label]="'[' + (step.index + 1) + '] ' + step.task.description"
+            [(expanded)]="stepExpandedMap[step.index]"
+            [showSeparator]="step.index > 0 && !stepExpandedMap[step.index - 1]">
             <div class="task">
               <info-block [label]="step.task.task_type" variant="secondary">
                 @switch (step.task.task_type) {
@@ -91,28 +91,28 @@
               <div class="task-item on-fail">
                 <expandable variant="error" [nested]="true"
                   [label]="'On-Fail Steps [' + step.on_fail_steps.length + ']'"
-                  [(expanded)]="onFailExpandedMap[stepIndex]">
+                  [(expanded)]="onFailExpandedMap[step.index]">
                   <div class="tasks">
-                    @for (onFailTask of step.on_fail_steps; track $index) {
-                    <expandable variant="error" [label]="'[' + ($index + 1) + '] ' + onFailTask.description"
-                      [(expanded)]="onFailStepExpandedMap[getOnFailStepKey(stepIndex, $index)]">
+                    @for (onFailStep of step.on_fail_steps; track onFailStep.index) {
+                    <expandable variant="error" [label]="'[' + (onFailStep.index + 1) + '] ' + onFailStep.task.description"
+                      [(expanded)]="onFailStepExpandedMap[getOnFailStepKey(step.index, onFailStep.index)]">
                       <div class="task">
-                        <info-block [label]="onFailTask.task_type" variant="secondary">
-                          @switch (onFailTask.task_type) {
+                        <info-block [label]="onFailStep.task.task_type" variant="secondary">
+                          @switch (onFailStep.task.task_type) {
                           @case ('RemoteSudo') {
                           <div class="task-item">
                             <info-block label="Command" variant="primary">
-                              <input class="text-field" type="text" [value]="onFailTask.command" readonly />
+                              <input class="text-field" type="text" [value]="onFailStep.task.command" readonly />
                             </info-block>
                           </div>
                           }
                           @case ('SftpCopy') {
                           <div class="task-item">
                             <info-block label="Source" variant="primary">
-                              <input class="text-field" type="text" [value]="onFailTask.source_path" readonly />
+                              <input class="text-field" type="text" [value]="onFailStep.task.source_path" readonly />
                             </info-block>
                             <info-block label="Destination" variant="primary">
-                              <input class="text-field" type="text" [value]="onFailTask.destination_path" readonly />
+                              <input class="text-field" type="text" [value]="onFailStep.task.destination_path" readonly />
                             </info-block>
                           </div>
                           }
