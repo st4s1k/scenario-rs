@@ -16,9 +16,7 @@ pub enum StepState {
         command: String,
         output: String,
     },
-    StepCompleted {
-        index: usize,
-    },
+    StepCompleted,
     StepFailed {
         message: String,
     },
@@ -28,8 +26,34 @@ pub enum StepState {
 pub enum AppEvent {
     Execution(bool),
     LogMessage(String),
-    StepState { on_fail: bool, state: StepState },
-    StepIndex { on_fail: bool, index: usize },
+    StepState {
+        step_index: usize,
+        steps_total: usize,
+        state: StepState,
+    },
+    OnFailStepState {
+        step_index: usize,
+        steps_total: usize,
+        on_fail_step_index: usize,
+        on_fail_steps_total: usize,
+        state: StepState,
+    },
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct StepStateEvent {
+    pub step_index: usize,
+    pub steps_total: usize,
+    pub state: StepState,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct OnFailStepStateEvent {
+    pub step_index: usize,
+    pub steps_total: usize,
+    pub on_fail_step_index: usize,
+    pub on_fail_steps_total: usize,
+    pub state: StepState,
 }
 
 pub struct FrontendEventHandler;
@@ -49,19 +73,33 @@ impl EventHandler<AppEvent> for FrontendEventHandler {
                 let message = format!("[{timestamp}] {message}");
                 let _ = app_handle.emit("log-message", message);
             }
-            AppEvent::StepState { on_fail, state } => {
-                let event_name = match *on_fail {
-                    true => "on-fail-step-state",
-                    false => "step-state",
+            AppEvent::StepState {
+                step_index,
+                steps_total,
+                state,
+            } => {
+                let event = StepStateEvent {
+                    step_index: *step_index,
+                    steps_total: *steps_total,
+                    state: state.clone(),
                 };
-                let _ = app_handle.emit(event_name, state);
+                let _ = app_handle.emit("step-state", event);
             }
-            AppEvent::StepIndex { on_fail, index } => {
-                let event_name = match *on_fail {
-                    true => "on-fail-step-index",
-                    false => "step-index",
+            AppEvent::OnFailStepState {
+                step_index,
+                steps_total,
+                on_fail_step_index,
+                on_fail_steps_total,
+                state,
+            } => {
+                let event = OnFailStepStateEvent {
+                    step_index: *step_index,
+                    steps_total: *steps_total,
+                    on_fail_step_index: *on_fail_step_index,
+                    on_fail_steps_total: *on_fail_steps_total,
+                    state: state.clone(),
                 };
-                let _ = app_handle.emit(event_name, index);
+                let _ = app_handle.emit("on-fail-step-state", event);
             }
         }
     }

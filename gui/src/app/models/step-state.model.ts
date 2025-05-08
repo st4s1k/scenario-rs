@@ -1,16 +1,36 @@
-export type StepEventType = 'SftpCopyProgress' | 'RemoteSudoOutput' | 'StepCompleted' | 'StepFailed';
-
 /**
- * Base interface for step events
+ * Interface for step state events
  */
-export interface BaseStepEvent {
-  type: StepEventType;
+export interface StepStateEvent {
+  step_index: number;
+  steps_total: number;
+  state: StepState;
 }
 
 /**
- * Event for SFTP copy progress
+ * Interface for on-fail step state events
  */
-export interface SftpCopyProgress extends BaseStepEvent {
+export interface OnFailStepStateEvent {
+  step_index: number;
+  steps_total: number;
+  on_fail_step_index: number;
+  on_fail_steps_total: number;
+  state: StepState;
+}
+
+/**
+ * Union type for all possible step states
+ */
+export type StepState =
+  SftpCopyProgress
+  | RemoteSudoOutput
+  | StepCompleted
+  | StepFailed;
+
+/**
+ * SFTP copy progress state
+ */
+export interface SftpCopyProgress extends BaseStepState {
   type: 'SftpCopyProgress';
   current: number;
   total: number;
@@ -19,35 +39,41 @@ export interface SftpCopyProgress extends BaseStepEvent {
 }
 
 /**
- * Event for remote sudo command output
+ * Remote sudo output state
  */
-export interface RemoteSudoOutput extends BaseStepEvent {
+export interface RemoteSudoOutput extends BaseStepState {
   type: 'RemoteSudoOutput';
   command: string;
   output: string;
 }
 
 /**
- * Event for a completed step
+ * Step completed state
  */
-export interface StepCompleted extends BaseStepEvent {
+export interface StepCompleted extends BaseStepState {
   type: 'StepCompleted';
-  index: number;
 }
 
 /**
- * Event for a failed step
+ * Step failed state
  */
-export interface StepFailed extends BaseStepEvent {
+export interface StepFailed extends BaseStepState {
   type: 'StepFailed';
   message: string;
 }
 
 /**
- * Union type for all possible step state events
+ * Base interface for step states
  */
-export type StepEvent =
-  SftpCopyProgress
-  | RemoteSudoOutput
-  | StepCompleted
-  | StepFailed;
+export interface BaseStepState {
+  type: StepStateType;
+}
+
+/**
+ * Type for step state
+ */
+export type StepStateType =
+  'SftpCopyProgress'
+  | 'RemoteSudoOutput'
+  | 'StepCompleted'
+  | 'StepFailed';

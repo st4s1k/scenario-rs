@@ -1,27 +1,33 @@
 <div class="execution-progress">
-  @if (currentStepIndex() == -1 || displaySteps.length === 0) {
+  @if (displaySteps.length === 0) {
   <div class="empty-state">No steps to display</div>
   } @else {
-  @for (displayStep of displaySteps.slice(0, currentStepIndex() + 1); track displayStep.step.index) {
-  <expandable [ngClass]="variant" [label]="'[' + (displayStep.step.index + 1) + '] ' + displayStep.step.task.description" [(expanded)]="displayStep.expanded"
-    [showSeparator]="$index > 0 && !displaySteps[$index - 1].expanded">
-    <div class="status-indicator" [ngClass]="displayStep.status" beforeLabel></div>
-    <div class="task">
-      @let state = displayStep.state();
+  @for (displayStep of displaySteps; track $index) {
 
-      @switch (displayStep.step.task.task_type) {
+  @let task = displayStep.task;
+  @let state = displayStep.state();
+  @let status = displayStep.status;
+
+  @let expandableLabel = '[' + ($index + 1) + '] ' + task.description;
+  @let showExpandableSeparator = $index > 0 && !displaySteps[$index - 1].expanded;
+
+  <expandable [variant]="variant" [label]="expandableLabel" [(expanded)]="displayStep.expanded"
+    [showSeparator]="showExpandableSeparator">
+    <div class="status-indicator" [ngClass]="status" beforeLabel></div>
+    <div class="task">
+      @switch (task.task_type) {
       @case ('RemoteSudo') {
       <div class="task-item">
         <info-block label="Command" variant="primary">
-          @let command = state && state.type === 'RemoteSudoState' && state.command
+          @let command = state && state.type === 'RemoteSudoOutput' && state.command
           ? state.command
-          : displayStep.step.task.command;
+          : task.command;
           <input class="text-field" type="text" [value]="command" readonly />
         </info-block>
       </div>
 
       <div class="task-item">
-        @let output = state && state.type === 'RemoteSudoState' && state.output
+        @let output = state && state.type === 'RemoteSudoOutput' && state.output
         ? state.output
         : '';
         <info-block class="output" label="Output" variant="secondary">
@@ -29,7 +35,7 @@
         </info-block>
       </div>
 
-      @if (displayStep.status === 'executing') {
+      @if (status === 'executing') {
       <div class="executing-indicator">
         <div class="dot-pulse"></div>
       </div>
@@ -38,21 +44,21 @@
       @case ('SftpCopy') {
       <div class="task-item">
         <info-block label="Source" variant="primary">
-          @let source = state && state.type === 'SftpCopyState'
+          @let source = state && state.type === 'SftpCopyProgress'
           ? state.source
-          : displayStep.step.task.source_path;
+          : task.source_path;
           <input class="text-field" type="text" [value]="source" readonly>
         </info-block>
 
         <info-block label="Destination" variant="primary">
-          @let destination = state && state.type === 'SftpCopyState'
+          @let destination = state && state.type === 'SftpCopyProgress'
           ? state.destination
-          : displayStep.step.task.destination_path;
+          : task.destination_path;
           <input class="text-field" type="text" [value]="destination" readonly />
         </info-block>
 
-        @let total = state && state.type === 'SftpCopyState' ? state.total : 0;
-        @let current = state && state.type === 'SftpCopyState' ? state.current : 0;
+        @let total = state && state.type === 'SftpCopyProgress' ? state.total : 0;
+        @let current = state && state.type === 'SftpCopyProgress' ? state.current : 0;
         @let progress = total == 0 ? 0 : Math.round((current / total) * 100);
         <div class="progress-bar" role="progressbar" aria-label="File transfer progress" [attr.aria-valuemin]="0"
           [attr.aria-valuemax]="total" [attr.aria-valuenow]="current"
@@ -63,12 +69,19 @@
       }
       }
 
-      @if (displayStep.status === 'failed') {
+      @if (status === 'failed') {
       <div class="task-item">
         <info-block class="error" label="Error" variant="error">
           <textarea spellcheck="false" readonly>{{ displayStep.errorMessage }}</textarea>
         </info-block>
       </div>
+
+      @if (displayStep.onFailSteps && displayStep.onFailSteps.length > 0) {
+      <expandable variant="error" [nested]="true" label="On-Fail Steps:" [(expanded)]="displayStep.onFailExpanded">
+        <execution-progress variant="error" [onFailSteps]="displayStep.onFailSteps">
+        </execution-progress>
+      </expandable>
+      }
       }
     </div>
   </expandable>

@@ -1,43 +1,23 @@
-import { Component, Input, OnDestroy, signal, WritableSignal, OnChanges, SimpleChanges, AfterViewInit } from '@angular/core';
-import { Step } from '../app.component';
 import { CommonModule } from '@angular/common';
-import { AutoScrollDirective } from '../auto-scroll.directive';
-import { InfoBlockComponent } from '../shared/info-block/info-block.component';
-import { ExpandableComponent } from '../shared/expandable/expandable.component';
+import { Component, Input, OnDestroy, OnInit, signal, WritableSignal } from '@angular/core';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
-import { StepEvent } from '../models/step-state.model';
+import { OnFailStep, Step, Task } from '../app.component';
+import { AutoScrollDirective } from '../auto-scroll.directive';
+import { OnFailStepStateEvent, RemoteSudoOutput, SftpCopyProgress, StepState, StepStateEvent } from '../models/step-state.model';
+import { ExpandableComponent } from '../shared/expandable/expandable.component';
+import { InfoBlockComponent } from '../shared/info-block/info-block.component';
 
 type StepStatus = 'executing' | 'completed' | 'failed' | 'pending';
 
-type StepStateType = 'SftpCopyState' | 'RemoteSudoState';
-
-interface BaseStepState {
-  type: StepStateType;
-}
-
-interface SftpCopyState extends BaseStepState {
-  type: 'SftpCopyState';
-  current: number;
-  total: number;
-  source: string;
-  destination: string;
-}
-
-interface RemoteSudoState extends BaseStepState {
-  type: 'RemoteSudoState';
-  command: string;
-  output: string;
-}
-
 interface DisplayStep {
-  step: Step;
-  state: WritableSignal<StepState | undefined>;
+  task: Task;
+  state: WritableSignal<StepState>;
   status: StepStatus;
   errorMessage?: string;
   expanded: boolean;
+  onFailExpanded: boolean;
+  onFailSteps?: OnFailStep[];
 }
-
-type StepState = SftpCopyState | RemoteSudoState;
 
 @Component({
   selector: 'execution-progress',
@@ -45,45 +25,40 @@ type StepState = SftpCopyState | RemoteSudoState;
     CommonModule,
     AutoScrollDirective,
     InfoBlockComponent,
-    ExpandableComponent
+    ExpandableComponent,
   ],
   templateUrl: './execution-progress.component.html',
   styleUrl: './execution-progress.component.scss'
 })
-export class ExecutionProgressComponent implements OnChanges, OnDestroy, AfterViewInit {
+export class ExecutionProgressComponent implements OnInit, OnDestroy {
 
-  Object = Object;
   Math = Math;
 
-  @Input() steps: Step[] = [];
   @Input() variant: 'primary' | 'error' = 'primary';
+  @Input() steps?: Step[];
+  @Input() onFailSteps?: OnFailStep[];
 
-  currentStepIndex = signal(-1);
   displaySteps: DisplayStep[] = [];
 
   unlistenStepState?: UnlistenFn;
-  unlistenCurrentStepIndex?: UnlistenFn;
+  unlistenOnFailStepState?: UnlistenFn;
 
   ngOnInit(): void {
-    this.setupStepStateListener();
-    this.setupCurrentStepIndexListener();
-  }
-
-  ngAfterViewInit(): void {
+    this.displaySteps = [];
+    if (this.steps !== undefined) {
+      this.setupStepStateListener();
+    }
+    if (this.onFailSteps !== undefined) {
+      this.setupOnFailStepStateListener();
+    }
   }
 
   ngOnDestroy(): void {
     if (this.unlistenStepState) {
       this.unlistenStepState();
     }
-    if (this.unlistenCurrentStepIndex) {
-      this.unlistenCurrentStepIndex();
-    }
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes["steps"]) {
-      this.initializeDisplaySteps();
+    if (this.unlistenOnFailStepState) {
+      this.unlistenOnFailStepState();
     }
   }
 
@@ -98,82 +73,117 @@ export class ExecutionProgressComponent implements OnChanges, OnDestroy, AfterVi
     return convertedSize.toFixed(decimals) + ' ' + sizes[exponent];
   }
 
-  private initializeDisplaySteps() {
-    if (this.steps.length === 0) {
-      this.displaySteps = [];
-    } else {
-      this.displaySteps = this.steps.map((step) => ({
-        step,
-        state: signal(undefined),
-        status: 'pending',
-        errorMessage: undefined,
-        expanded: false
-      } as DisplayStep));
-    }
-  }
-
   private async setupStepStateListener(): Promise<void> {
-    this.unlistenStepState = await listen<StepEvent>('step-state', (event) => {
+    this.unlistenStepState = await listen<StepStateEvent>("step-state", (event) => {
       this.updateDisplayStep(event.payload);
     });
   }
 
-  private async setupCurrentStepIndexListener(): Promise<void> {
-    this.unlistenCurrentStepIndex = await listen<number>('step-index', (event) => {
-      this.currentStepIndex.set(event.payload);
+  private async setupOnFailStepStateListener(): Promise<void> {
+    this.unlistenOnFailStepState = await listen<OnFailStepStateEvent>("on-fail-step-state", (event) => {
+      this.updateDisplayOnFailStep(event.payload);
     });
   }
 
   private updateDisplayStep(
-    stepEvent: StepEvent
+    stepEvent: StepStateEvent
   ): void {
-    const index = this.currentStepIndex();
-    this.displaySteps[index] = {
-      ...this.displaySteps[index],
-      status: this.getDisplayStatus(stepEvent),
-      errorMessage: stepEvent.type === 'StepFailed' ? stepEvent.message : undefined,
-      expanded: true
-    };
-    const oldDisplayState = this.displaySteps[index].state();
-    const newDisplayState = this.updateDisplayState(oldDisplayState, stepEvent);
-    this.displaySteps[index].state.set(newDisplayState);
-    this.displaySteps.slice(0, index).forEach((step) => (step.expanded = false));
+    if (this.steps === undefined) {
+      console.error("Steps are not defined");
+      return;
+    }
+
+    const index = stepEvent.step_index;
+    const task = this.steps[index].task;
+    const state = stepEvent.state;
+    const status = this.getDisplayStatus(state);
+    const onFailSteps = this.steps[index].on_fail_steps;
+
+    this.updateDisplaySteps(index, task, state, status, onFailSteps);
+  }
+
+  private updateDisplayOnFailStep(
+    stepEvent: OnFailStepStateEvent
+  ): void {
+    if (this.onFailSteps === undefined) {
+      console.error("OnFailSteps are not defined");
+      return;
+    }
+
+    const index = stepEvent.on_fail_step_index;
+    const task = this.onFailSteps[index].task;
+    const state = stepEvent.state;
+    const status = this.getDisplayStatus(state);
+    const onFailSteps = undefined;
+
+    this.updateDisplaySteps(index, task, state, status, onFailSteps);
+  }
+
+  private updateDisplaySteps(
+    index: number,
+    task: Task,
+    state: StepState,
+    status: StepStatus,
+    onFailSteps?: OnFailStep[]
+  ): void {
+    if (this.displaySteps[index] === undefined) {
+      this.displaySteps[index] = {
+        task,
+        state: signal<StepState>(state),
+        status,
+        errorMessage: undefined,
+        expanded: true,
+        onFailExpanded: true,
+        onFailSteps,
+      };
+      this.displaySteps[index].state.set(state);
+      this.displaySteps.slice(0, index).forEach((step) => (step.expanded = false));
+    } else {
+      const displayStep = this.displaySteps[index];
+      displayStep.status = status;
+      displayStep.errorMessage = state.type === 'StepFailed' ? state.message : undefined;
+      displayStep.expanded = status !== 'completed';
+      const oldDisplayState = displayStep.state();
+      const newDisplayState = this.updateDisplayState(oldDisplayState, state);
+      displayStep.state.set(newDisplayState);
+    }
   }
 
   private updateDisplayState(
-    oldDisplayState: StepState | undefined,
-    stepEvent: StepEvent
-  ): StepState | undefined {
-    if (stepEvent) {
-      switch (stepEvent.type) {
-        case 'SftpCopyProgress':
-          return {
-            type: 'SftpCopyState',
-            current: stepEvent.current,
-            total: stepEvent.total,
-            source: stepEvent.source,
-            destination: stepEvent.destination
-          } as SftpCopyState;
-        case 'RemoteSudoOutput':
-          return {
-            type: 'RemoteSudoState',
-            command: stepEvent.command,
-            output: stepEvent.output
-          } as RemoteSudoState;
-      }
+    oldDisplayState: StepState,
+    state: StepState
+  ): StepState {
+    switch (state.type) {
+      case 'SftpCopyProgress':
+        return {
+          type: 'SftpCopyProgress',
+          current: state.current,
+          total: state.total,
+          source: state.source,
+          destination: state.destination
+        } as SftpCopyProgress;
+      case 'RemoteSudoOutput':
+        return {
+          type: 'RemoteSudoOutput',
+          command: state.command,
+          output: state.output
+        } as RemoteSudoOutput;
+      default:
+        return oldDisplayState;
     }
-    return oldDisplayState;
   }
 
-  private getDisplayStatus(stepEvent: StepEvent): StepStatus {
-    if (stepEvent) {
-      switch (stepEvent.type) {
+  private getDisplayStatus(state: StepState): StepStatus {
+    if (state) {
+      switch (state.type) {
         case 'StepCompleted':
           return 'completed';
         case 'StepFailed':
           return 'failed';
+        case 'SftpCopyProgress':
+        case 'RemoteSudoOutput':
+          return 'executing';
       }
-      return 'executing';
     } else {
       return 'pending';
     }
