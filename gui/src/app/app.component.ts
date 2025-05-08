@@ -94,7 +94,6 @@ export class AppComponent implements OnDestroy {
   resolvedVariables: ResolvedVariables = {};
   tasks: { [key: string]: Task } = {};
   steps: Step[] = [];
-  orderedTasks: Task[] = [];
 
   unlistenLogUpdates?: UnlistenFn;
   unlistenExecutionStatus?: UnlistenFn;
@@ -236,7 +235,6 @@ export class AppComponent implements OnDestroy {
     return invoke<Step[]>('get_steps')
       .then((steps) => {
         this.steps = steps || [];
-        this.orderedTasks = this.steps.map(step => step.task);
       });
   }
 
