@@ -29,16 +29,16 @@
     }
 
     @mixin variant($color) {
-      .expandable-header {
+      &>.expandable-header {
         $hover-color: color-mix(in srgb, $color 60%, white);
 
-        label,
-        .expandable-icon {
+        &>label,
+        &>.expandable-icon {
           color: $color;
         }
 
-        &:hover label,
-        &:hover .expandable-icon {
+        &:hover>label,
+        &:hover>.expandable-icon {
           color: $hover-color;
         }
       }
