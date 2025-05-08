@@ -1,7 +1,9 @@
 <div class="expandable-container" [ngClass]="variant">
   <div class="expandable-separator" [class.hidden]="!showSeparator"></div>
   <div class="expandable-header" (click)="toggleExpanded($event)">
-    <div class="expandable-icon">{{expanded ? '[-]' : '[+]'}}</div>
+    <div class="expandable-icon">
+      <div class="codicon" [class.codicon-chevron-down]="expanded" [class.codicon-chevron-right]="!expanded"></div>
+    </div>
     <ng-content select="[beforeLabel]"></ng-content>
     <label class="expandable-label">{{label}}</label>
     <input type="checkbox" [checked]="!expanded" aria-hidden="true" tabindex="-1" />
