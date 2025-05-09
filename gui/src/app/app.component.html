@@ -44,7 +44,7 @@
 
       <expandable label="Execution progress:" [(expanded)]="executionProgressExpanded">
         <div class="section"> 
-          <execution-progress [steps]="steps">
+          <execution-progress [steps]="steps" [isExecuting]="isExecuting()">
           </execution-progress>
         </div>
       </expandable>

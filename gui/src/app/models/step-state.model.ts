@@ -24,6 +24,7 @@ export interface OnFailStepStateEvent {
 export type StepState =
   SftpCopyProgress
   | RemoteSudoOutput
+  | StepStarted
   | StepCompleted
   | StepFailed;
 
@@ -45,6 +46,13 @@ export interface RemoteSudoOutput extends BaseStepState {
   type: 'RemoteSudoOutput';
   command: string;
   output: string;
+}
+
+/**
+ * Step started state
+ */
+export interface StepStarted extends BaseStepState {
+  type: 'StepStarted';
 }
 
 /**
@@ -75,5 +83,6 @@ export interface BaseStepState {
 export type StepStateType =
   'SftpCopyProgress'
   | 'RemoteSudoOutput'
+  | 'StepStarted'
   | 'StepCompleted'
   | 'StepFailed';

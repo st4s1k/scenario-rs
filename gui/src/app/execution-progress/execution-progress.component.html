@@ -27,12 +27,12 @@
       </div>
 
       <div class="task-item">
-        @let output = state && state.type === 'RemoteSudoOutput' && state.output
-        ? state.output
-        : '';
+        @if (state && state.type === 'RemoteSudoOutput' && state.output) {
         <info-block class="output" label="Output" variant="secondary">
-          <textarea wrap="off" spellcheck="false" [autoScroll]="displayStep.state" readonly>{{ output }}</textarea>
+          <textarea wrap="off" spellcheck="false" [autoScroll]="displayStep.state" [value]="state.output" readonly>
+          </textarea>
         </info-block>
+        }
       </div>
 
       @if (status === 'executing') {
@@ -70,15 +70,21 @@
       }
 
       @if (status === 'failed') {
-      <div class="task-item">
-        <info-block class="error" label="Error" variant="error">
-          <textarea spellcheck="false" readonly>{{ displayStep.errorMessage }}</textarea>
-        </info-block>
-      </div>
+      <expandable variant="error" label="Errors:" [(expanded)]="displayStep.errorsExpanded">
+        <div class="task-item">
+          @for (error of displayStep.errors; track $index) {
+          <info-block class="error" label="Error" variant="error">
+            <textarea spellcheck="false" [value]="error" readonly>
+          </textarea>
+          </info-block>
+          }
+        </div>
+      </expandable>
 
-      @if (displayStep.onFailSteps && displayStep.onFailSteps.length > 0) {
+      @if (displayOnFailSteps.length > 0) {
       <expandable variant="error" [nested]="true" label="On-Fail Steps:" [(expanded)]="displayStep.onFailExpanded">
-        <execution-progress variant="error" [onFailSteps]="displayStep.onFailSteps">
+        <div class="status-indicator" [ngClass]="onFailStatus" beforeLabel></div>
+        <execution-progress [displaySteps]="displayOnFailSteps" [isExecuting]="isExecuting">
         </execution-progress>
       </expandable>
       }
