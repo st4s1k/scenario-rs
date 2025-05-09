@@ -27,6 +27,7 @@ pub enum StepState {
 pub enum AppEvent {
     Execution(bool),
     LogMessage(String),
+    LogPlainMessage(String),
     StepState {
         step_index: usize,
         steps_total: usize,
@@ -73,6 +74,9 @@ impl EventHandler<AppEvent> for FrontendEventHandler {
                 let timestamp = Local::now().format("%H:%M:%S.%3f").to_string();
                 let message = format!("[{timestamp}] {message}");
                 let _ = app_handle.emit("log-message", message);
+            }
+            AppEvent::LogPlainMessage(text) => {
+                let _ = app_handle.emit("log-message", text);
             }
             AppEvent::StepState {
                 step_index,

@@ -59,11 +59,11 @@ impl EventLayer for ScenarioEventLayer {
 
         const SCENARIO_PREFIX: &str = "[SCN]";
 
-        if let Some(scenario_event) = &visitor.scenario_event {
+        if let Some(scenario_event) = visitor.scenario_event {
             match scenario_event.as_str() {
                 "error" => {
                     self.sender.send_event(AppEvent::Execution(false));
-                    if let Some(scenario_error) = &visitor.scenario_error {
+                    if let Some(scenario_error) = visitor.scenario_error {
                         if let (Some(step_index), Some(steps_total)) =
                             (visitor.step_index, visitor.steps_total)
                         {
@@ -74,12 +74,13 @@ impl EventLayer for ScenarioEventLayer {
                                 (visitor.on_fail_step_index, visitor.on_fail_steps_total)
                             {
                                 self.sender.send_event(AppEvent::LogMessage(format!(
-                                    "{} [{}/{}] [on-fail] [{}/{}] {scenario_error}",
+                                    "{} [{}/{}] [on-fail] [{}/{}] {}",
                                     SCENARIO_PREFIX,
                                     step_index + 1,
                                     steps_total,
                                     on_fail_step_index + 1,
-                                    on_fail_steps_total
+                                    on_fail_steps_total,
+                                    scenario_error
                                 )));
                                 self.sender.send_event(AppEvent::OnFailStepState {
                                     step_index,
@@ -90,10 +91,11 @@ impl EventLayer for ScenarioEventLayer {
                                 });
                             } else {
                                 self.sender.send_event(AppEvent::LogMessage(format!(
-                                    "{} [{}/{}] {scenario_error}",
+                                    "{} [{}/{}] {}",
                                     SCENARIO_PREFIX,
                                     step_index + 1,
-                                    steps_total
+                                    steps_total,
+                                    scenario_error
                                 )));
                                 self.sender.send_event(AppEvent::StepState {
                                     step_index,
@@ -103,8 +105,8 @@ impl EventLayer for ScenarioEventLayer {
                             }
                         } else {
                             self.sender.send_event(AppEvent::LogMessage(format!(
-                                "{} {scenario_error}",
-                                SCENARIO_PREFIX
+                                "{} {}",
+                                SCENARIO_PREFIX, scenario_error
                             )));
                         }
                     } else {
@@ -129,15 +131,17 @@ impl EventLayer for ScenarioEventLayer {
                     self.sender.send_event(AppEvent::Execution(false));
                 }
                 "step_started" => {
-                    if let (Some(step_index), Some(steps_total), Some(description)) = (
+                    if let (Some(step_index), Some(steps_total), Some(task_description)) = (
                         visitor.step_index,
                         visitor.steps_total,
-                        visitor.task_description.as_ref(),
+                        visitor.task_description,
                     ) {
-                        let task_number = step_index + 1;
                         self.sender.send_event(AppEvent::LogMessage(format!(
-                            "{} [{task_number}/{steps_total}] {description}",
-                            SCENARIO_PREFIX
+                            "{} [{}/{}] {}",
+                            SCENARIO_PREFIX,
+                            step_index + 1,
+                            steps_total,
+                            task_description
                         )));
                         self.sender.send_event(AppEvent::StepState {
                             step_index,
@@ -158,85 +162,184 @@ impl EventLayer for ScenarioEventLayer {
                     }
                 }
                 "remote_sudo_started" => {
-                    if let Some(command) = &visitor.remote_sudo_command {
-                        self.sender.send_event(AppEvent::LogMessage(format!(
-                            "{} Executing: {command}",
-                            SCENARIO_PREFIX
-                        )));
-                    }
-                }
-                "remote_sudo_output" => {
-                    if let (Some(command), Some(output)) =
-                        (&visitor.remote_sudo_command, &visitor.remote_sudo_output)
-                    {
-                        self.sender
-                            .send_event(AppEvent::LogMessage(output.to_string()));
-
-                        if let (Some(step_index), Some(steps_total)) =
-                            (visitor.step_index, visitor.steps_total)
+                    if let (Some(step_index), Some(steps_total), Some(remote_sudo_command)) = (
+                        visitor.step_index,
+                        visitor.steps_total,
+                        visitor.remote_sudo_command,
+                    ) {
+                        if let (Some(on_fail_step_index), Some(on_fail_steps_total)) =
+                            (visitor.on_fail_step_index, visitor.on_fail_steps_total)
                         {
-                            let state = StepState::RemoteSudoOutput {
-                                command: command.to_owned(),
-                                output: output.to_owned(),
-                            };
-                            if let (Some(on_fail_step_index), Some(on_fail_steps_total)) =
-                                (visitor.on_fail_step_index, visitor.on_fail_steps_total)
-                            {
-                                self.sender.send_event(AppEvent::OnFailStepState {
-                                    step_index,
-                                    steps_total,
-                                    on_fail_step_index,
-                                    on_fail_steps_total,
-                                    state,
-                                });
-                            } else {
-                                self.sender.send_event(AppEvent::StepState {
-                                    step_index,
-                                    steps_total,
-                                    state,
-                                });
-                            }
+                            self.sender.send_event(AppEvent::LogMessage(format!(
+                                "{} [{}/{}] [on-fail] [{}/{}] Command: {}",
+                                SCENARIO_PREFIX,
+                                step_index + 1,
+                                steps_total,
+                                on_fail_step_index + 1,
+                                on_fail_steps_total,
+                                remote_sudo_command
+                            )));
+                        } else {
+                            self.sender.send_event(AppEvent::LogMessage(format!(
+                                "{} [{}/{}] Command: {}",
+                                SCENARIO_PREFIX,
+                                step_index + 1,
+                                steps_total,
+                                remote_sudo_command
+                            )));
                         }
                     }
                 }
-                "sftp_copy_started" => {
-                    if let (Some(source), Some(destination)) = (
-                        visitor.sftp_copy_source.as_ref(),
-                        visitor.sftp_copy_destination.as_ref(),
+                "remote_sudo_output" => {
+                    if let (
+                        Some(step_index),
+                        Some(steps_total),
+                        Some(remote_sudo_command),
+                        Some(remote_sudo_output),
+                    ) = (
+                        visitor.step_index,
+                        visitor.steps_total,
+                        visitor.remote_sudo_command,
+                        visitor.remote_sudo_output,
                     ) {
-                        self.sender.send_event(AppEvent::LogMessage(format!(
-                            "{} Source: {source}",
-                            SCENARIO_PREFIX
-                        )));
-                        self.sender.send_event(AppEvent::LogMessage(format!(
-                            "{} Destination: {destination}",
-                            SCENARIO_PREFIX
-                        )));
+                        let state = StepState::RemoteSudoOutput {
+                            command: remote_sudo_command.to_owned(),
+                            output: remote_sudo_output.to_owned(),
+                        };
+                        if let (Some(on_fail_step_index), Some(on_fail_steps_total)) =
+                            (visitor.on_fail_step_index, visitor.on_fail_steps_total)
+                        {
+                            self.sender.send_event(AppEvent::LogMessage(format!(
+                                "{} [{}/{}] [on-fail] [{}/{}] Output:",
+                                SCENARIO_PREFIX,
+                                step_index + 1,
+                                steps_total,
+                                on_fail_step_index + 1,
+                                on_fail_steps_total
+                            )));
+                            self.sender.send_event(AppEvent::OnFailStepState {
+                                step_index,
+                                steps_total,
+                                on_fail_step_index,
+                                on_fail_steps_total,
+                                state,
+                            });
+                        } else {
+                            self.sender.send_event(AppEvent::LogMessage(format!(
+                                "{} [{}/{}] Output:",
+                                SCENARIO_PREFIX,
+                                step_index + 1,
+                                steps_total
+                            )));
+                            self.sender.send_event(AppEvent::StepState {
+                                step_index,
+                                steps_total,
+                                state,
+                            });
+                        }
+                        self.sender.send_event(AppEvent::LogPlainMessage(remote_sudo_output));
+                    }
+                }
+                "sftp_copy_started" => {
+                    if let (
+                        Some(step_index),
+                        Some(steps_total),
+                        Some(sftp_copy_source),
+                        Some(sftp_copy_destination),
+                    ) = (
+                        visitor.step_index,
+                        visitor.steps_total,
+                        visitor.sftp_copy_source,
+                        visitor.sftp_copy_destination,
+                    ) {
+                        if let (Some(on_fail_step_index), Some(on_fail_steps_total)) =
+                            (visitor.on_fail_step_index, visitor.on_fail_steps_total)
+                        {
+                            self.sender.send_event(AppEvent::LogMessage(format!(
+                                "{} [{}/{}] [on-fail] [{}/{}] Source: {}",
+                                SCENARIO_PREFIX,
+                                step_index + 1,
+                                steps_total,
+                                on_fail_step_index + 1,
+                                on_fail_steps_total,
+                                sftp_copy_source
+                            )));
+                            self.sender.send_event(AppEvent::LogMessage(format!(
+                                "{} [{}/{}] [on-fail] [{}/{}] Destination: {}",
+                                SCENARIO_PREFIX,
+                                step_index + 1,
+                                steps_total,
+                                on_fail_step_index + 1,
+                                on_fail_steps_total,
+                                sftp_copy_destination
+                            )));
+                        } else {
+                            self.sender.send_event(AppEvent::LogMessage(format!(
+                                "{} [{}/{}] Source: {}",
+                                SCENARIO_PREFIX,
+                                step_index + 1,
+                                steps_total,
+                                sftp_copy_source
+                            )));
+                            self.sender.send_event(AppEvent::LogMessage(format!(
+                                "{} [{}/{}] Destination: {}",
+                                SCENARIO_PREFIX,
+                                step_index + 1,
+                                steps_total,
+                                sftp_copy_destination
+                            )));
+                        }
                     }
                 }
                 "sftp_copy_completed" => {
-                    self.sender.send_event(AppEvent::LogMessage(format!(
-                        "{} SFTP copy finished",
-                        SCENARIO_PREFIX
-                    )));
+                    if let (Some(step_index), Some(steps_total)) =
+                        (visitor.step_index, visitor.steps_total)
+                    {
+                        if let (Some(on_fail_step_index), Some(on_fail_steps_total)) =
+                            (visitor.on_fail_step_index, visitor.on_fail_steps_total)
+                        {
+                            self.sender.send_event(AppEvent::LogMessage(format!(
+                                "{} [{}/{}] [on-fail] [{}/{}] SFTP copy finished",
+                                SCENARIO_PREFIX,
+                                step_index + 1,
+                                steps_total,
+                                on_fail_step_index + 1,
+                                on_fail_steps_total
+                            )));
+                        } else {
+                            self.sender.send_event(AppEvent::LogMessage(format!(
+                                "{} [{}/{}] SFTP copy finished",
+                                SCENARIO_PREFIX,
+                                step_index + 1,
+                                steps_total
+                            )));
+                        }
+                    }
                 }
                 "sftp_copy_progress" => {
-                    if let (Some(current), Some(total), Some(source), Some(destination)) = (
+                    if let (
+                        Some(sftp_copy_progress_current),
+                        Some(sftp_copy_progress_total),
+                        Some(sftp_copy_source),
+                        Some(sftp_copy_destination),
+                    ) = (
                         visitor.sftp_copy_progress_current,
                         visitor.sftp_copy_progress_total,
-                        visitor.sftp_copy_source.as_ref(),
-                        visitor.sftp_copy_destination.as_ref(),
+                        visitor.sftp_copy_source,
+                        visitor.sftp_copy_destination,
                     ) {
-                        let percentage = (current as f64 / total as f64) * 100.0;
+                        let percentage = (sftp_copy_progress_current as f64
+                            / sftp_copy_progress_total as f64)
+                            * 100.0;
 
                         if let (Some(step_index), Some(steps_total)) =
                             (visitor.step_index, visitor.steps_total)
                         {
                             let state = StepState::SftpCopyProgress {
-                                source: source.to_owned(),
-                                destination: destination.to_owned(),
-                                current,
-                                total,
+                                source: sftp_copy_source,
+                                destination: sftp_copy_destination,
+                                current: sftp_copy_progress_current,
+                                total: sftp_copy_progress_total,
                             };
                             if let (Some(on_fail_step_index), Some(on_fail_steps_total)) =
                                 (visitor.on_fail_step_index, visitor.on_fail_steps_total)
@@ -275,16 +378,34 @@ impl EventLayer for ScenarioEventLayer {
                     }
                 }
                 "on_fail_steps_started" => {
-                    self.sender.send_event(AppEvent::LogMessage(format!(
-                        "{} [on-fail] Starting failure recovery steps",
-                        SCENARIO_PREFIX
-                    )));
+                    if let (Some(step_index), Some(steps_total), Some(on_fail_steps_total)) = (
+                        visitor.step_index,
+                        visitor.steps_total,
+                        visitor.on_fail_steps_total,
+                    ) {
+                        self.sender.send_event(AppEvent::LogMessage(format!(
+                            "{} [{}/{}] [on-fail] ({}) Starting failure recovery steps",
+                            SCENARIO_PREFIX,
+                            step_index + 1,
+                            steps_total,
+                            on_fail_steps_total
+                        )));
+                    }
                 }
                 "on_fail_steps_completed" => {
-                    self.sender.send_event(AppEvent::LogMessage(format!(
-                        "{} [on-fail] Failure recovery steps completed",
-                        SCENARIO_PREFIX
-                    )));
+                    if let (Some(step_index), Some(steps_total), Some(on_fail_steps_total)) = (
+                        visitor.step_index,
+                        visitor.steps_total,
+                        visitor.on_fail_steps_total,
+                    ) {
+                        self.sender.send_event(AppEvent::LogMessage(format!(
+                            "{} [{}/{}] [on-fail] ({}) Failure recovery steps completed",
+                            SCENARIO_PREFIX,
+                            step_index + 1,
+                            steps_total,
+                            on_fail_steps_total
+                        )));
+                    }
                 }
                 "on_fail_step_started" => {
                     if let (
@@ -292,18 +413,22 @@ impl EventLayer for ScenarioEventLayer {
                         Some(steps_total),
                         Some(on_fail_step_index),
                         Some(on_fail_steps_total),
-                        Some(description),
+                        Some(task_description),
                     ) = (
                         visitor.step_index,
                         visitor.steps_total,
                         visitor.on_fail_step_index,
                         visitor.on_fail_steps_total,
-                        visitor.task_description.as_ref(),
+                        visitor.task_description,
                     ) {
-                        let task_number = step_index + 1;
                         self.sender.send_event(AppEvent::LogMessage(format!(
-                            "{} [on-fail] [{task_number}/{steps_total}] {description}",
-                            SCENARIO_PREFIX
+                            "{} [{}/{}] [on-fail] [{}/{}] {}",
+                            SCENARIO_PREFIX,
+                            step_index + 1,
+                            steps_total,
+                            on_fail_step_index + 1,
+                            on_fail_steps_total,
+                            task_description
                         )));
                         self.sender.send_event(AppEvent::OnFailStepState {
                             step_index,
