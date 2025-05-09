@@ -184,24 +184,34 @@ With custom log level:
 scenario-rs-cli -c ./example_configs/example-scenario.toml -l debug
 ```
 
+## GUI Demo
+
+<video src="demo/demo_video.mp4"></video>
+
 ## Screenshots
 
-![screenshot](screenshots/screenshot_0.png)
+![screenshot](demo/screenshot_0.png)
 
 <details>
   <summary><b>❗click here to view more screenshots❗<b></summary>
 
   <h2>Variables</h2>
 
-  ![screenshot](screenshots/screenshot_1.png)
+  ![screenshot](demo/screenshot_1.png)
 
   <h2>Tasks</h2>
 
-  ![screenshot](screenshots/screenshot_2.png)
+  ![screenshot](demo/screenshot_2.png)
 
   <h2>Steps</h2>
 
-  ![screenshot](screenshots/screenshot_3.png)
+  ![screenshot](demo/screenshot_3.png)
+
+  <h2>Execution progress</h2>
+
+  ![screenshot](demo/screenshot_4.png)
+
+  ![screenshot](demo/screenshot_5.png)
 
 </details>
 
