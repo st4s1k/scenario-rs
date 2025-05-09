@@ -16,6 +16,7 @@ pub enum StepState {
         command: String,
         output: String,
     },
+    StepStarted,
     StepCompleted,
     StepFailed {
         message: String,

@@ -129,16 +129,21 @@ impl EventLayer for ScenarioEventLayer {
                     self.sender.send_event(AppEvent::Execution(false));
                 }
                 "step_started" => {
-                    if let (Some(index), Some(total_steps), Some(description)) = (
+                    if let (Some(step_index), Some(steps_total), Some(description)) = (
                         visitor.step_index,
                         visitor.steps_total,
                         visitor.task_description.as_ref(),
                     ) {
-                        let task_number = index + 1;
+                        let task_number = step_index + 1;
                         self.sender.send_event(AppEvent::LogMessage(format!(
-                            "{} [{task_number}/{total_steps}] {description}",
+                            "{} [{task_number}/{steps_total}] {description}",
                             SCENARIO_PREFIX
                         )));
+                        self.sender.send_event(AppEvent::StepState {
+                            step_index,
+                            steps_total,
+                            state: StepState::StepStarted,
+                        });
                     }
                 }
                 "step_completed" => {
@@ -282,16 +287,31 @@ impl EventLayer for ScenarioEventLayer {
                     )));
                 }
                 "on_fail_step_started" => {
-                    if let (Some(index), Some(total_steps), Some(description)) = (
+                    if let (
+                        Some(step_index),
+                        Some(steps_total),
+                        Some(on_fail_step_index),
+                        Some(on_fail_steps_total),
+                        Some(description),
+                    ) = (
                         visitor.step_index,
                         visitor.steps_total,
+                        visitor.on_fail_step_index,
+                        visitor.on_fail_steps_total,
                         visitor.task_description.as_ref(),
                     ) {
-                        let task_number = index + 1;
+                        let task_number = step_index + 1;
                         self.sender.send_event(AppEvent::LogMessage(format!(
-                            "{} [on-fail] [{task_number}/{total_steps}] {description}",
+                            "{} [on-fail] [{task_number}/{steps_total}] {description}",
                             SCENARIO_PREFIX
                         )));
+                        self.sender.send_event(AppEvent::OnFailStepState {
+                            step_index,
+                            steps_total,
+                            on_fail_step_index,
+                            on_fail_steps_total,
+                            state: StepState::StepStarted,
+                        });
                     }
                 }
                 "on_fail_step_completed" => {
