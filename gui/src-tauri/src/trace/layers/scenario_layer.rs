@@ -271,13 +271,13 @@ impl EventLayer for ScenarioEventLayer {
                 }
                 "on_fail_steps_started" => {
                     self.sender.send_event(AppEvent::LogMessage(format!(
-                        "{} [on_fail] Starting failure recovery steps",
+                        "{} [on-fail] Starting failure recovery steps",
                         SCENARIO_PREFIX
                     )));
                 }
                 "on_fail_steps_completed" => {
                     self.sender.send_event(AppEvent::LogMessage(format!(
-                        "{} [on_fail] Failure recovery steps completed",
+                        "{} [on-fail] Failure recovery steps completed",
                         SCENARIO_PREFIX
                     )));
                 }
@@ -289,7 +289,7 @@ impl EventLayer for ScenarioEventLayer {
                     ) {
                         let task_number = index + 1;
                         self.sender.send_event(AppEvent::LogMessage(format!(
-                            "{} [on_fail] [{task_number}/{total_steps}] {description}",
+                            "{} [on-fail] [{task_number}/{total_steps}] {description}",
                             SCENARIO_PREFIX
                         )));
                     }
