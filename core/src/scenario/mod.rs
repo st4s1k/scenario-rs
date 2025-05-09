@@ -245,7 +245,10 @@ impl Scenario {
 
         match self.execute.steps.execute(&session, &self.variables) {
             Ok(_) => debug!(scenario.event = "scenario_completed"),
-            Err(error) => debug!(scenario.event = "error", scenario.error = %error),
+            Err(error) => {
+                debug!(scenario.event = "error", scenario.error = %error);
+                debug!(scenario.event = "scenario_failed");
+            },
         }
     }
 }

@@ -62,7 +62,6 @@ impl EventLayer for ScenarioEventLayer {
         if let Some(scenario_event) = visitor.scenario_event {
             match scenario_event.as_str() {
                 "error" => {
-                    self.sender.send_event(AppEvent::Execution(false));
                     if let Some(scenario_error) = visitor.scenario_error {
                         if let (Some(step_index), Some(steps_total)) =
                             (visitor.step_index, visitor.steps_total)
@@ -126,6 +125,13 @@ impl EventLayer for ScenarioEventLayer {
                 "scenario_completed" => {
                     self.sender.send_event(AppEvent::LogMessage(format!(
                         "{} Scenario completed successfully!",
+                        SCENARIO_PREFIX
+                    )));
+                    self.sender.send_event(AppEvent::Execution(false));
+                }
+                "scenario_failed" => {
+                    self.sender.send_event(AppEvent::LogMessage(format!(
+                        "{} Scenario failed",
                         SCENARIO_PREFIX
                     )));
                     self.sender.send_event(AppEvent::Execution(false));
