@@ -8,7 +8,7 @@
   color: styles.$secondary-color-lighter-60;
   text-align: center;
   padding: styles.$gap-small;
-  border: 1px solid styles.$primary-color-lighter-40;
+  border: styles.$border-width solid styles.$primary-color-lighter-40;
   position: absolute;
   z-index: 1;
   font-size: styles.$font-size-small;
