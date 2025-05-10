@@ -4,6 +4,8 @@ use crate::{
 };
 use std::{
     collections::{BTreeMap, HashMap},
+    ffi::OsStr,
+    path::Path,
     sync::{atomic::Ordering, Mutex},
 };
 use tauri::State;
@@ -79,4 +81,10 @@ pub fn get_tasks(state: State<'_, Mutex<ScenarioAppState>>) -> BTreeMap<String, 
 pub fn get_steps(state: State<'_, Mutex<ScenarioAppState>>) -> Vec<StepDTO> {
     let state = state.safe_lock();
     state.get_steps()
+}
+
+#[tauri::command(async)]
+pub fn is_valid_config_path(path: &str) -> bool {
+    let path = Path::new(path);
+    path.exists() && path.is_file() && path.extension() == Some(OsStr::new("toml"))
 }
