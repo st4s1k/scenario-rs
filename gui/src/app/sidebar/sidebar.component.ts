@@ -21,10 +21,11 @@ interface TabConfig {
 })
 export class SidebarComponent implements OnChanges {
 
-  private readonly titleSize = 24; // find a way to get this from CSS
-  private readonly collapseThreshold = this.titleSize + 10;
-  private readonly minSidebarWidth = this.collapseThreshold + 1;
+  private readonly titleSize = 1.5;
+  private readonly collapseThreshold = this.titleSize + 0.625;
+  private readonly minSidebarWidth = this.collapseThreshold + 0.0625;
   private readonly storageKey = 'scenario-rs-sidebar-state';
+  private readonly htmlFontSize;
 
   @Input() resolvedVariables: { [key: string]: string } = {};
   @Input() tasks: { [key: string]: Task } = {};
@@ -52,11 +53,12 @@ export class SidebarComponent implements OnChanges {
 
   private startX = 0;
   private startWidth = 0;
-  private previousWidth = 300;
+  private previousWidth = 18.75;
 
   Object = Object;
 
   constructor(private renderer: Renderer2, @Inject(DOCUMENT) private document: Document) {
+    this.htmlFontSize = parseFloat(getComputedStyle(this.document.documentElement).fontSize);
     this.loadSavedState();
   }
 
@@ -69,12 +71,12 @@ export class SidebarComponent implements OnChanges {
       if (savedState) {
         const state = JSON.parse(savedState);
         this.isCollapsed = state.collapsed !== undefined ? state.collapsed : true;
-        this.previousWidth = state.width || 300;
+        this.previousWidth = state.width || 18.75;
         this.activeTab = state.activeTab || 'variables';
       }
       this.sidebarWidth = this.isCollapsed ? this.titleSize : this.previousWidth;
       if (this.previousWidth < this.collapseThreshold) {
-        this.previousWidth = 300;
+        this.previousWidth = 18.75;
       }
     } catch (e) {
       this.isCollapsed = true;
@@ -103,7 +105,7 @@ export class SidebarComponent implements OnChanges {
     if (this.activeTab === tabId) {
       this.isCollapsed = !this.isCollapsed;
       if (this.isCollapsed) {
-        this.previousWidth = Math.max(this.collapseThreshold + 20, this.sidebarWidth);
+        this.previousWidth = Math.max(this.collapseThreshold + 1.25, this.sidebarWidth);
         this.sidebarWidth = this.titleSize;
       } else {
         this.sidebarWidth = this.previousWidth;
@@ -121,7 +123,7 @@ export class SidebarComponent implements OnChanges {
   startResize(event: MouseEvent): void {
     if (!this.isCollapsed) {
       this.isResizing = true;
-      this.startX = event.clientX;
+      this.startX = event.clientX / this.htmlFontSize;
       this.startWidth = this.sidebarWidth;
       this.renderer.addClass(this.document.body, 'resizing-sidebar');
     }
@@ -131,7 +133,7 @@ export class SidebarComponent implements OnChanges {
   @HostListener('window:resize')
   onResize(): void {
     if (!this.isCollapsed) {
-      this.sidebarWidth = Math.min(this.sidebarWidth, window.innerWidth - 20);
+      this.sidebarWidth = Math.min(this.sidebarWidth, window.innerWidth - 1.25);
     }
   }
 
@@ -139,16 +141,17 @@ export class SidebarComponent implements OnChanges {
   onMouseMove(event: MouseEvent): void {
     if (!this.isResizing) return;
 
-    const newWidth = this.startWidth - (event.clientX - this.startX);
+    const clientX = event.clientX / this.htmlFontSize;
+    const newWidth = this.startWidth - (clientX - this.startX);
 
     if (newWidth < this.collapseThreshold && !this.isCollapsed) {
       this.isCollapsed = true;
-      this.previousWidth = Math.max(this.collapseThreshold + 20, this.startWidth);
+      this.previousWidth = Math.max(this.collapseThreshold + 1.25, this.startWidth);
       this.sidebarWidth = this.titleSize;
       this.isResizing = false;
       this.renderer.removeClass(this.document.body, 'resizing-sidebar');
     } else if (!this.isCollapsed) {
-      this.sidebarWidth = Math.max(this.minSidebarWidth, Math.min(newWidth, window.innerWidth - 20));
+      this.sidebarWidth = Math.max(this.minSidebarWidth, Math.min(newWidth, window.innerWidth - 1.25));
     }
 
     event.preventDefault();
