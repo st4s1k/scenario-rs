@@ -14,7 +14,7 @@
       left: styles.$gap-small;
       font-size: styles.$font-size-small;
       background-color: styles.$secondary-color-lighter-2;
-      border-width: 1px;
+      border-width: styles.$border-width;
       border-style: solid;
       padding: 0 styles.$gap-small;
       z-index: 1;
@@ -24,7 +24,7 @@
       display: grid;
       padding: styles.$gap-small;
       padding-top: styles.$gap-medium;
-      border-width: 1px;
+      border-width: styles.$border-width;
       border-style: solid;
     }
 
