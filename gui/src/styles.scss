@@ -8,7 +8,7 @@ $green: #69D84F; // Fresh green
 $blue: #069AF3; // Azure
 
 // Lighter shades
-$primary-color-lighter-40: color-mix(in srgb, $primary-color 60%, white);
+$primary-color-lighter-40: color-mix(in srgb, white 40%, $primary-color);
 $secondary-color-lighter-2: color-mix(in srgb, white 2%, $secondary-color);
 $secondary-color-lighter-5: color-mix(in srgb, white 5%, $secondary-color);
 $secondary-color-lighter-10: color-mix(in srgb, white 10%, $secondary-color);

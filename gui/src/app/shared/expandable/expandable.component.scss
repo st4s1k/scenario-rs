@@ -90,6 +90,10 @@
           font-size: $icon-width;
         }
       }
+
+      &:hover {
+        color: styles.$primary-color-lighter-40;
+      }
     }
 
     >.expandable-content {
