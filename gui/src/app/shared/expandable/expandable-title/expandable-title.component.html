@@ -1,3 +1,6 @@
 <div class="expandable-title">
+    @if (colorIndicator() !== undefined) {
+    <div class="color-indicator" [ngClass]="colorIndicator()"></div>
+    }
     <ng-content></ng-content>
 </div>

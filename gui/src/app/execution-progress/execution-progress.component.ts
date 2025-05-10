@@ -7,6 +7,7 @@ import { OnFailStepStateEvent, RemoteSudoOutput, SftpCopyProgress, StepState, St
 import { ExpandableComponent } from '../shared/expandable/expandable.component';
 import { InfoBlockComponent } from '../shared/info-block/info-block.component';
 import { ExpandableTitleComponent } from '../shared/expandable/expandable-title/expandable-title.component';
+import { ComponentColorVariant } from '../models/enums';
 
 type StepStatus = 'executing' | 'completed' | 'failed' | 'pending';
 
@@ -18,6 +19,7 @@ interface DisplayStep {
   expanded: boolean;
   errorsExpanded: boolean;
   onFailExpanded: boolean;
+  statusColor: WritableSignal<ComponentColorVariant | undefined>;
 }
 
 @Component({
@@ -36,13 +38,13 @@ export class ExecutionProgressComponent implements OnInit, OnChanges, OnDestroy 
 
   Math = Math;
 
-  @Input() variant: 'primary' | 'error' = 'primary';
   @Input() steps?: Step[];
   @Input({ required: true }) isExecuting!: boolean;
   @Input() displaySteps: DisplayStep[] = [];
 
   displayOnFailSteps: DisplayStep[] = [];
   onFailStatus: StepStatus = 'pending';
+  onFailStatusColor: WritableSignal<ComponentColorVariant | undefined> = signal(undefined);
 
   unlistenStepState?: UnlistenFn;
   unlistenOnFailStepState?: UnlistenFn;
@@ -100,19 +102,17 @@ export class ExecutionProgressComponent implements OnInit, OnChanges, OnDestroy 
 
   private async setupOnFailStepStateListener(): Promise<void> {
     this.unlistenOnFailStepState = await listen<OnFailStepStateEvent>("on-fail-step-state", (event) => {
-      console.log('on-fail-step-state', event.payload);
-
       const stepEvent = event.payload;
       const index = stepEvent.on_fail_step_index;
       const task = this.steps![stepEvent.step_index].on_fail_steps![index].task;
       const state = stepEvent.state;
 
       if (stepEvent.state.type === 'StepFailed') {
-        this.onFailStatus = 'failed';
+        this.onFailStatusColor.set('red');
       } else if (this.isExecuting) {
-        this.onFailStatus = 'executing';
-      } else if (this.onFailStatus !== 'failed') {
-        this.onFailStatus = 'completed';
+        this.onFailStatusColor.set('blue');
+      } else if (this.onFailStatusColor() !== 'red') {
+        this.onFailStatusColor.set('green');
       }
 
       this.displayOnFailSteps = this.updateDisplaySteps(this.displayOnFailSteps, index, task, state);
@@ -135,6 +135,7 @@ export class ExecutionProgressComponent implements OnInit, OnChanges, OnDestroy 
           expanded: true,
           errorsExpanded: true,
           onFailExpanded: true,
+          statusColor: signal(undefined)
         };
         break;
       case 'SftpCopyProgress':
@@ -146,6 +147,7 @@ export class ExecutionProgressComponent implements OnInit, OnChanges, OnDestroy 
           source: state.source,
           destination: state.destination
         } as SftpCopyProgress);
+        displaySteps[index].statusColor.set('blue');
         break;
       case 'RemoteSudoOutput':
         displaySteps[index].status = 'executing';
@@ -154,14 +156,17 @@ export class ExecutionProgressComponent implements OnInit, OnChanges, OnDestroy 
           command: state.command,
           output: state.output
         } as RemoteSudoOutput);
+        displaySteps[index].statusColor.set('blue');
         break;
       case 'StepCompleted':
         displaySteps[index].status = 'completed';
         displaySteps[index].expanded = false;
+        displaySteps[index].statusColor.set('green');
         break;
       case 'StepFailed':
         displaySteps[index].status = 'failed';
         displaySteps[index].errors?.unshift(state.message);
+        displaySteps[index].statusColor.set('red');
         break;
     }
     return displaySteps;

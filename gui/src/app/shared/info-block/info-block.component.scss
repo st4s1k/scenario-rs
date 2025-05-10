@@ -51,7 +51,15 @@
       }
     }
 
-    &.error {
+    &.blue {
+      @include block-variant(styles.$blue);
+    }
+
+    &.green {
+      @include block-variant(styles.$green);
+    }
+
+    &.red {
       @include block-variant(styles.$red);
     }
   }

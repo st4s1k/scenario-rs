@@ -10,8 +10,7 @@
 
   @let showExpandableSeparator = $index > 0 && !displaySteps[$index - 1].expanded;
   <expandable [(expanded)]="displayStep.expanded" [showSeparator]="showExpandableSeparator">
-    <expandable-title>
-      <div class="status-indicator" [ngClass]="status"></div>
+    <expandable-title [colorIndicator]="displayStep.statusColor">
       <div>[{{$index + 1}}]</div>
       <div>{{task.description}}</div>
     </expandable-title>
@@ -71,13 +70,13 @@
       }
 
       @if (status === 'failed') {
-      <expandable variant="error" [(expanded)]="displayStep.errorsExpanded">
+      <expandable variant="red" [(expanded)]="displayStep.errorsExpanded">
         <expandable-title>
           Errors:
         </expandable-title>
         <div class="task-item">
           @for (error of displayStep.errors; track $index) {
-          <info-block class="error" label="Error" variant="error">
+          <info-block class="error" label="Error" variant="red">
             <textarea spellcheck="false" [value]="error" readonly>
           </textarea>
           </info-block>
@@ -86,10 +85,9 @@
       </expandable>
 
       @if (displayOnFailSteps.length > 0) {
-      <expandable variant="error" [nested]="true" [(expanded)]="displayStep.onFailExpanded">
-        <expandable-title>
-          <div class="status-indicator" [ngClass]="onFailStatus"></div>
-          <div>On-Fail Steps:</div>
+      <expandable [nested]="true" [(expanded)]="displayStep.onFailExpanded">
+        <expandable-title [colorIndicator]="onFailStatusColor">
+          On-Fail Steps:
         </expandable-title>
         <execution-progress [displaySteps]="displayOnFailSteps" [isExecuting]="isExecuting">
         </execution-progress>

@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, ContentChild, ElementRef } from '@angular/core';
+import { Component, Input } from '@angular/core';
+import { ComponentColorVariant } from '../../models/enums';
 
 @Component({
   selector: 'info-block',
@@ -9,5 +10,5 @@ import { Component, Input, ContentChild, ElementRef } from '@angular/core';
 })
 export class InfoBlockComponent {
   @Input() label: string = '';
-  @Input() variant: 'primary' | 'secondary' | 'error' = 'primary';
+  @Input() variant: ComponentColorVariant = 'primary';
 }

@@ -6,5 +6,26 @@
         grid-auto-flow: column;
         align-items: center;
         gap: styles.$gap-small;
+
+      .color-indicator {
+        display: inline-block;
+        width: 0.5rem;
+        height: 0.5rem;
+        outline: styles.$border-width solid styles.$primary-color;
+        border: calc(2 * styles.$border-width) solid styles.$secondary-color;
+        margin-right: styles.$gap-small;
+
+        &.blue {
+          background-color: styles.$blue;
+        }
+
+        &.green {
+          background-color: styles.$green;
+        }
+
+        &.red {
+          background-color: styles.$red;
+        }
+      }
     }
 }

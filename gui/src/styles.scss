@@ -1,11 +1,14 @@
 // Global variables
-$titlebar-height: 1.8rem;
-$field-height: 1.6rem;
-$primary-color: rgb(218, 165, 32); // goldenrod
+
+// Color palette
+$primary-color: #daa520; // goldenrod
+$secondary-color: #1e1e1e; // Eerie Black
+$red: #FD5E53; // Sunset orange
+$green: #69D84F; // Fresh green
+$blue: #069AF3; // Azure
+
+// Lighter shades
 $primary-color-lighter-40: color-mix(in srgb, $primary-color 60%, white);
-$font-size-default: 0.8rem;
-$font-size-small: 0.7rem;
-$secondary-color: rgb(30, 30, 30);
 $secondary-color-lighter-2: color-mix(in srgb, white 2%, $secondary-color);
 $secondary-color-lighter-5: color-mix(in srgb, white 5%, $secondary-color);
 $secondary-color-lighter-10: color-mix(in srgb, white 10%, $secondary-color);
@@ -13,14 +16,25 @@ $secondary-color-lighter-20: color-mix(in srgb, white 20%, $secondary-color);
 $secondary-color-lighter-40: color-mix(in srgb, white 40%, $secondary-color);
 $secondary-color-lighter-60: color-mix(in srgb, white 60%, $secondary-color);
 $secondary-color-lighter-70: color-mix(in srgb, white 70%, $secondary-color);
+
+// Text colors
 $text-color: $secondary-color-lighter-70;
 $button-text-color: $secondary-color;
+
+// Font sizes
+$font-size-default: 0.8rem;
+$font-size-small: 0.7rem;
+
+// Element sizes
+$titlebar-height: 1.8rem;
+$field-height: 1.6rem;
+
 $gap-small: 0.3rem;
 $gap-medium: 0.6rem;
 $gap-large: 0.9rem;
-$red: rgb(255, 102, 99); // pastel red
 $border-width: calc(1rem / 16);
 
+// Font imports
 @font-face {
   font-family: 'JetBrains Mono';
   src: url('./fonts/webfonts/JetBrainsMono-Bold.woff2') format('woff2');
@@ -117,6 +131,7 @@ html {
       &::selection {
         background-color: $primary-color-lighter-40;
         color: $secondary-color;
+        font-weight: 700;
       }
     }
 

@@ -11,27 +11,6 @@
       color: styles.$secondary-color-lighter-60;
     }
 
-    .status-indicator {
-      display: inline-block;
-      width: 0.5rem;
-      height: 0.5rem;
-      outline: styles.$border-width solid styles.$primary-color;
-      border: calc(2 * styles.$border-width) solid styles.$secondary-color;
-      margin-right: styles.$gap-small;
-
-      &.executing {
-        background-color: rgb(100, 149, 237);
-      }
-
-      &.completed {
-        background-color: rgb(76, 175, 80);
-      }
-
-      &.failed {
-        background-color: styles.$red;
-      }
-    }
-
     .task {
       display: grid;
       padding: styles.$gap-small;
