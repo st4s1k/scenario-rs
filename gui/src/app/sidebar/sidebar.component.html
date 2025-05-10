@@ -61,9 +61,9 @@
         <div class="tasks">
           @if (steps && steps.length > 0) {
           @for (step of steps; track step.index) {
-          <expandable [label]="'[' + (step.index + 1) + '] ' + step.task.description"
-            [(expanded)]="stepExpandedMap[step.index]"
+          <expandable [label]="step.task.description" [(expanded)]="stepExpandedMap[step.index]"
             [showSeparator]="step.index > 0 && !stepExpandedMap[step.index - 1]">
+            <label beforeExpandableLabel>[{{step.index + 1}}]</label>
             <div class="task">
               <info-block [label]="step.task.task_type" variant="secondary">
                 @switch (step.task.task_type) {
@@ -94,8 +94,13 @@
                   [(expanded)]="onFailExpandedMap[step.index]">
                   <div class="tasks">
                     @for (onFailStep of step.on_fail_steps; track onFailStep.index) {
-                    <expandable variant="error" [label]="'[' + (onFailStep.index + 1) + '] ' + onFailStep.task.description"
-                      [(expanded)]="onFailStepExpandedMap[getOnFailStepKey(step.index, onFailStep.index)]">
+                    @let onFailStepKey = getOnFailStepKey(step.index, onFailStep.index);
+                    @let previousExpanded = onFailStepExpanded(step.index, onFailStep.index - 1);
+                    @let showSeparator = onFailStep.index > 0 && !previousExpanded;
+                    <expandable [label]="onFailStep.task.description"
+                      [(expanded)]="onFailStepExpandedMap[onFailStepKey]" [showSeparator]="showSeparator"
+                      separatorVariant="gap" separatorSize="small">
+                      <label beforeExpandableLabel>[{{onFailStep.index + 1}}]</label>
                       <div class="task">
                         <info-block [label]="onFailStep.task.task_type" variant="secondary">
                           @switch (onFailStep.task.task_type) {
@@ -112,7 +117,8 @@
                               <input class="text-field" type="text" [value]="onFailStep.task.source_path" readonly />
                             </info-block>
                             <info-block label="Destination" variant="primary">
-                              <input class="text-field" type="text" [value]="onFailStep.task.destination_path" readonly />
+                              <input class="text-field" type="text" [value]="onFailStep.task.destination_path"
+                                readonly />
                             </info-block>
                           </div>
                           }

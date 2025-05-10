@@ -85,13 +85,9 @@
       grid-auto-rows: min-content;
       min-width: max-content;
 
-      expandable.expanded {
-        margin-bottom: styles.$gap-small;
-      }
-
       .task {
         display: grid;
-        padding-bottom: styles.$gap-small;
+        padding: styles.$gap-small 0;
         border: none;
         gap: styles.$gap-medium;
 

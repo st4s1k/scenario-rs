@@ -45,6 +45,11 @@ export class SidebarComponent implements OnChanges {
     return `${parentIndex}-${onFailIndex}`;
   }
 
+  onFailStepExpanded(parentIndex: number, onFailIndex: number): boolean {
+    const key = this.getOnFailStepKey(parentIndex, onFailIndex);
+    return this.onFailStepExpandedMap[key] || false;
+  }
+
   tabsConfig: TabConfig[] = [
     { id: 'steps', title: 'Steps' },
     { id: 'tasks', title: 'Tasks' },
