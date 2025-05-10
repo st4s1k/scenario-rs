@@ -30,7 +30,7 @@
         padding: styles.$gap-medium;
         gap: styles.$gap-medium;
         box-sizing: border-box;
-        border: 1px solid styles.$primary-color;
+        border: styles.$border-width solid styles.$primary-color;
         background-color: styles.$secondary-color-lighter-2;
         width: 100%;
         height: 100%;
@@ -39,9 +39,9 @@
       .config-section {
         display: grid;
         width: 100%;
-        max-width: 800px;
+        max-width: 50rem;
         justify-self: center;
-        grid-template-columns: auto minmax(100px, 1fr) auto;
+        grid-template-columns: auto 1fr auto;
         gap: styles.$gap-medium;
         align-items: center;
 
@@ -52,7 +52,6 @@
 
         input {
           grid-column: 2;
-          width: 100%;
         }
 
         button {
@@ -97,17 +96,17 @@
 
         .loader {
           grid-column: 3;
-          width: 24px;
-          height: 24px;
+          width: 1.5rem;
+          height: 1.5rem;
           display: inline-block;
           position: relative;
 
           &::after,
           &::before {
             content: '';
-            width: 24px;
-            height: 24px;
-            border: 2px solid styles.$primary-color-lighter-40;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: calc(2 * styles.$border-width) solid styles.$primary-color-lighter-40;
             position: absolute;
             left: 0;
             top: 0;
@@ -155,7 +154,7 @@
               gap: styles.$gap-small;
 
               .log-button {
-                $size: 22px;
+                $size: 1.2rem;
 
                 display: grid;
                 position: relative;
@@ -165,11 +164,11 @@
                 background-repeat: no-repeat;
                 background-position: center;
                 transition: background-color 0.2s;
-                border: 1px solid transparent;
+                border: styles.$border-width solid transparent;
 
                 svg {
                   display: block;
-                  width: 16px;
+                  width: 0.8rem;
                   aspect-ratio: 1;
                   color: styles.$primary-color;
                 }
@@ -179,7 +178,7 @@
 
                   &:focus,
                   &:hover {
-                    border: 1px solid styles.$secondary-color-lighter-10;
+                    border: styles.$border-width solid styles.$secondary-color-lighter-10;
                   }
 
                   svg {
@@ -205,7 +204,7 @@
 
               textarea {
                 flex-grow: 1;
-                min-height: 200px;
+                min-height: 12.5rem;
               }
             }
           }
