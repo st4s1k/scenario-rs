@@ -3,6 +3,7 @@ import { CommonModule, DOCUMENT } from '@angular/common';
 import { ExpandableComponent } from '../shared/expandable/expandable.component';
 import { InfoBlockComponent } from '../shared/info-block/info-block.component';
 import { Step, Task } from '../app.component';
+import { ExpandableTitleComponent } from '../shared/expandable/expandable-title/expandable-title.component';
 
 interface TabConfig {
   id: string;
@@ -14,7 +15,8 @@ interface TabConfig {
   imports: [
     CommonModule,
     ExpandableComponent,
-    InfoBlockComponent
+    InfoBlockComponent,
+    ExpandableTitleComponent
   ],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss'

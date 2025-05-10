@@ -5,8 +5,7 @@
     <div class="expandable-icon">
       <div class="codicon" [class.codicon-chevron-down]="expanded" [class.codicon-chevron-right]="!expanded"></div>
     </div>
-    <ng-content select="[beforeExpandableLabel]"></ng-content>
-    <label class="expandable-label">{{label}}</label>
+    <ng-content select="expandable-title"></ng-content>
     <input type="checkbox" [checked]="!expanded" aria-hidden="true" tabindex="-1" />
   </div>
   <div class="expandable-content" [class.hidden]="!expanded" [class.nested]="nested">

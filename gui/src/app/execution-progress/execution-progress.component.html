@@ -8,12 +8,13 @@
   @let state = displayStep.state();
   @let status = displayStep.status;
 
-  @let expandableLabel = '[' + ($index + 1) + '] ' + task.description;
   @let showExpandableSeparator = $index > 0 && !displaySteps[$index - 1].expanded;
-
-  <expandable [variant]="variant" [label]="expandableLabel" [(expanded)]="displayStep.expanded"
-    [showSeparator]="showExpandableSeparator">
-    <div class="status-indicator" [ngClass]="status" beforeExpandableLabel></div>
+  <expandable [variant]="variant" [(expanded)]="displayStep.expanded" [showSeparator]="showExpandableSeparator">
+    <expandable-title>
+      <div class="status-indicator" [ngClass]="status"></div>
+      <div>[{{$index + 1}}]</div>
+      <div>{{task.description}}</div>
+    </expandable-title>
     <div class="task">
       @switch (task.task_type) {
       @case ('RemoteSudo') {
@@ -82,8 +83,11 @@
       </expandable>
 
       @if (displayOnFailSteps.length > 0) {
-      <expandable variant="error" [nested]="true" label="On-Fail Steps:" [(expanded)]="displayStep.onFailExpanded">
-        <div class="status-indicator" [ngClass]="onFailStatus" beforeExpandableLabel></div>
+      <expandable variant="error" [nested]="true" [(expanded)]="displayStep.onFailExpanded">
+        <expandable-title>
+          <div class="status-indicator" [ngClass]="onFailStatus"></div>
+          <div>On-Fail Steps:</div>
+        </expandable-title>
         <execution-progress [displaySteps]="displayOnFailSteps" [isExecuting]="isExecuting">
         </execution-progress>
       </expandable>

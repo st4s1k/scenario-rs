@@ -53,13 +53,9 @@
       &>.expandable-header {
         $hover-color: color-mix(in srgb, $color 60%, white);
 
-        &>label,
-        &>.expandable-icon {
-          color: $color;
-        }
+        color: $color;
 
-        &:hover>label,
-        &:hover>.expandable-icon {
+        &:hover {
           color: $hover-color;
         }
       }
@@ -102,10 +98,6 @@
           font-size: $icon-width;
         }
       }
-
-      .expandable-label {
-        cursor: pointer;
-      }
     }
 
     >.expandable-content {
@@ -114,7 +106,6 @@
       opacity: 1;
       overflow: visible;
       margin-top: styles.$gap-small;
-      margin-bottom: styles.$gap-medium;
       min-width: max-content;
 
       &.hidden {

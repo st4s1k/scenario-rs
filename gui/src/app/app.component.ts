@@ -15,6 +15,7 @@ import { ExecutionProgressComponent } from './execution-progress/execution-progr
 import { TextFieldModule } from '@angular/cdk/text-field';
 import { ExpandableComponent } from './shared/expandable/expandable.component';
 import { TooltipComponent } from './shared/tooltip/tooltip.component';
+import { ExpandableTitleComponent } from './shared/expandable/expandable-title/expandable-title.component';
 
 interface RequiredFieldsForm {
   [key: string]: FormControl<string | null>;
@@ -66,7 +67,8 @@ export interface Step {
     ExecutionProgressComponent,
     TextFieldModule,
     ExpandableComponent,
-    TooltipComponent
+    TooltipComponent,
+    ExpandableTitleComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'

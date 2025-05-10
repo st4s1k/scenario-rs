@@ -1,0 +1,10 @@
+@use '../../../../styles.scss';
+
+:host {
+    .expandable-title {
+        display: grid;
+        grid-auto-flow: column;
+        align-items: center;
+        gap: styles.$gap-small;
+    }
+}

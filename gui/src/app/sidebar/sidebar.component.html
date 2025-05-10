@@ -20,9 +20,14 @@
       @case ('tasks') {
       <div class="tab-content">
         <div class="tasks">
-          @for (task of Object.entries(tasks); track task[0]) {
-          <expandable [label]="task[1].description" [(expanded)]="taskExpandedMap[task[0]]"
-            [showSeparator]="$index > 0 && !taskExpandedMap[Object.entries(tasks)[$index - 1][0]]">
+          @for (task of Object.entries(tasks); track $index) {
+          @let previousExpanded = $index > 0 && !taskExpandedMap[Object.entries(tasks)[$index - 1][0]];
+          @let separatorVariant = previousExpanded ? 'line' : 'gap';
+          <expandable [(expanded)]="taskExpandedMap[task[0]]" [showSeparator]="$index > 0"
+            [separatorVariant]="separatorVariant">
+            <expandable-title>
+              <div>{{task[1].description}}</div>
+            </expandable-title>
             <div class="task">
               <info-block [label]="task[1].task_type" variant="secondary">
                 @switch (task[1].task_type) {
@@ -61,9 +66,14 @@
         <div class="tasks">
           @if (steps && steps.length > 0) {
           @for (step of steps; track step.index) {
-          <expandable [label]="step.task.description" [(expanded)]="stepExpandedMap[step.index]"
-            [showSeparator]="step.index > 0 && !stepExpandedMap[step.index - 1]">
-            <label beforeExpandableLabel>[{{step.index + 1}}]</label>
+          @let previousExpanded = step.index > 0 && !stepExpandedMap[step.index - 1];
+          @let separatorVariant = previousExpanded ? 'line' : 'gap';
+          <expandable [(expanded)]="stepExpandedMap[step.index]" [showSeparator]="step.index > 0"
+            [separatorVariant]="separatorVariant">
+            <expandable-title>
+              <div>[{{step.index + 1}}]</div>
+              <div>{{step.task.description}}</div>
+            </expandable-title>
             <div class="task">
               <info-block [label]="step.task.task_type" variant="secondary">
                 @switch (step.task.task_type) {
@@ -89,18 +99,22 @@
 
               @if (step.on_fail_steps && step.on_fail_steps.length > 0) {
               <div class="task-item on-fail">
-                <expandable variant="error" [nested]="true"
-                  [label]="'On-Fail Steps [' + step.on_fail_steps.length + ']'"
-                  [(expanded)]="onFailExpandedMap[step.index]">
+                <expandable variant="error" [nested]="true" [(expanded)]="onFailExpandedMap[step.index]">
+                  <expandable-title>
+                    <div>On-Fail Steps</div>
+                    <div>[{{step.on_fail_steps.length}}]</div>
+                  </expandable-title>
                   <div class="tasks">
                     @for (onFailStep of step.on_fail_steps; track onFailStep.index) {
                     @let onFailStepKey = getOnFailStepKey(step.index, onFailStep.index);
                     @let previousExpanded = onFailStepExpanded(step.index, onFailStep.index - 1);
                     @let showSeparator = onFailStep.index > 0 && !previousExpanded;
-                    <expandable [label]="onFailStep.task.description"
-                      [(expanded)]="onFailStepExpandedMap[onFailStepKey]" [showSeparator]="showSeparator"
+                    <expandable [(expanded)]="onFailStepExpandedMap[onFailStepKey]" [showSeparator]="showSeparator"
                       separatorVariant="gap" separatorSize="small">
-                      <label beforeExpandableLabel>[{{onFailStep.index + 1}}]</label>
+                      <expandable-title>
+                        <div>[{{onFailStep.index + 1}}]</div>
+                        <div>{{onFailStep.task.description}}</div>
+                      </expandable-title>
                       <div class="task">
                         <info-block [label]="onFailStep.task.task_type" variant="secondary">
                           @switch (onFailStep.task.task_type) {

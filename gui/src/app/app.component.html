@@ -20,7 +20,10 @@
       </div>
 
       @if ((requiredFields | keyvalue).length > 0) {
-      <expandable label="Required fields:" [(expanded)]="requiredFieldsExpanded">
+      <expandable [(expanded)]="requiredFieldsExpanded">
+        <expandable-title>
+          Required fields:
+        </expandable-title>
         <div class="section">
           <form class="required-fields" [formGroup]="requiredFieldsFormGroup">
             @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
@@ -45,15 +48,20 @@
         <span class="loader"></span>
         }
       </div>
-
-      <expandable label="Execution progress:" [(expanded)]="executionProgressExpanded">
+      <expandable [(expanded)]="executionProgressExpanded">
+        <expandable-title>
+          Execution progress:
+        </expandable-title>
         <div class="section">
           <execution-progress [steps]="steps" [isExecuting]="isExecuting()">
           </execution-progress>
         </div>
       </expandable>
 
-      <expandable class="log-section" label="Execution log:" [(expanded)]="logExpanded">
+      <expandable class="log-section" [(expanded)]="logExpanded">
+        <expandable-title>
+          Execution log:
+        </expandable-title>
         <div class="section">
           <div class="log">
             <div class="log-controls">

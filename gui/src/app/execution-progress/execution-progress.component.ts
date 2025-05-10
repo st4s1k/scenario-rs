@@ -6,6 +6,7 @@ import { AutoScrollDirective } from '../auto-scroll.directive';
 import { OnFailStepStateEvent, RemoteSudoOutput, SftpCopyProgress, StepState, StepStateEvent } from '../models/step-state.model';
 import { ExpandableComponent } from '../shared/expandable/expandable.component';
 import { InfoBlockComponent } from '../shared/info-block/info-block.component';
+import { ExpandableTitleComponent } from '../shared/expandable/expandable-title/expandable-title.component';
 
 type StepStatus = 'executing' | 'completed' | 'failed' | 'pending';
 
@@ -26,6 +27,7 @@ interface DisplayStep {
     AutoScrollDirective,
     InfoBlockComponent,
     ExpandableComponent,
+    ExpandableTitleComponent
   ],
   templateUrl: './execution-progress.component.html',
   styleUrl: './execution-progress.component.scss'

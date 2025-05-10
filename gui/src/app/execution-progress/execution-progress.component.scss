@@ -17,7 +17,7 @@
       height: 0.5rem;
       outline: styles.$border-width solid styles.$primary-color;
       border: calc(2 * styles.$border-width) solid styles.$secondary-color;
-      margin: 0 styles.$gap-small;
+      margin-right: styles.$gap-small;
 
       &.executing {
         background-color: rgb(100, 149, 237);
