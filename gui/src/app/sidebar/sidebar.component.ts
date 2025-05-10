@@ -1,9 +1,10 @@
-import { Component, Input, HostListener, OnChanges, Renderer2, Inject } from '@angular/core';
+import { Component, Input, HostListener, OnChanges, Renderer2, Inject, WritableSignal, signal } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { ExpandableComponent } from '../shared/expandable/expandable.component';
 import { InfoBlockComponent } from '../shared/info-block/info-block.component';
 import { Step, Task } from '../app.component';
 import { ExpandableTitleComponent } from '../shared/expandable/expandable-title/expandable-title.component';
+import { ComponentColorVariant } from '../models/enums';
 
 interface TabConfig {
   id: string;
@@ -37,6 +38,7 @@ export class SidebarComponent implements OnChanges {
   sidebarWidth = this.titleSize;
   isResizing = false;
   isCollapsed = true;
+  onFailColorIndicator: WritableSignal<ComponentColorVariant> = signal('red');
 
   taskExpandedMap: { [key: string]: boolean } = {};
   stepExpandedMap: { [index: number]: boolean } = {};

@@ -99,8 +99,8 @@
 
               @if (step.on_fail_steps && step.on_fail_steps.length > 0) {
               <div class="task-item on-fail">
-                <expandable variant="red" [nested]="true" [(expanded)]="onFailExpandedMap[step.index]">
-                  <expandable-title>
+                <expandable [nested]="true" [(expanded)]="onFailExpandedMap[step.index]">
+                  <expandable-title [colorIndicator]="onFailColorIndicator">
                     <div>On-Fail Steps</div>
                     <div>[{{step.on_fail_steps.length}}]</div>
                   </expandable-title>
