@@ -1,10 +1,10 @@
 // Global variables
-$titlebar-height: 30px;
-$field-height: 24px;
+$titlebar-height: 1.8rem;
+$field-height: 1.6rem;
 $primary-color: rgb(218, 165, 32); // goldenrod
 $primary-color-lighter-40: color-mix(in srgb, $primary-color 60%, white);
-$font-size-default: 13px;
-$font-size-small: 10px;
+$font-size-default: 0.8rem;
+$font-size-small: 0.7rem;
 $secondary-color: rgb(30, 30, 30);
 $secondary-color-lighter-2: color-mix(in srgb, white 2%, $secondary-color);
 $secondary-color-lighter-5: color-mix(in srgb, white 5%, $secondary-color);
@@ -16,10 +16,11 @@ $secondary-color-lighter-70: color-mix(in srgb, white 70%, $secondary-color);
 $text-color: $secondary-color-lighter-70;
 $button-text-color: $secondary-color;
 $title-size: $field-height;
-$gap-small: 5px;
-$gap-medium: 10px;
-$gap-large: 15px;
+$gap-small: 0.3rem;
+$gap-medium: 0.6rem;
+$gap-large: 0.9rem;
 $red: rgb(255, 102, 99); // pastel red
+$border-width: calc(1rem / 16);
 
 @font-face {
   font-family: 'JetBrains Mono';
@@ -39,8 +40,8 @@ $red: rgb(255, 102, 99); // pastel red
 
 // Scrollbar styles
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 ::-webkit-scrollbar-track {
@@ -127,18 +128,18 @@ html {
     .text-field {
       @extend .text;
 
-      height: $field-height;
+      max-height: $field-height;
       border: none;
-      border-bottom: 1px solid $primary-color;
+      border-bottom: $border-width solid $primary-color; // rem value
       background-color: transparent;
       font-family: inherit;
 
-      &:focus {
+      &:focus,
+      &:focus-visible {
         border: none;
-        border-bottom: 1px solid $primary-color;
-        outline-offset: $gap-small;
-        outline-color: $primary-color-lighter-40;
-        outline-style: solid;
+        border-bottom: $border-width solid $primary-color;
+        outline: $border-width solid $primary-color-lighter-40;
+        outline-offset: 0.2rem;
       }
     }
 
@@ -165,26 +166,34 @@ html {
       background-color: $primary-color;
       color: $button-text-color;
 
-      border: 1px solid transparent;
-      outline-offset: -3px;
-      outline: 2px solid $secondary-color;
+      border: $border-width solid transparent;
+      outline-offset: calc(-3 * $border-width);
+      outline: calc(2 * $border-width) solid $secondary-color;
 
       font-size: inherit;
       font-family: inherit;
       font-weight: 700;
 
-      &:focus,
-      &:hover {
-        background-color: $primary-color-lighter-40;
-        outline-offset: -4px;
-        outline: 3px double $secondary-color;
+      &:not(:active) {
+
+        &:hover,
+        &:focus,
+        &:focus-visible {
+          background-color: $primary-color-lighter-40;
+
+          &:focus,
+          &:focus-visible {
+            outline-offset: calc(-3.5 * $border-width);
+            outline: calc(2.5 * $border-width) double $secondary-color;
+          }
+        }
       }
 
       &:active {
         color: $primary-color;
         background-color: $secondary-color;
-        outline: 1px solid $primary-color;
-        border: 1px solid $primary-color;
+        outline: $border-width solid $primary-color;
+        border: $border-width solid $primary-color;
       }
     }
   }
