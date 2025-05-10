@@ -71,7 +71,10 @@
       }
 
       @if (status === 'failed') {
-      <expandable variant="error" label="Errors:" [(expanded)]="displayStep.errorsExpanded">
+      <expandable variant="error" [(expanded)]="displayStep.errorsExpanded">
+        <expandable-title>
+          Errors:
+        </expandable-title>
         <div class="task-item">
           @for (error of displayStep.errors; track $index) {
           <info-block class="error" label="Error" variant="error">
