@@ -11,7 +11,7 @@
     grid-template-columns: auto 1fr auto auto auto auto;
     height: $size;
     background: styles.$secondary-color-lighter-5;
-    border-bottom: 1px solid styles.$secondary-color-lighter-20;
+    border-bottom: styles.$border-width solid styles.$secondary-color-lighter-20;
     box-sizing: border-box;
 
     #spacer {
@@ -22,8 +22,8 @@
       display: grid;
       position: relative;
       place-content: center;
-      width: $size;
-      height: $size;
+      width: calc($size - styles.$border-width);
+      height: calc($size - styles.$border-width);
       background-repeat: no-repeat;
       background-position: center;
       transition: background-color 0.2s;
