@@ -4,22 +4,43 @@
   display: block;
   width: 100%;
 
-  .expandable-container {
+  >.expandable-container {
     width: 100%;
     display: grid;
     grid-template-rows: auto auto 1fr;
 
-    .expandable-separator {
+    >.expandable-separator {
       display: grid;
       grid-template-columns: 1fr auto;
       width: 100%;
-      height: styles.$gap-medium;
+      height: 0;
 
       &::before {
         content: '';
         width: 100%;
         height: 50%;
         border-bottom: styles.$border-width solid styles.$secondary-color-lighter-10;
+      }
+
+      &.gap-small,
+      &.gap-medium,
+      &.gap-large {
+        visibility: hidden;
+      }
+
+      &.gap-small,
+      &.line-small {
+        height: styles.$gap-small;
+      }
+
+      &.gap-medium,
+      &.line-medium {
+        height: styles.$gap-medium;
+      }
+
+      &.gap-large,
+      &.line-large {
+        height: styles.$gap-large;
       }
 
       &.hidden {
@@ -55,7 +76,7 @@
     $icon-width: 1rem;
     $title-size: 1.2rem;
 
-    .expandable-header {
+    >.expandable-header {
       min-height: $title-size;
       height: $title-size;
       display: grid;
@@ -68,13 +89,13 @@
         display: none;
       }
 
-      .expandable-icon {
+      >.expandable-icon {
         display: grid;
         place-items: center;
         width: $icon-width;
         height: $title-size;
 
-        .codicon {
+        >.codicon {
           display: grid;
           place-items: center;
           height: auto;
@@ -87,19 +108,20 @@
       }
     }
 
-    .expandable-content {
+    >.expandable-content {
       display: grid;
       grid-template-columns: auto 1fr;
       opacity: 1;
       overflow: visible;
-      gap: styles.$gap-small;
-      margin-top: styles.$gap-medium;
+      margin-top: styles.$gap-small;
+      margin-bottom: styles.$gap-medium;
+      min-width: max-content;
 
       &.hidden {
         display: none;
       }
 
-      .expandable-nesting-indicator {
+      >.expandable-nesting-indicator {
         width: $icon-width;
 
         &:after {
@@ -113,13 +135,13 @@
       }
 
       &.nested {
-        margin-top: 0;
+        margin-bottom: 0;
 
         >.expandable-nesting-indicator {
           width: calc(#{$icon-width} / 2);
 
           &:after {
-            width: 100%;
+            width: 70%;
           }
         }
       }

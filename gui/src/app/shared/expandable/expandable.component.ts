@@ -12,6 +12,8 @@ export class ExpandableComponent {
   @Input() variant: 'primary' | 'error' = 'primary';
   @Input() expanded: boolean = true;
   @Input() showSeparator: boolean = false;
+  @Input() separatorVariant: 'line' | 'gap' = 'line';
+  @Input() separatorSize: 'small' | 'medium' | 'large' = 'medium';
   @Input() nested: boolean = false;
   @Output() expandedChange = new EventEmitter<boolean>();
   @HostBinding('class.nested') get isNested() { return this.nested; }

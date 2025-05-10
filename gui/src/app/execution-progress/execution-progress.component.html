@@ -13,7 +13,7 @@
 
   <expandable [variant]="variant" [label]="expandableLabel" [(expanded)]="displayStep.expanded"
     [showSeparator]="showExpandableSeparator">
-    <div class="status-indicator" [ngClass]="status" beforeLabel></div>
+    <div class="status-indicator" [ngClass]="status" beforeExpandableLabel></div>
     <div class="task">
       @switch (task.task_type) {
       @case ('RemoteSudo') {
@@ -83,7 +83,7 @@
 
       @if (displayOnFailSteps.length > 0) {
       <expandable variant="error" [nested]="true" label="On-Fail Steps:" [(expanded)]="displayStep.onFailExpanded">
-        <div class="status-indicator" [ngClass]="onFailStatus" beforeLabel></div>
+        <div class="status-indicator" [ngClass]="onFailStatus" beforeExpandableLabel></div>
         <execution-progress [displaySteps]="displayOnFailSteps" [isExecuting]="isExecuting">
         </execution-progress>
       </expandable>
