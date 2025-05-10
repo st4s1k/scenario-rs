@@ -10,8 +10,8 @@
         <div class="variables">
           @for (variable of Object.entries(resolvedVariables); track variable[0]) {
           <div class="variable">
-            <label>{{variable[0]}}</label>
-            <input class="text-field" type="text" [value]="variable[1]" readonly />
+            <label for="sidebar-var-{{variable[0]}}">{{variable[0]}}</label>
+            <input id="sidebar-var-{{variable[0]}}" class="text-field" type="text" [value]="variable[1]" readonly />
           </div>
           }
         </div>
@@ -144,7 +144,7 @@
     <div class="tabs">
       @for (tab of tabsConfig; track tab.id) {
       <div class="tab" [class.active]="isTabActive(tab.id)" (click)="toggleTab(tab.id)">
-        <label>{{tab.title}}</label>
+        <div class="tab-title">{{tab.title}}</div>
       </div>
       }
     </div>

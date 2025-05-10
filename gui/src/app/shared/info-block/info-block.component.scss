@@ -3,13 +3,13 @@
 :host {
   margin-top: styles.$gap-medium;
 
-  .block {
+  >.block {
     display: grid;
     position: relative;
     padding-top: styles.$gap-medium;
     margin-top: -#{styles.$gap-medium};
 
-    label {
+    >label {
       position: absolute;
       left: styles.$gap-small;
       font-size: styles.$font-size-small;
@@ -20,7 +20,7 @@
       z-index: 1;
     }
 
-    .content {
+    >.content {
       display: grid;
       padding: styles.$gap-small;
       padding-top: styles.$gap-medium;

@@ -75,7 +75,7 @@ html {
     height: 100%;
     overflow: hidden;
     background-color: $secondary-color;
-    color: $text-color;
+    color: $primary-color;
     font-weight: 400;
     font-family: "JetBrains Mono";
     font-size: $font-size-default;
@@ -118,10 +118,6 @@ html {
         background-color: $primary-color-lighter-40;
         color: $secondary-color;
       }
-    }
-
-    label {
-      color: $primary-color;
     }
 
     .text-field {

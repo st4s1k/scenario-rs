@@ -5,13 +5,11 @@
 <div class="app-container unselectable" #container appNoRightClick>
   <div class="main-container">
     <div class="main-content">
-      <label>
-        <h1>scenario-rs</h1>
-      </label>
+      <h1>scenario-rs</h1>
 
       <div class="config-section">
-        <label>Config file:</label>
-        <input class="text-field" type="text" [formControl]="scenarioConfigPath"
+        <label for="scenario-config-path">Config file:</label>
+        <input id="scenario-config-path" class="text-field" type="text" [formControl]="scenarioConfigPath"
           [class.invalid-path]="isInvalidScenarioConfigPath" (keydown.enter)="validatePathAndLoadConfig()">
         <button (click)="selectConfigFile()">Select</button>
         @if (isInvalidScenarioConfigPath) {
@@ -27,9 +25,9 @@
           <form class="required-fields" [formGroup]="requiredFieldsFormGroup">
             @for (requiredField of requiredFields | keyvalue; track requiredField.key) {
             @if (!requiredField.value.read_only) {
-            <label>{{requiredField.value.label}}</label>
+            <label for="required-var-{{requiredField.key}}">{{requiredField.value.label}}</label>
             <div class="field-container">
-              <input class="text-field" type="text" [formControlName]="requiredField.key" />
+              <input id="required-var-{{requiredField.key}}" class="text-field" type="text" [formControlName]="requiredField.key" />
               @if (requiredField.value.var_type === 'path') {
               <button (click)="selectRequiredFile(requiredField.key)">Select</button>
               }

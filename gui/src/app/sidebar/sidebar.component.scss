@@ -134,13 +134,13 @@
 
         &:focus,
         &:hover {
-          label {
+          .tab-title {
             color: styles.$primary-color-lighter-40;
           }
         }
 
 
-        label {
+        .tab-title {
           cursor: pointer;
         }
 
