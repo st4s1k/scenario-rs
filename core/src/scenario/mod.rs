@@ -237,6 +237,7 @@ impl Scenario {
             Ok(session) => session,
             Err(error) => {
                 debug!(scenario.event = "error", scenario.error = %error);
+                debug!(scenario.event = "scenario_failed");
                 return;
             }
         };
