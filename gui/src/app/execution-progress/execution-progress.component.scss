@@ -13,10 +13,10 @@
 
     .status-indicator {
       display: inline-block;
-      width: 8px;
-      height: 8px;
-      outline: 1px solid styles.$primary-color;
-      border: 2px solid styles.$secondary-color;
+      width: 0.5rem;
+      height: 0.5rem;
+      outline: styles.$border-width solid styles.$primary-color;
+      border: calc(2 * styles.$border-width) solid styles.$secondary-color;
       margin: 0 styles.$gap-small;
 
       &.executing {
@@ -47,7 +47,7 @@
 
           position: relative;
           overflow: hidden;
-          height: 20px;
+          height: 1.25rem;
 
           &::before,
           &::after {
@@ -66,7 +66,7 @@
             z-index: 1;
             color: $progress-fill-color;
             background: $progress-track-color;
-            border: 1px solid $progress-fill-color;
+            border: styles.$border-width solid $progress-fill-color;
             box-sizing: border-box;
           }
 
@@ -74,8 +74,8 @@
             z-index: 2;
             color: $progress-track-color;
             background: $progress-fill-color;
-            outline: 2px solid $progress-track-color;
-            outline-offset: -3px;
+            outline: calc(2 * styles.$border-width) solid $progress-track-color;
+            outline-offset: calc(-3 * styles.$border-width);
             clip-path: inset(0 calc(100% - var(--progress-percentage, 0%)) 0 0);
             transition: clip-path 0.2s ease;
           }
@@ -100,7 +100,7 @@
           }
 
           &.output textarea {
-            max-height: 200px;
+            max-height: 12.5rem;
           }
 
           &.error {
@@ -126,14 +126,14 @@
   .executing-indicator {
     display: grid;
     justify-content: center;
-    margin-top: 8px;
+    margin-top: 0.5rem;
 
     .dot-pulse {
       position: relative;
       display: inline-block;
-      width: 8px;
-      height: 8px;
-      margin-right: 4px;
+      width: 0.5rem;
+      height: 0.5rem;
+      margin-right: 0.25rem;
       background-color: styles.$primary-color;
       animation: pulse 1.5s infinite linear;
 
@@ -143,20 +143,20 @@
         display: inline-block;
         position: absolute;
         top: 0;
-        width: 8px;
-        height: 8px;
-        margin-right: 4px;
+        width: 0.5rem;
+        height: 0.5rem;
+        margin-right: 0.25rem;
         background-color: styles.$primary-color;
         opacity: 0.7;
       }
 
       &::before {
-        left: -12px;
+        left: -0.75rem;
         animation: pulse 1.5s infinite linear -0.5s;
       }
 
       &::after {
-        left: 12px;
+        left: 0.75rem;
         animation: pulse 1.5s infinite linear -1s;
       }
     }
