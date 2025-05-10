@@ -26,14 +26,14 @@
         </info-block>
       </div>
 
+      @if (state && state.type === 'RemoteSudoOutput' && state.output) {
       <div class="task-item">
-        @if (state && state.type === 'RemoteSudoOutput' && state.output) {
         <info-block class="output" label="Output" variant="secondary">
           <textarea wrap="off" spellcheck="false" [autoScroll]="displayStep.state" [value]="state.output" readonly>
           </textarea>
         </info-block>
-        }
       </div>
+      }
 
       @if (status === 'executing') {
       <div class="executing-indicator">
