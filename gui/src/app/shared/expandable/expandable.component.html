@@ -1,4 +1,4 @@
-<div class="expandable-container" [ngClass]="variant">
+<div class="expandable-container">
   @let separatorStyle = separatorVariant && separatorSize ? separatorVariant + '-' + separatorSize : undefined;
   <div class="expandable-separator" [class.hidden]="!showSeparator" [ngClass]="separatorStyle"></div>
   <div class="expandable-header" (click)="toggleExpanded($event)">

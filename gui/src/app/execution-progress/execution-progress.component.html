@@ -9,7 +9,7 @@
   @let status = displayStep.status;
 
   @let showExpandableSeparator = $index > 0 && !displaySteps[$index - 1].expanded;
-  <expandable [variant]="variant" [(expanded)]="displayStep.expanded" [showSeparator]="showExpandableSeparator">
+  <expandable [(expanded)]="displayStep.expanded" [showSeparator]="showExpandableSeparator">
     <expandable-title>
       <div class="status-indicator" [ngClass]="status"></div>
       <div>[{{$index + 1}}]</div>
