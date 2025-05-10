@@ -20,12 +20,18 @@ interface TabConfig {
   styleUrl: './sidebar.component.scss'
 })
 export class SidebarComponent implements OnChanges {
+
+  private readonly titleSize = 24; // find a way to get this from CSS
+  private readonly collapseThreshold = this.titleSize + 10;
+  private readonly minSidebarWidth = this.collapseThreshold + 1;
+  private readonly storageKey = 'scenario-rs-sidebar-state';
+
   @Input() resolvedVariables: { [key: string]: string } = {};
   @Input() tasks: { [key: string]: Task } = {};
   @Input() steps: Step[] = [];
 
   activeTab: string = 'variables';
-  sidebarWidth = 30;
+  sidebarWidth = this.titleSize;
   isResizing = false;
   isCollapsed = true;
 
@@ -44,10 +50,6 @@ export class SidebarComponent implements OnChanges {
     { id: 'variables', title: 'Variables' }
   ];
 
-  private readonly minSidebarWidth = 40;
-  private readonly titleSize = 24;
-  private readonly collapseThreshold = 60;
-  private readonly storageKey = 'scenario-rs-sidebar-state';
   private startX = 0;
   private startWidth = 0;
   private previousWidth = 300;

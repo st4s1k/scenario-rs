@@ -13,7 +13,7 @@
   grid-template-rows: 1fr;
   background-color: styles.$secondary-color-lighter-2;
   box-sizing: border-box;
-  border-left: 1px solid styles.$secondary-color-lighter-20;
+  border-left: styles.$border-width solid styles.$secondary-color-lighter-20;
   max-height: calc(100vh - #{styles.$titlebar-height});
 
   &.resizing {
@@ -21,9 +21,11 @@
     user-select: none;
   }
 
+  $collapsed-width: 1.5rem;
+
   &.collapsed {
-    width: styles.$title-size;
-    min-width: styles.$title-size;
+    width: $collapsed-width;
+    min-width: $collapsed-width;
     border: none;
 
     .resize-handle {
@@ -36,7 +38,7 @@
     top: 0;
     transform: translateX(-50%);
     bottom: 0;
-    width: 4px;
+    width: calc(4 * styles.$border-width);
     cursor: ew-resize;
     z-index: 10;
     transition: background-color 0.2s ease;
@@ -118,10 +120,10 @@
     .tabs {
       display: grid;
       grid-auto-rows: min-content;
-      width: styles.$title-size;
+      width: $collapsed-width;
       background-color: styles.$secondary-color-lighter-5;
       box-sizing: border-box;
-      border-left: 1px solid styles.$secondary-color-lighter-20;
+      border-left: styles.$border-width solid styles.$secondary-color-lighter-20;
 
       .tab {
         display: grid;
@@ -132,7 +134,7 @@
         padding: styles.$gap-medium 0;
         cursor: pointer;
         box-sizing: border-box;
-        border-bottom: 1px solid styles.$secondary-color-lighter-20;
+        border-bottom: styles.$border-width solid styles.$secondary-color-lighter-20;
 
         &:focus,
         &:hover {
