@@ -11,8 +11,14 @@
 
       <div class="config-section">
         <label>Config file:</label>
-        <input class="text-field" type="text" [formControl]="scenarioConfigPath">
+        <input class="text-field" type="text" [formControl]="scenarioConfigPath"
+          [class.invalid-path]="isInvalidScenarioConfigPath" (keydown.enter)="validatePathAndLoadConfig()">
         <button (click)="selectConfigFile()">Select</button>
+        @if (isInvalidScenarioConfigPath) {
+        <div class="error-message">
+          Invalid path to config (must exist and be a *.toml file)
+        </div>
+        }
       </div>
 
       @if ((requiredFields | keyvalue).length > 0) {
@@ -43,7 +49,7 @@
       </div>
 
       <expandable label="Execution progress:" [(expanded)]="executionProgressExpanded">
-        <div class="section"> 
+        <div class="section">
           <execution-progress [steps]="steps" [isExecuting]="isExecuting()">
           </execution-progress>
         </div>

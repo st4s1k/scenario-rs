@@ -1,14 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, signal, OnDestroy } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule } from "@angular/forms";
+import { FormControl, FormGroup, ReactiveFormsModule, AbstractControl, ValidationErrors, AsyncValidatorFn } from "@angular/forms";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { NoRightClickDirective } from './no-right-click.directive';
 import { TitlebarComponent } from "./titlebar/titlebar.component";
 import { ClipboardModule } from 'ngx-clipboard';
 import * as dialog from "@tauri-apps/plugin-dialog"
-import { Subscription } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
+import { Subscription, Observable, of, from } from 'rxjs';
+import { debounceTime, switchMap, map } from 'rxjs/operators';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { AutoScrollDirective } from './auto-scroll.directive';
 import { ExecutionProgressComponent } from './execution-progress/execution-progress.component';
@@ -72,10 +72,22 @@ export interface Step {
   styleUrl: './app.component.scss'
 })
 export class AppComponent implements OnDestroy {
-
   Object = Object;
 
-  scenarioConfigPath = new FormControl<string>('');
+  scenarioConfigPath = new FormControl<string>('', {
+    asyncValidators: this.configPathValidator(),
+  });
+
+  private _lastInvalidScenarioConfigPathValue = false;
+
+  get isInvalidScenarioConfigPath(): boolean {
+    if (this.scenarioConfigPath.pending) {
+      return this._lastInvalidScenarioConfigPathValue;
+    }
+    this._lastInvalidScenarioConfigPathValue =
+      this.scenarioConfigPath.invalid && (this.scenarioConfigPath.dirty || this.scenarioConfigPath.touched);
+    return this._lastInvalidScenarioConfigPathValue;
+  }
 
   requiredFieldsExpanded = true;
   executionProgressExpanded = true;
@@ -185,20 +197,44 @@ export class AppComponent implements OnDestroy {
 
     if (configPath && typeof configPath === 'string') {
       this.scenarioConfigPath.setValue(configPath);
-      await this.loadConfigFile();
-      await this.getTasks();
-      await this.getSteps();
-      await this.getRequiredVariables();
-      await this.getResolvedVariables();
+      await this.loadConfig();
     }
   }
 
-  async loadConfigFile(): Promise<void> {
-    const configPath = this.scenarioConfigPath.value || '';
-    if (configPath.trim() === '') {
-      return;
+  async validatePathAndLoadConfig(): Promise<void> {
+    const path = this.scenarioConfigPath.value;
+    if (!path || path.trim() === '') {
+      this.scenarioConfigPath.setErrors(null);
+    } else if (await invoke<boolean>('is_valid_config_path', { path })) {
+      await this.loadConfig();
+    } else {
+      this.scenarioConfigPath.setErrors({ invalidPath: true });
     }
-    await invoke('load_config', { configPath });
+  }
+
+  async loadConfig() {
+    await invoke('load_config', { configPath: this.scenarioConfigPath.value });
+    await this.getTasks();
+    await this.getSteps();
+    await this.getRequiredVariables();
+    await this.getResolvedVariables();
+  }
+
+  configPathValidator(): AsyncValidatorFn {
+    return (control: AbstractControl): Observable<ValidationErrors | null> => {
+      if (!control.value || control.value.trim() === '') {
+        return of(null);
+      }
+
+      return of(control.value).pipe(
+        debounceTime(500),
+        switchMap(path =>
+          from(invoke<boolean>('is_valid_config_path', { path })).pipe(
+            map(isValid => isValid ? null : { invalidPath: true })
+          )
+        )
+      );
+    };
   }
 
   private async getRequiredVariables(): Promise<void> {

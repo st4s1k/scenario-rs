@@ -41,21 +41,44 @@
         width: 100%;
         max-width: 50rem;
         justify-self: center;
-        grid-template-columns: auto 1fr auto;
-        gap: styles.$gap-medium;
         align-items: center;
+        grid-template:
+          'l i b' auto
+          '. e .' auto
+          / auto 1fr auto;
+        column-gap: styles.$gap-medium;
+        row-gap: styles.$gap-small;
 
         label {
-          grid-column: 1;
+          grid-area: l;
           text-align: left;
+          width: 100%;
+          min-width: max-content;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         input {
-          grid-column: 2;
+          grid-area: i;
+          box-sizing: border-box;
+          width: 100%;
+
+          &.invalid-path {
+            color: styles.$red;
+            border-color: styles.$red;
+            outline-color: styles.$red;
+          }
         }
 
         button {
-          grid-column: 3;
+          grid-area: b;
+        }
+
+        .error-message {
+          grid-area: e;
+          color: styles.$red;
+          font-size: styles.$font-size-small;
+          white-space: nowrap;
         }
       }
 
@@ -76,7 +99,6 @@
         .field-container {
           display: grid;
           grid-template-columns: 1fr auto;
-          grid-column: 2;
           gap: styles.$gap-medium;
           align-items: center;
         }
