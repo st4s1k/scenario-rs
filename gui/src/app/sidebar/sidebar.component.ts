@@ -2,7 +2,7 @@ import { Component, Input, HostListener, OnChanges, Renderer2, Inject, WritableS
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { ExpandableComponent } from '../shared/expandable/expandable.component';
 import { InfoBlockComponent } from '../shared/info-block/info-block.component';
-import { Step, Task } from '../app.component';
+import { Step, Tasks } from '../models/scenario.model';
 import { ExpandableTitleComponent } from '../shared/expandable/expandable-title/expandable-title.component';
 import { ComponentColorVariant } from '../models/enums';
 
@@ -31,7 +31,7 @@ export class SidebarComponent implements OnChanges {
   private readonly htmlFontSize;
 
   @Input() resolvedVariables: { [key: string]: string } = {};
-  @Input() tasks: { [key: string]: Task } = {};
+  @Input() tasks: Tasks = {};
   @Input() steps: Step[] = [];
 
   activeTab: string = 'variables';

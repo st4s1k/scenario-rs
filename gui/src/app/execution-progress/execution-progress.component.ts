@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, OnChanges, OnDestroy, OnInit, signal, SimpleChanges, WritableSignal } from '@angular/core';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
-import { Step, Task } from '../app.component';
+import { Step, Task } from '../models/scenario.model';
 import { AutoScrollDirective } from '../auto-scroll.directive';
 import { OnFailStepStateEvent, RemoteSudoOutput, SftpCopyProgress, StepState, StepStateEvent } from '../models/step-state.model';
 import { ExpandableComponent } from '../shared/expandable/expandable.component';
