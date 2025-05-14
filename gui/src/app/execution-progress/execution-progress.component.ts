@@ -11,7 +11,7 @@ import { ComponentColorVariant } from '../models/enums';
 
 type StepStatus = 'executing' | 'completed' | 'failed' | 'pending';
 
-interface DisplayStep {
+interface StepView {
   task: Task;
   state: WritableSignal<StepState | undefined>;
   status: StepStatus;
@@ -40,9 +40,9 @@ export class ExecutionProgressComponent implements OnInit, OnChanges, OnDestroy 
 
   @Input() steps?: Step[];
   @Input({ required: true }) isExecuting!: boolean;
-  @Input() displaySteps: DisplayStep[] = [];
+  @Input() stepViews: StepView[] = [];
 
-  displayOnFailSteps: DisplayStep[] = [];
+  onFailStepViews: StepView[] = [];
   onFailStatus: StepStatus = 'pending';
   onFailStatusColor: WritableSignal<ComponentColorVariant | undefined> = signal(undefined);
 
@@ -54,7 +54,7 @@ export class ExecutionProgressComponent implements OnInit, OnChanges, OnDestroy 
   ngOnInit(): void {
     this.previousIsExecuting = this.isExecuting;
     if (this.steps !== undefined) {
-      this.displaySteps = [];
+      this.stepViews = [];
       this.setupStepStateListener();
       this.setupOnFailStepStateListener();
     }
@@ -64,8 +64,8 @@ export class ExecutionProgressComponent implements OnInit, OnChanges, OnDestroy 
     if (changes['isExecuting']
       && this.previousIsExecuting === false
       && this.isExecuting === true) {
-      this.displaySteps = [];
-      this.displayOnFailSteps = [];
+      this.stepViews = [];
+      this.onFailStepViews = [];
     }
   }
 
@@ -96,7 +96,7 @@ export class ExecutionProgressComponent implements OnInit, OnChanges, OnDestroy 
       const task = this.steps![index].task;
       const state = stepEvent.state;
 
-      this.displaySteps = this.updateDisplaySteps(this.displaySteps, index, task, state);
+      this.stepViews = this.updateStepViews(this.stepViews, index, task, state);
     });
   }
 
@@ -115,19 +115,19 @@ export class ExecutionProgressComponent implements OnInit, OnChanges, OnDestroy 
         this.onFailStatusColor.set('green');
       }
 
-      this.displayOnFailSteps = this.updateDisplaySteps(this.displayOnFailSteps, index, task, state);
+      this.onFailStepViews = this.updateStepViews(this.onFailStepViews, index, task, state);
     });
   }
 
-  private updateDisplaySteps(
-    displaySteps: DisplayStep[],
+  private updateStepViews(
+    stepViews: StepView[],
     index: number,
     task: Task,
     state: StepState,
-  ): DisplayStep[] {
+  ): StepView[] {
     switch (state.type) {
       case 'StepStarted':
-        displaySteps[index] = {
+        stepViews[index] = {
           task,
           state: signal<StepState | undefined>(state),
           status: 'pending',
@@ -139,36 +139,36 @@ export class ExecutionProgressComponent implements OnInit, OnChanges, OnDestroy 
         };
         break;
       case 'SftpCopyProgress':
-        displaySteps[index].status = 'executing';
-        displaySteps[index].state.set({
+        stepViews[index].status = 'executing';
+        stepViews[index].state.set({
           type: 'SftpCopyProgress',
           current: state.current,
           total: state.total,
           source: state.source,
           destination: state.destination
         } as SftpCopyProgress);
-        displaySteps[index].statusColor.set('blue');
+        stepViews[index].statusColor.set('blue');
         break;
       case 'RemoteSudoOutput':
-        displaySteps[index].status = 'executing';
-        displaySteps[index].state.set({
+        stepViews[index].status = 'executing';
+        stepViews[index].state.set({
           type: 'RemoteSudoOutput',
           command: state.command,
           output: state.output
         } as RemoteSudoOutput);
-        displaySteps[index].statusColor.set('blue');
+        stepViews[index].statusColor.set('blue');
         break;
       case 'StepCompleted':
-        displaySteps[index].status = 'completed';
-        displaySteps[index].expanded = false;
-        displaySteps[index].statusColor.set('green');
+        stepViews[index].status = 'completed';
+        stepViews[index].expanded = false;
+        stepViews[index].statusColor.set('green');
         break;
       case 'StepFailed':
-        displaySteps[index].status = 'failed';
-        displaySteps[index].errors?.unshift(state.message);
-        displaySteps[index].statusColor.set('red');
+        stepViews[index].status = 'failed';
+        stepViews[index].errors?.unshift(state.message);
+        stepViews[index].statusColor.set('red');
         break;
     }
-    return displaySteps;
+    return stepViews;
   }
 }

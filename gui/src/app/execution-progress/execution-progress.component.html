@@ -1,16 +1,16 @@
 <div class="execution-progress">
-  @if (displaySteps.length === 0) {
+  @if (stepViews.length === 0) {
   <div class="empty-state">No steps to display</div>
   } @else {
-  @for (displayStep of displaySteps; track $index) {
+  @for (stepView of stepViews; track $index) {
 
-  @let task = displayStep.task;
-  @let state = displayStep.state();
-  @let status = displayStep.status;
+  @let task = stepView.task;
+  @let state = stepView.state();
+  @let status = stepView.status;
 
-  @let showExpandableSeparator = $index > 0 && !displaySteps[$index - 1].expanded;
-  <expandable [(expanded)]="displayStep.expanded" [showSeparator]="showExpandableSeparator">
-    <expandable-title [colorIndicator]="displayStep.statusColor">
+  @let showExpandableSeparator = $index > 0 && !stepViews[$index - 1].expanded;
+  <expandable [(expanded)]="stepView.expanded" [showSeparator]="showExpandableSeparator">
+    <expandable-title [colorIndicator]="stepView.statusColor">
       <div>[{{$index + 1}}]</div>
       <div>{{task.description}}</div>
     </expandable-title>
@@ -29,7 +29,7 @@
       @if (state && state.type === 'RemoteSudoOutput' && state.output) {
       <div class="task-item">
         <info-block class="output" label="Output" variant="secondary">
-          <textarea wrap="off" spellcheck="false" [autoScroll]="displayStep.state" [value]="state.output" readonly>
+          <textarea wrap="off" spellcheck="false" [autoScroll]="stepView.state" [value]="state.output" readonly>
           </textarea>
         </info-block>
       </div>
@@ -70,12 +70,12 @@
       }
 
       @if (status === 'failed') {
-      <expandable variant="red" [(expanded)]="displayStep.errorsExpanded">
+      <expandable variant="red" [(expanded)]="stepView.errorsExpanded">
         <expandable-title>
           Errors:
         </expandable-title>
         <div class="task-item">
-          @for (error of displayStep.errors; track $index) {
+          @for (error of stepView.errors; track $index) {
           <info-block class="error" label="Error" variant="red">
             <textarea spellcheck="false" [value]="error" readonly>
           </textarea>
@@ -84,12 +84,12 @@
         </div>
       </expandable>
 
-      @if (displayOnFailSteps.length > 0) {
-      <expandable [nested]="true" [(expanded)]="displayStep.onFailExpanded">
+      @if (onFailStepViews.length > 0) {
+      <expandable [nested]="true" [(expanded)]="stepView.onFailExpanded">
         <expandable-title [colorIndicator]="onFailStatusColor">
           On-Fail Steps:
         </expandable-title>
-        <execution-progress [displaySteps]="displayOnFailSteps" [isExecuting]="isExecuting">
+        <execution-progress [stepViews]="onFailStepViews" [isExecuting]="isExecuting">
         </execution-progress>
       </expandable>
       }
