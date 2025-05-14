@@ -3,7 +3,6 @@ import { Component, signal, OnDestroy } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, AbstractControl, ValidationErrors, AsyncValidatorFn } from "@angular/forms";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
-import { NoRightClickDirective } from './no-right-click.directive';
 import { TitlebarComponent } from "./titlebar/titlebar.component";
 import { ClipboardModule } from 'ngx-clipboard';
 import * as dialog from "@tauri-apps/plugin-dialog"
@@ -61,7 +60,6 @@ export interface Step {
     ReactiveFormsModule,
     ClipboardModule,
     TitlebarComponent,
-    NoRightClickDirective,
     SidebarComponent,
     AutoScrollDirective,
     ExecutionProgressComponent,

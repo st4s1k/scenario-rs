@@ -21,6 +21,7 @@ tauri-plugin-shell = "2"
 chrono = "0.4.41"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tauri-plugin-prevent-default = "2.0"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
