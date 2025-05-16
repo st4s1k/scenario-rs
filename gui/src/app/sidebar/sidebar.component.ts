@@ -27,7 +27,6 @@ export class SidebarComponent implements OnChanges {
   private readonly titleSize = 1.5;
   private readonly collapseThreshold = this.titleSize + 0.625;
   private readonly minSidebarWidth = this.collapseThreshold + 0.0625;
-  private readonly storageKey = 'scenario-rs-sidebar-state';
   private readonly htmlFontSize;
 
   @Input() resolvedVariables: { [key: string]: string } = {};
@@ -68,42 +67,9 @@ export class SidebarComponent implements OnChanges {
 
   constructor(private renderer: Renderer2, @Inject(DOCUMENT) private document: Document) {
     this.htmlFontSize = parseFloat(getComputedStyle(this.document.documentElement).fontSize);
-    this.loadSavedState();
   }
 
   ngOnChanges(): void {
-  }
-
-  private loadSavedState(): void {
-    try {
-      const savedState = localStorage.getItem(this.storageKey);
-      if (savedState) {
-        const state = JSON.parse(savedState);
-        this.isCollapsed = state.collapsed !== undefined ? state.collapsed : true;
-        this.previousWidth = state.width || 18.75;
-        this.activeTab = state.activeTab || 'variables';
-      }
-      this.sidebarWidth = this.isCollapsed ? this.titleSize : this.previousWidth;
-      if (this.previousWidth < this.collapseThreshold) {
-        this.previousWidth = 18.75;
-      }
-    } catch (e) {
-      this.isCollapsed = true;
-      this.sidebarWidth = this.titleSize;
-    }
-  }
-
-  private saveState(): void {
-    try {
-      const state = {
-        width: this.isCollapsed ? this.previousWidth : this.sidebarWidth,
-        collapsed: this.isCollapsed,
-        activeTab: this.activeTab
-      };
-      localStorage.setItem(this.storageKey, JSON.stringify(state));
-    } catch (e) {
-      console.warn('Error saving sidebar state:', e);
-    }
   }
 
   isTabActive(tabId: string): boolean {
@@ -126,7 +92,6 @@ export class SidebarComponent implements OnChanges {
       }
       this.activeTab = tabId;
     }
-    this.saveState();
   }
 
   startResize(event: MouseEvent): void {
@@ -171,7 +136,6 @@ export class SidebarComponent implements OnChanges {
     if (this.isResizing) {
       this.isResizing = false;
       this.renderer.removeClass(this.document.body, 'resizing-sidebar');
-      this.saveState();
     }
   }
 
@@ -181,7 +145,6 @@ export class SidebarComponent implements OnChanges {
     if (event.altKey && event.key === 's') {
       this.isCollapsed = !this.isCollapsed;
       this.sidebarWidth = this.isCollapsed ? this.titleSize : this.previousWidth;
-      this.saveState();
       event.preventDefault();
     }
 
