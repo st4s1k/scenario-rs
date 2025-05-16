@@ -49,18 +49,6 @@
       }
     }
 
-    @mixin variant($color) {
-      &>.expandable-header {
-        $hover-color: color-mix(in srgb, $color 60%, white);
-
-        color: $color;
-
-        &:hover {
-          color: $hover-color;
-        }
-      }
-    }
-
     $icon-width: 1rem;
     $title-size: 1.2rem;
 
