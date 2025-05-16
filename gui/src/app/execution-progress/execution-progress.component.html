@@ -8,8 +8,10 @@
   @let state = stepView.state();
   @let status = stepView.status;
 
-  @let showExpandableSeparator = $index > 0 && !stepViews[$index - 1].expanded;
-  <expandable [(expanded)]="stepView.expanded" [showSeparator]="showExpandableSeparator">
+  @let previousExpanded = $index > 0 && stepViews[$index - 1].expanded;
+  @let expandableSeparatorVariant = previousExpanded ? 'gap' : 'line';
+  <expandable [(expanded)]="stepView.expanded" [showSeparator]="$index > 0"
+    [separatorVariant]="expandableSeparatorVariant">
     <expandable-title [colorIndicator]="stepView.statusColor">
       <div>[{{$index + 1}}]</div>
       <div>{{task.description}}</div>
