@@ -1,6 +1,4 @@
-product-name = "scenario-rs-gui"
-version = "0.6.0"
-identifier = "com.st4s1k.scenario-rs.app"
+identifier = "com.st4s1k.scenario-rs"
 
 [build]
 before-dev-command = "npm run start"
@@ -10,9 +8,7 @@ frontend-dist = "../dist/gui/browser"
 
 [[app.windows]]
 decorations = false
-title = "scenario-rs-gui"
-width = 800
-height = 600
+title = "scenario-rs"
 
 [bundle]
 license = "MIT OR Apache-2.0"
