@@ -159,7 +159,10 @@ impl RequiredVariables {
 
                 if let VariableType::Path = required_variable.var_type() {
                     let path = PathBuf::from(&value);
-                    if path.is_file() || path.extension().is_some() {
+
+                    let is_dir_path = ends_with_directory_separator(&value);
+
+                    if !is_dir_path && (path.is_file() || path.extension().is_some()) {
                         if let Some(file_name_str) = path.file_name().and_then(|s| s.to_str()) {
                             let basename_key = format!("basename:{}", name);
                             let label = format!("Basename of {}", required_variable.label());
@@ -183,6 +186,16 @@ impl RequiredVariables {
             self.insert(key, var);
         }
     }
+}
+
+fn ends_with_directory_separator(value: &str) -> bool {
+    value
+        .trim_end()
+        .chars()
+        .rev()
+        .next()
+        .map(|c| c == '\\' || std::path::is_separator(c))
+        .unwrap_or(false)
 }
 
 /// Represents a single required variable with its metadata and value.
@@ -602,6 +615,46 @@ mod tests {
         assert_eq!(vars.len(), 1); // No basename was added
         assert_eq!(vars.get("path_var").unwrap().value(), "/tmp/directory/");
         assert!(!vars.contains_key("basename:path_var"));
+    }
+
+    #[test]
+    fn test_upsert_with_windows_style_directory_terminators() {
+        // Given
+        let mut vars = RequiredVariables::default();
+        vars.insert(
+            "windows_dir".to_string(),
+            RequiredVariable {
+                label: "Windows Directory".to_string(),
+                var_type: VariableType::Path,
+                value: "".to_string(),
+                read_only: false,
+            },
+        );
+        vars.insert(
+            "windows_dir_alt".to_string(),
+            RequiredVariable {
+                label: "Windows Directory Alt".to_string(),
+                var_type: VariableType::Path,
+                value: "".to_string(),
+                read_only: false,
+            },
+        );
+
+        let windows_dir_value = "C\\Temp\\";
+        let windows_dir_alt_value = "C\\Temp/";
+
+        let mut update_map = HashMap::new();
+        update_map.insert("windows_dir".to_string(), windows_dir_value.to_string());
+        update_map.insert("windows_dir_alt".to_string(), windows_dir_alt_value.to_string());
+
+        // When
+        vars.upsert(update_map);
+
+        // Then
+        assert_eq!(vars.get("windows_dir").unwrap().value(), windows_dir_value);
+        assert_eq!(vars.get("windows_dir_alt").unwrap().value(), windows_dir_alt_value);
+        assert!(!vars.contains_key("basename:windows_dir"));
+        assert!(!vars.contains_key("basename:windows_dir_alt"));
     }
 
     #[test]
