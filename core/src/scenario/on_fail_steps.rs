@@ -63,8 +63,8 @@ use tracing::{debug, instrument};
 /// // Create empty on_fail_steps and add tasks manually
 /// let mut on_fail_steps = OnFailSteps::default();
 /// for (idx, name) in task_names.iter().enumerate() {
-///     if let Some(task) = tasks.get(&name) {
-///        let on_fail_step = OnFailStep::from((idx, task));
+///     if let Some(task) = tasks.get(name).cloned() {
+///         let on_fail_step = OnFailStep::from((idx, task));
 ///         on_fail_steps.push(on_fail_step);
 ///     }
 /// }

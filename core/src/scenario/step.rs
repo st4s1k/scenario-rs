@@ -76,7 +76,7 @@ use tracing::{debug, instrument};
 ///
 /// // Create on_fail steps manually using the public API
 /// let mut on_fail_steps = OnFailSteps::default();
-/// if let Some(cleanup_task) = tasks.get("cleanup") {
+/// if let Some(cleanup_task) = tasks.get("cleanup").cloned() {
 ///     let on_fail_step = OnFailStep::from((0, cleanup_task));
 ///     on_fail_steps.push(on_fail_step);
 /// }
