@@ -221,7 +221,9 @@ impl Visit for ScenarioEventVisitor {
 
     fn record_i64(&mut self, field: &Field, _value: i64) {
         match field.name() {
-            "remote_sudo.exit_status" => {}
+            "remote_sudo.exit_status" => {
+                self.remote_sudo_exit_status = Some(_value);
+            }
             _ => {
                 error!("Unrecognized field: {}", field.name());
             }

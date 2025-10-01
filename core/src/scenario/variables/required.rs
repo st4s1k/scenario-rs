@@ -159,7 +159,11 @@ impl RequiredVariables {
 
                 if let VariableType::Path = required_variable.var_type() {
                     let path = PathBuf::from(&value);
-                    if path.is_file() || path.extension().is_some() {
+                    let is_dir_path = value.ends_with(std::path::MAIN_SEPARATOR);
+                    if path.is_file()
+                        || path.extension().is_some()
+                        || (path.file_name().is_some() && !is_dir_path)
+                    {
                         if let Some(file_name_str) = path.file_name().and_then(|s| s.to_str()) {
                             let basename_key = format!("basename:{}", name);
                             let label = format!("Basename of {}", required_variable.label());
@@ -602,6 +606,33 @@ mod tests {
         assert_eq!(vars.len(), 1); // No basename was added
         assert_eq!(vars.get("path_var").unwrap().value(), "/tmp/directory/");
         assert!(!vars.contains_key("basename:path_var"));
+    }
+
+    #[test]
+    fn test_upsert_with_file_without_extension() {
+        // Given
+        let mut vars = RequiredVariables::default();
+        vars.insert(
+            "path_var".to_string(),
+            RequiredVariable {
+                label: "Path Variable".to_string(),
+                var_type: VariableType::Path,
+                value: "".to_string(),
+                read_only: false,
+            },
+        );
+
+        let mut update_map = HashMap::new();
+        update_map.insert("path_var".to_string(), "/tmp/file".to_string());
+
+        // When
+        vars.upsert(update_map);
+
+        // Then
+        assert_eq!(vars.len(), 2); // basename variable added
+        assert_eq!(vars.get("path_var").unwrap().value(), "/tmp/file");
+        assert!(vars.contains_key("basename:path_var"));
+        assert_eq!(vars.get("basename:path_var").unwrap().value(), "file");
     }
 
     #[test]
