@@ -160,13 +160,7 @@ impl RequiredVariables {
                 if let VariableType::Path = required_variable.var_type() {
                     let path = PathBuf::from(&value);
 
-                    let is_dir_path = value
-                        .trim_end()
-                        .chars()
-                        .rev()
-                        .find(|c| !c.is_whitespace())
-                        .map(|c| c == '\\' || std::path::is_separator(c))
-                        .unwrap_or(false);
+                    let is_dir_path = ends_with_directory_separator(&value);
 
                     if !is_dir_path && (path.is_file() || path.extension().is_some()) {
                         if let Some(file_name_str) = path.file_name().and_then(|s| s.to_str()) {
@@ -192,6 +186,16 @@ impl RequiredVariables {
             self.insert(key, var);
         }
     }
+}
+
+fn ends_with_directory_separator(value: &str) -> bool {
+    value
+        .trim_end()
+        .chars()
+        .rev()
+        .next()
+        .map(|c| c == '\\' || std::path::is_separator(c))
+        .unwrap_or(false)
 }
 
 /// Represents a single required variable with its metadata and value.
