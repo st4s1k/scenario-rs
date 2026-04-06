@@ -1,88 +1,50 @@
-/**
- * Interface for step state events
- */
-export interface StepStateEvent {
-  step_index: number;
-  steps_total: number;
-  state: StepState;
-}
+// --- Execution State Machine Types ---
 
-/**
- * Interface for on-fail step state events
- */
-export interface OnFailStepStateEvent {
-  step_index: number;
-  steps_total: number;
-  on_fail_step_index: number;
-  on_fail_steps_total: number;
-  state: StepState;
-}
+export type ExecutionStatus =
+  { kind: 'Idle' }
+  | { kind: 'Running' }
+  | { kind: 'Completed' }
+  | { kind: 'Failed'; error: string };
 
-/**
- * Union type for all possible step states
- */
-export type StepState =
-  SftpCopyProgress
-  | RemoteSudoOutput
-  | StepStarted
-  | StepCompleted
-  | StepFailed;
+export type StepStatus = 'Pending' | 'Running' | 'Completed' | 'Failed' | 'Skipped';
 
-/**
- * SFTP copy progress state
- */
-export interface SftpCopyProgress extends BaseStepState {
-  type: 'SftpCopyProgress';
-  current: number;
-  total: number;
-  source: string;
-  destination: string;
-}
+export type TaskProgress =
+  | { type: 'SftpCopy'; source: string; destination: string; bytes_transferred: number; bytes_total: number }
+  | { type: 'RemoteSudo'; command: string; output: string };
 
-/**
- * Remote sudo output state
- */
-export interface RemoteSudoOutput extends BaseStepState {
-  type: 'RemoteSudoOutput';
-  command: string;
+export interface OnFailStepExecState {
+  index: number;
+  task_description: string;
+  status: StepStatus;
+  progress: TaskProgress | null;
   output: string;
+  errors: string[];
 }
 
-/**
- * Step started state
- */
-export interface StepStarted extends BaseStepState {
-  type: 'StepStarted';
+export interface StepExecState {
+  index: number;
+  task_description: string;
+  status: StepStatus;
+  progress: TaskProgress | null;
+  output: string;
+  errors: string[];
+  on_fail_steps: OnFailStepExecState[];
 }
 
-/**
- * Step completed state
- */
-export interface StepCompleted extends BaseStepState {
-  type: 'StepCompleted';
+export interface ExecutionState {
+  status: ExecutionStatus;
+  steps: StepExecState[];
 }
 
-/**
- * Step failed state
- */
-export interface StepFailed extends BaseStepState {
-  type: 'StepFailed';
-  message: string;
-}
+// --- State Diffs (streamed from backend) ---
 
-/**
- * Base interface for step states
- */
-export interface BaseStepState {
-  type: StepStateType;
-}
-
-/**
- * Type for step state
- */
-export type StepStateType =
-  'SftpCopyProgress'
-  | 'RemoteSudoOutput'
-  | 'StepStarted'
-  | 'StepCompleted'
-  | 'StepFailed';
+export type StateDiff =
+  | { kind: 'ExecutionStatusChanged'; status: ExecutionStatus }
+  | { kind: 'StepStatusChanged'; step_index: number; status: StepStatus }
+  | { kind: 'StepProgressUpdated'; step_index: number; progress: TaskProgress }
+  | { kind: 'StepOutputAppended'; step_index: number; text: string }
+  | { kind: 'StepErrorAdded'; step_index: number; error: string }
+  | { kind: 'OnFailStepStatusChanged'; step_index: number; on_fail_step_index: number; status: StepStatus }
+  | { kind: 'OnFailStepProgressUpdated'; step_index: number; on_fail_step_index: number; progress: TaskProgress }
+  | { kind: 'OnFailStepOutputAppended'; step_index: number; on_fail_step_index: number; text: string }
+  | { kind: 'OnFailStepErrorAdded'; step_index: number; on_fail_step_index: number; error: string };

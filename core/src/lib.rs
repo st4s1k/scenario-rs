@@ -13,5 +13,6 @@
 pub mod config;
 pub mod scenario;
 pub mod session;
+pub mod state;
 pub mod trace;
 pub mod utils;

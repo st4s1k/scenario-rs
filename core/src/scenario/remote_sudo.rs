@@ -1,6 +1,8 @@
 use crate::{
     scenario::{errors::RemoteSudoError, variables::Variables},
     session::Session,
+    state::TaskTracker,
+    state::types::TaskProgress,
     trace::ScenarioEvent,
 };
 use tracing::{debug, instrument};
@@ -31,6 +33,7 @@ impl RemoteSudo {
         &self,
         session: &Session,
         variables: &Variables,
+        tracker: Option<&TaskTracker<'_>>,
     ) -> Result<(), RemoteSudoError> {
         let command = variables
             .resolve_placeholders(&self.command)
@@ -89,6 +92,14 @@ impl RemoteSudo {
             scenario.event = ScenarioEvent::RemoteSudoOutput.as_str(),
             remote_sudo.output = output
         );
+
+        if let Some(tracker) = tracker {
+            tracker.append_output(output.clone());
+            tracker.update_progress(TaskProgress::RemoteSudo {
+                command: command.clone(),
+                output: output.clone(),
+            });
+        }
 
         let exit_status = channel
             .lock()
@@ -162,7 +173,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = remote_sudo.execute(&session, &variables);
+        let result = remote_sudo.execute(&session, &variables, None);
 
         // Then
         assert!(result.is_ok());
@@ -183,7 +194,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = remote_sudo.execute(&session, &variables);
+        let result = remote_sudo.execute(&session, &variables, None);
 
         // Then
         assert!(matches!(
@@ -220,7 +231,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = remote_sudo.execute(&session, &variables);
+        let result = remote_sudo.execute(&session, &variables, None);
 
         // Then
         assert!(matches!(
@@ -258,7 +269,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = remote_sudo.execute(&session, &variables);
+        let result = remote_sudo.execute(&session, &variables, None);
 
         // Then
         assert!(matches!(
@@ -295,7 +306,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = remote_sudo.execute(&session, &variables);
+        let result = remote_sudo.execute(&session, &variables, None);
 
         // Then
         assert!(matches!(
@@ -332,7 +343,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = remote_sudo.execute(&session, &variables);
+        let result = remote_sudo.execute(&session, &variables, None);
 
         // Then
         assert!(matches!(
@@ -371,7 +382,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = remote_sudo.execute(&session, &variables);
+        let result = remote_sudo.execute(&session, &variables, None);
 
         // Then
         assert!(matches!(

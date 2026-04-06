@@ -7,6 +7,7 @@ use crate::{
     config::steps::StepsConfig,
     scenario::{errors::StepsError, step::Step, tasks::Tasks, variables::Variables},
     session::Session,
+    state::ExecutionStateManager,
     trace::ScenarioEvent,
 };
 use std::ops::{Deref, DerefMut};
@@ -62,6 +63,7 @@ impl Steps {
         &self,
         session: &Session,
         variables: &Variables,
+        state_manager: Option<&ExecutionStateManager>,
     ) -> Result<(), StepsError> {
         if self.is_empty() {
             return Ok(());
@@ -70,7 +72,7 @@ impl Steps {
         debug!(scenario.event = ScenarioEvent::StepsStarted.as_str());
 
         for step in self.iter() {
-            step.execute(step, session, variables)
+            step.execute(session, variables, state_manager)
                 .map_err(StepsError::CannotExecuteStep)?;
         }
 

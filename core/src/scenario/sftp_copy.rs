@@ -1,9 +1,11 @@
 use crate::{
     scenario::{errors::SftpCopyError, variables::Variables},
     session::Session,
+    state::TaskTracker,
+    state::types::TaskProgress,
     trace::ScenarioEvent,
 };
-use std::{io::Read, path::Path};
+use std::{io::Read, path::Path, time::Instant};
 use tracing::{debug, instrument, trace};
 
 #[cfg(not(test))]
@@ -43,6 +45,7 @@ impl SftpCopy {
         &self,
         session: &Session,
         variables: &Variables,
+        tracker: Option<&TaskTracker<'_>>,
     ) -> Result<(), SftpCopyError> {
         let resolved_source = variables
             .resolve_placeholders(&self.source_path)
@@ -115,6 +118,8 @@ impl SftpCopy {
 
         let mut current_bytes = 0u64;
         let mut buffer = [0u8; 8192];
+        let mut last_progress_emit = Instant::now();
+        let throttle_interval = std::time::Duration::from_millis(50);
         loop {
             let bytes_read = source_file
                 .read(&mut buffer)
@@ -136,12 +141,27 @@ impl SftpCopy {
                 })?;
 
             current_bytes += bytes_read as u64;
+            let is_final = current_bytes >= total_bytes;
+            let elapsed = last_progress_emit.elapsed() >= throttle_interval;
 
-            trace!(
-                scenario.event = ScenarioEvent::SftpCopyProgress.as_str(),
-                sftp_copy.progress.current = current_bytes,
-                sftp_copy.progress.total = total_bytes,
-            );
+            if elapsed || is_final {
+                trace!(
+                    scenario.event = ScenarioEvent::SftpCopyProgress.as_str(),
+                    sftp_copy.progress.current = current_bytes,
+                    sftp_copy.progress.total = total_bytes,
+                );
+
+                if let Some(tracker) = tracker {
+                    tracker.update_progress(TaskProgress::SftpCopy {
+                        source: resolved_source.clone(),
+                        destination: resolved_destination.clone(),
+                        bytes_transferred: current_bytes,
+                        bytes_total: total_bytes,
+                    });
+                }
+
+                last_progress_emit = Instant::now();
+            }
         }
 
         debug!(scenario.event = ScenarioEvent::SftpCopyCompleted.as_str());
@@ -173,7 +193,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = sftp_copy.execute(&session, &variables);
+        let result = sftp_copy.execute(&session, &variables, None);
 
         // Then
         assert!(result.is_ok());
@@ -190,7 +210,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = sftp_copy.execute(&session, &variables);
+        let result = sftp_copy.execute(&session, &variables, None);
 
         // Then
         assert!(matches!(
@@ -210,7 +230,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = sftp_copy.execute(&session, &variables);
+        let result = sftp_copy.execute(&session, &variables, None);
 
         // Then
         assert!(matches!(
@@ -257,7 +277,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = sftp_copy.execute(&session, &variables);
+        let result = sftp_copy.execute(&session, &variables, None);
 
         // Then
         assert!(matches!(
@@ -289,7 +309,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = sftp_copy.execute(&session, &variables);
+        let result = sftp_copy.execute(&session, &variables, None);
 
         // Then
         assert!(matches!(
@@ -328,7 +348,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = sftp_copy.execute(&session, &variables);
+        let result = sftp_copy.execute(&session, &variables, None);
 
         // Then
         assert!(matches!(
@@ -348,7 +368,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = sftp_copy.execute(&session, &variables);
+        let result = sftp_copy.execute(&session, &variables, None);
 
         // Then
         assert!(matches!(
@@ -368,7 +388,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = sftp_copy.execute(&session, &variables);
+        let result = sftp_copy.execute(&session, &variables, None);
 
         // Then
         assert!(matches!(
@@ -388,7 +408,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = sftp_copy.execute(&session, &variables);
+        let result = sftp_copy.execute(&session, &variables, None);
 
         // Then
         assert!(matches!(

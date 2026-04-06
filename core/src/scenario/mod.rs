@@ -5,6 +5,8 @@ use crate::{
         tasks::Tasks, variables::Variables,
     },
     session::Session,
+    state::ExecutionStateManager,
+    state::types::ExecutionStatus,
     trace::ScenarioEvent,
     utils::HasText,
 };
@@ -113,27 +115,52 @@ impl TryFrom<&str> for Scenario {
 
 impl Scenario {
     /// Executes the scenario: creates SSH session, runs steps, logs progress.
+    ///
+    /// Pass an `ExecutionStateManager` to enable structured progress tracking.
+    /// Pass `None` for tracing-only output (e.g. CLI usage).
     #[instrument(skip_all, name = "scenario")]
-    pub fn execute(&self) {
+    pub fn execute(&self, state_manager: Option<&ExecutionStateManager>) {
         debug!(scenario.event = ScenarioEvent::ScenarioStarted.as_str());
+        if let Some(sm) = state_manager {
+            sm.update_execution_status(ExecutionStatus::Running);
+        }
 
         let session = match Session::new(&self.server, &self.credentials) {
             Ok(session) => session,
             Err(error) => {
                 debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 debug!(scenario.event = ScenarioEvent::ScenarioFailed.as_str());
+                if let Some(sm) = state_manager {
+                    sm.update_execution_status(ExecutionStatus::Failed {
+                        error: error.to_string(),
+                    });
+                }
                 return;
             }
         };
 
         debug!(scenario.event = ScenarioEvent::SessionCreated.as_str());
 
-        match self.execute.steps.execute(&session, &self.variables) {
-            Ok(_) => debug!(scenario.event = ScenarioEvent::ScenarioCompleted.as_str()),
+        match self
+            .execute
+            .steps
+            .execute(&session, &self.variables, state_manager)
+        {
+            Ok(_) => {
+                debug!(scenario.event = ScenarioEvent::ScenarioCompleted.as_str());
+                if let Some(sm) = state_manager {
+                    sm.update_execution_status(ExecutionStatus::Completed);
+                }
+            }
             Err(error) => {
                 debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 debug!(scenario.event = ScenarioEvent::ScenarioFailed.as_str());
-            },
+                if let Some(sm) = state_manager {
+                    sm.update_execution_status(ExecutionStatus::Failed {
+                        error: error.to_string(),
+                    });
+                }
+            }
         }
     }
 }

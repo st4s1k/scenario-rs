@@ -1,5 +1,5 @@
 use crate::{
-    trace::{frontend_event_handler::StepState, layers::EventLayer, AppEvent},
+    trace::{layers::EventLayer, AppEvent},
     utils::SendEvent,
 };
 use scenario_rs::trace::{ScenarioEvent, ScenarioEventVisitor};
@@ -64,15 +64,14 @@ impl EventLayer for ScenarioEventLayer {
                 error!("Unrecognized event type: {}", scenario_event_str);
                 return;
             };
+
+            // Only emit log messages — progress/state is handled by ExecutionStateManager
             match scenario_event {
                 ScenarioEvent::Error => {
                     if let Some(scenario_error) = visitor.scenario_error {
                         if let (Some(step_index), Some(steps_total)) =
                             (visitor.step_index, visitor.steps_total)
                         {
-                            let state = StepState::StepFailed {
-                                message: scenario_error.to_string(),
-                            };
                             if let (Some(on_fail_step_index), Some(on_fail_steps_total)) =
                                 (visitor.on_fail_step_index, visitor.on_fail_steps_total)
                             {
@@ -85,13 +84,6 @@ impl EventLayer for ScenarioEventLayer {
                                     on_fail_steps_total,
                                     scenario_error
                                 )));
-                                self.sender.send_event(AppEvent::OnFailStepState {
-                                    step_index,
-                                    steps_total,
-                                    on_fail_step_index,
-                                    on_fail_steps_total,
-                                    state,
-                                });
                             } else {
                                 self.sender.send_event(AppEvent::LogMessage(format!(
                                     "{} [{}/{}] {}",
@@ -100,11 +92,6 @@ impl EventLayer for ScenarioEventLayer {
                                     steps_total,
                                     scenario_error
                                 )));
-                                self.sender.send_event(AppEvent::StepState {
-                                    step_index,
-                                    steps_total,
-                                    state,
-                                });
                             }
                         } else {
                             self.sender.send_event(AppEvent::LogMessage(format!(
@@ -124,21 +111,18 @@ impl EventLayer for ScenarioEventLayer {
                         "{} Scenario started...",
                         SCENARIO_PREFIX
                     )));
-                    self.sender.send_event(AppEvent::Execution(true));
                 }
                 ScenarioEvent::ScenarioCompleted => {
                     self.sender.send_event(AppEvent::LogMessage(format!(
                         "{} Scenario completed successfully!",
                         SCENARIO_PREFIX
                     )));
-                    self.sender.send_event(AppEvent::Execution(false));
                 }
                 ScenarioEvent::ScenarioFailed => {
                     self.sender.send_event(AppEvent::LogMessage(format!(
                         "{} Scenario failed",
                         SCENARIO_PREFIX
                     )));
-                    self.sender.send_event(AppEvent::Execution(false));
                 }
                 ScenarioEvent::StepStarted => {
                     if let (Some(step_index), Some(steps_total), Some(task_description)) = (
@@ -153,22 +137,6 @@ impl EventLayer for ScenarioEventLayer {
                             steps_total,
                             task_description
                         )));
-                        self.sender.send_event(AppEvent::StepState {
-                            step_index,
-                            steps_total,
-                            state: StepState::StepStarted,
-                        });
-                    }
-                }
-                ScenarioEvent::StepCompleted => {
-                    if let (Some(step_index), Some(steps_total)) =
-                        (visitor.step_index, visitor.steps_total)
-                    {
-                        self.sender.send_event(AppEvent::StepState {
-                            step_index,
-                            steps_total,
-                            state: StepState::StepCompleted,
-                        });
                     }
                 }
                 ScenarioEvent::RemoteSudoStarted => {
@@ -201,21 +169,11 @@ impl EventLayer for ScenarioEventLayer {
                     }
                 }
                 ScenarioEvent::RemoteSudoOutput => {
-                    if let (
-                        Some(step_index),
-                        Some(steps_total),
-                        Some(remote_sudo_command),
-                        Some(remote_sudo_output),
-                    ) = (
+                    if let (Some(step_index), Some(steps_total), Some(remote_sudo_output)) = (
                         visitor.step_index,
                         visitor.steps_total,
-                        visitor.remote_sudo_command,
                         visitor.remote_sudo_output,
                     ) {
-                        let state = StepState::RemoteSudoOutput {
-                            command: remote_sudo_command.to_owned(),
-                            output: remote_sudo_output.to_owned(),
-                        };
                         if let (Some(on_fail_step_index), Some(on_fail_steps_total)) =
                             (visitor.on_fail_step_index, visitor.on_fail_steps_total)
                         {
@@ -227,13 +185,6 @@ impl EventLayer for ScenarioEventLayer {
                                 on_fail_step_index + 1,
                                 on_fail_steps_total
                             )));
-                            self.sender.send_event(AppEvent::OnFailStepState {
-                                step_index,
-                                steps_total,
-                                on_fail_step_index,
-                                on_fail_steps_total,
-                                state,
-                            });
                         } else {
                             self.sender.send_event(AppEvent::LogMessage(format!(
                                 "{} [{}/{}] Output:",
@@ -241,13 +192,9 @@ impl EventLayer for ScenarioEventLayer {
                                 step_index + 1,
                                 steps_total
                             )));
-                            self.sender.send_event(AppEvent::StepState {
-                                step_index,
-                                steps_total,
-                                state,
-                            });
                         }
-                        self.sender.send_event(AppEvent::LogPlainMessage(remote_sudo_output));
+                        self.sender
+                            .send_event(AppEvent::LogPlainMessage(remote_sudo_output));
                     }
                 }
                 ScenarioEvent::SftpCopyStarted => {
@@ -330,60 +277,38 @@ impl EventLayer for ScenarioEventLayer {
                     if let (
                         Some(sftp_copy_progress_current),
                         Some(sftp_copy_progress_total),
-                        Some(sftp_copy_source),
-                        Some(sftp_copy_destination),
+                        Some(step_index),
+                        Some(steps_total),
                     ) = (
                         visitor.sftp_copy_progress_current,
                         visitor.sftp_copy_progress_total,
-                        visitor.sftp_copy_source,
-                        visitor.sftp_copy_destination,
+                        visitor.step_index,
+                        visitor.steps_total,
                     ) {
                         let percentage = (sftp_copy_progress_current as f64
                             / sftp_copy_progress_total as f64)
                             * 100.0;
 
-                        if let (Some(step_index), Some(steps_total)) =
-                            (visitor.step_index, visitor.steps_total)
+                        if let (Some(on_fail_step_index), Some(on_fail_steps_total)) =
+                            (visitor.on_fail_step_index, visitor.on_fail_steps_total)
                         {
-                            let state = StepState::SftpCopyProgress {
-                                source: sftp_copy_source,
-                                destination: sftp_copy_destination,
-                                current: sftp_copy_progress_current,
-                                total: sftp_copy_progress_total,
-                            };
-                            if let (Some(on_fail_step_index), Some(on_fail_steps_total)) =
-                                (visitor.on_fail_step_index, visitor.on_fail_steps_total)
-                            {
-                                self.sender.send_event(AppEvent::LogMessage(format!(
-                                    "{} [{}/{}] [on-fail] [{}/{}] Progress: {:.1}%",
-                                    SCENARIO_PREFIX,
-                                    step_index + 1,
-                                    steps_total,
-                                    on_fail_step_index + 1,
-                                    on_fail_steps_total,
-                                    percentage
-                                )));
-                                self.sender.send_event(AppEvent::OnFailStepState {
-                                    step_index,
-                                    steps_total,
-                                    on_fail_step_index,
-                                    on_fail_steps_total,
-                                    state,
-                                });
-                            } else {
-                                self.sender.send_event(AppEvent::LogMessage(format!(
-                                    "{} [{}/{}] Progress: {:.1}%",
-                                    SCENARIO_PREFIX,
-                                    step_index + 1,
-                                    steps_total,
-                                    percentage
-                                )));
-                                self.sender.send_event(AppEvent::StepState {
-                                    step_index,
-                                    steps_total,
-                                    state,
-                                });
-                            }
+                            self.sender.send_event(AppEvent::LogMessage(format!(
+                                "{} [{}/{}] [on-fail] [{}/{}] Progress: {:.1}%",
+                                SCENARIO_PREFIX,
+                                step_index + 1,
+                                steps_total,
+                                on_fail_step_index + 1,
+                                on_fail_steps_total,
+                                percentage
+                            )));
+                        } else {
+                            self.sender.send_event(AppEvent::LogMessage(format!(
+                                "{} [{}/{}] Progress: {:.1}%",
+                                SCENARIO_PREFIX,
+                                step_index + 1,
+                                steps_total,
+                                percentage
+                            )));
                         }
                     }
                 }
@@ -440,37 +365,11 @@ impl EventLayer for ScenarioEventLayer {
                             on_fail_steps_total,
                             task_description
                         )));
-                        self.sender.send_event(AppEvent::OnFailStepState {
-                            step_index,
-                            steps_total,
-                            on_fail_step_index,
-                            on_fail_steps_total,
-                            state: StepState::StepStarted,
-                        });
                     }
                 }
-                ScenarioEvent::OnFailStepCompleted => {
-                    if let (
-                        Some(step_index),
-                        Some(steps_total),
-                        Some(on_fail_step_index),
-                        Some(on_fail_steps_total),
-                    ) = (
-                        visitor.step_index,
-                        visitor.steps_total,
-                        visitor.on_fail_step_index,
-                        visitor.on_fail_steps_total,
-                    ) {
-                        self.sender.send_event(AppEvent::OnFailStepState {
-                            step_index,
-                            steps_total,
-                            on_fail_step_index,
-                            on_fail_steps_total,
-                            state: StepState::StepCompleted,
-                        });
-                    }
-                }
-                ScenarioEvent::CreateSessionStarted
+                ScenarioEvent::StepCompleted
+                | ScenarioEvent::OnFailStepCompleted
+                | ScenarioEvent::CreateSessionStarted
                 | ScenarioEvent::CreateSessionCompleted
                 | ScenarioEvent::CreatedMockSession
                 | ScenarioEvent::SessionCreated

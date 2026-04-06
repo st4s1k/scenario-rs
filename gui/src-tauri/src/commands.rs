@@ -2,6 +2,7 @@ use crate::{
     app::{RequiredVariableDTO, ScenarioAppState, StepDTO, TaskDTO},
     utils::SafeLock,
 };
+use scenario_rs::state::types::ExecutionState;
 use std::{
     collections::{BTreeMap, HashMap},
     ffi::OsStr,
@@ -87,4 +88,12 @@ pub fn get_steps(state: State<'_, Mutex<ScenarioAppState>>) -> Vec<StepDTO> {
 pub fn is_valid_config_path(path: &str) -> bool {
     let path = Path::new(path);
     path.exists() && path.is_file() && path.extension() == Some(OsStr::new("toml"))
+}
+
+#[tauri::command(async)]
+pub fn get_execution_state(
+    state: State<'_, Mutex<ScenarioAppState>>,
+) -> Option<ExecutionState> {
+    let state = state.safe_lock();
+    state.get_execution_state()
 }

@@ -1,6 +1,8 @@
 use crate::{
     scenario::{errors::OnFailError, task::Task, variables::Variables},
     session::Session,
+    state::{ExecutionStateManager, TaskTracker},
+    state::types::StepStatus,
     trace::ScenarioEvent,
 };
 use tracing::{debug, instrument};
@@ -38,22 +40,31 @@ impl OnFailStep {
         &self,
         session: &Session,
         variables: &Variables,
+        state_manager: Option<&ExecutionStateManager>,
+        parent_step_index: usize,
     ) -> Result<(), OnFailError> {
         debug!(
             scenario.event = ScenarioEvent::OnFailStepStarted.as_str(),
             task.description = self.task.description()
         );
 
+        if let Some(sm) = state_manager {
+            sm.update_on_fail_step_status(parent_step_index, self.index, StepStatus::Running);
+        }
+
+        let tracker =
+            state_manager.map(|sm| TaskTracker::for_on_fail_step(sm, parent_step_index, self.index));
+
         let result = match &self.task {
             Task::RemoteSudo { remote_sudo, .. } => remote_sudo
-                .execute(session, variables)
+                .execute(session, variables, tracker.as_ref())
                 .map_err(OnFailError::CannotOnFailRemoteSudo)
                 .map_err(|error| {
                     debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                     error
                 }),
             Task::SftpCopy { sftp_copy, .. } => sftp_copy
-                .execute(session, variables)
+                .execute(session, variables, tracker.as_ref())
                 .map_err(OnFailError::CannotOnFailSftpCopy)
                 .map_err(|error| {
                     debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
@@ -63,6 +74,18 @@ impl OnFailStep {
 
         if result.is_ok() {
             debug!(scenario.event = ScenarioEvent::OnFailStepCompleted.as_str());
+            if let Some(sm) = state_manager {
+                sm.update_on_fail_step_status(
+                    parent_step_index,
+                    self.index,
+                    StepStatus::Completed,
+                );
+            }
+        } else if let Some(sm) = state_manager {
+            sm.update_on_fail_step_status(parent_step_index, self.index, StepStatus::Failed);
+            if let Err(ref e) = result {
+                sm.add_on_fail_step_error(parent_step_index, self.index, e.to_string());
+            }
         }
 
         result

@@ -5,6 +5,7 @@ use crate::{
         variables::Variables,
     },
     session::Session,
+    state::ExecutionStateManager,
     trace::ScenarioEvent,
 };
 use std::ops::{Deref, DerefMut};
@@ -66,6 +67,8 @@ impl OnFailSteps {
         &self,
         session: &Session,
         variables: &Variables,
+        state_manager: Option<&ExecutionStateManager>,
+        parent_step_index: usize,
     ) -> Result<(), OnFailError> {
         if self.is_empty() {
             return Ok(());
@@ -74,7 +77,7 @@ impl OnFailSteps {
         debug!(scenario.event = ScenarioEvent::OnFailStepsStarted.as_str());
 
         for step in self.iter() {
-            step.execute(session, variables)?;
+            step.execute(session, variables, state_manager, parent_step_index)?;
         }
 
         debug!(scenario.event = ScenarioEvent::OnFailStepsCompleted.as_str());
@@ -235,7 +238,7 @@ mod tests {
         let variables = Variables::default();
 
         // When
-        let result = on_fail_steps.execute(&session, &variables);
+        let result = on_fail_steps.execute(&session, &variables, None, 0);
 
         // Then
         assert!(result.is_err(), "Execute should fail with sftp copy error");

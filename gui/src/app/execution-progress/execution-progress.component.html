@@ -1,43 +1,42 @@
 <div class="execution-progress">
-  @if (stepViews.length === 0) {
+  @if (displayStates.length === 0) {
   <div class="empty-state">No steps to display</div>
   } @else {
-  @for (stepView of stepViews; track $index) {
+  @for (stepState of displayStates; track stepState.index) {
 
-  @let task = stepView.task;
-  @let state = stepView.state();
-  @let status = stepView.status;
+  @let task = getTask($index);
+  @let ui = uiStates[$index];
 
-  @let previousExpanded = $index > 0 && stepViews[$index - 1].expanded;
+  @let previousExpanded = $index > 0 && uiStates[$index - 1]?.expanded;
   @let expandableSeparatorVariant = previousExpanded ? 'gap' : 'line';
-  <expandable [(expanded)]="stepView.expanded" [showSeparator]="$index > 0"
+  <expandable [(expanded)]="ui.expanded" [showSeparator]="$index > 0"
     [separatorVariant]="expandableSeparatorVariant">
-    <expandable-title [colorIndicator]="stepView.statusColor">
+    <expandable-title [colorIndicator]="ui.statusColor">
       <div>[{{$index + 1}}]</div>
-      <div>{{task.description}}</div>
+      <div>{{stepState.task_description}}</div>
     </expandable-title>
     <div class="task">
-      @switch (task.task_type) {
+      @switch (task?.task_type) {
       @case ('RemoteSudo') {
       <div class="task-item">
         <info-block label="Command" variant="primary">
-          @let command = state && state.type === 'RemoteSudoOutput' && state.command
-          ? state.command
-          : task.command;
+          @let command = stepState.progress && stepState.progress.type === 'RemoteSudo'
+          ? stepState.progress.command
+          : task?.command;
           <input class="text-field" type="text" [value]="command" readonly />
         </info-block>
       </div>
 
-      @if (state && state.type === 'RemoteSudoOutput' && state.output) {
+      @if (stepState.output) {
       <div class="task-item">
         <info-block class="output" label="Output" variant="secondary">
-          <textarea wrap="off" spellcheck="false" [autoScroll]="stepView.state" [value]="state.output" readonly>
+          <textarea wrap="off" spellcheck="false" [value]="stepState.output" readonly>
           </textarea>
         </info-block>
       </div>
       }
 
-      @if (status === 'executing') {
+      @if (stepState.status === 'Running') {
       <div class="executing-indicator">
         <div class="dot-pulse"></div>
       </div>
@@ -46,21 +45,21 @@
       @case ('SftpCopy') {
       <div class="task-item">
         <info-block label="Source" variant="primary">
-          @let source = state && state.type === 'SftpCopyProgress'
-          ? state.source
-          : task.source_path;
+          @let source = stepState.progress && stepState.progress.type === 'SftpCopy'
+          ? stepState.progress.source
+          : task?.source_path;
           <input class="text-field" type="text" [value]="source" readonly>
         </info-block>
 
         <info-block label="Destination" variant="primary">
-          @let destination = state && state.type === 'SftpCopyProgress'
-          ? state.destination
-          : task.destination_path;
+          @let destination = stepState.progress && stepState.progress.type === 'SftpCopy'
+          ? stepState.progress.destination
+          : task?.destination_path;
           <input class="text-field" type="text" [value]="destination" readonly />
         </info-block>
 
-        @let total = state && state.type === 'SftpCopyProgress' ? state.total : 0;
-        @let current = state && state.type === 'SftpCopyProgress' ? state.current : 0;
+        @let total = stepState.progress && stepState.progress.type === 'SftpCopy' ? stepState.progress.bytes_total : 0;
+        @let current = stepState.progress && stepState.progress.type === 'SftpCopy' ? stepState.progress.bytes_transferred : 0;
         @let progress = total == 0 ? 0 : Math.round((current / total) * 100);
         <div class="progress-bar" role="progressbar" aria-label="File transfer progress" [attr.aria-valuemin]="0"
           [attr.aria-valuemax]="total" [attr.aria-valuenow]="current"
@@ -71,13 +70,13 @@
       }
       }
 
-      @if (status === 'failed') {
-      <expandable variant="red" [(expanded)]="stepView.errorsExpanded">
+      @if (stepState.status === 'Failed') {
+      <expandable variant="red" [(expanded)]="ui.errorsExpanded">
         <expandable-title>
           Errors:
         </expandable-title>
         <div class="task-item">
-          @for (error of stepView.errors; track $index) {
+          @for (error of stepState.errors; track $index) {
           <info-block class="error" label="Error" variant="red">
             <textarea spellcheck="false" [value]="error" readonly>
           </textarea>
@@ -86,12 +85,15 @@
         </div>
       </expandable>
 
-      @if (onFailStepViews.length > 0) {
-      <expandable [nested]="true" [(expanded)]="stepView.onFailExpanded">
+      @if (hasOnFailSteps(stepState)) {
+      <expandable [nested]="true" [(expanded)]="ui.onFailExpanded">
         <expandable-title [colorIndicator]="onFailStatusColor">
           On-Fail Steps:
         </expandable-title>
-        <execution-progress [stepViews]="onFailStepViews" [isExecuting]="isExecuting">
+        <execution-progress
+          [onFailExecStates]="stepState.on_fail_steps"
+          [onFailSteps]="steps?.[$index]?.on_fail_steps"
+          [isExecuting]="isExecuting">
         </execution-progress>
       </expandable>
       }

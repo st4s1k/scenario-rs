@@ -7,6 +7,12 @@ use scenario_rs::{
         variables::required::{RequiredVariable, VariableType},
         Scenario,
     },
+    state::{
+        types::{
+            ExecutionState, ExecutionStatus, OnFailStepExecState, StepExecState, StepStatus,
+        },
+        ExecutionStateManager,
+    },
     utils::{HasText, IsNotEmpty},
 };
 use serde::{Deserialize, Serialize};
@@ -18,8 +24,9 @@ use std::{
         mpsc::Receiver,
         Arc,
     },
+    time::{Duration, Instant},
 };
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 use tracing::{error, info, instrument, warn};
 
 /// Stores required variable values for a specific configuration path, used for state persistence.
@@ -75,6 +82,7 @@ pub struct ScenarioAppState {
     pub(crate) app_handle: AppHandle,
     pub(crate) scenario: Option<Scenario>,
     pub(crate) is_executing: Arc<AtomicBool>,
+    pub(crate) execution_state_manager: Option<Arc<ExecutionStateManager>>,
 }
 
 /// DTO for transferring required variable info to the frontend.
@@ -194,6 +202,7 @@ impl ScenarioAppState {
             app_handle: app_handle.clone(),
             scenario: None,
             is_executing: Arc::new(AtomicBool::new(false)),
+            execution_state_manager: None,
         }
     }
 
@@ -308,14 +317,35 @@ impl ScenarioAppState {
     pub fn execute_scenario(&mut self) {
         if let Some(scenario) = self.scenario.as_ref().cloned() {
             let is_executing = self.is_executing.clone();
+
+            // Create state manager with diff channel
+            let (diff_tx, diff_rx) = std::sync::mpsc::channel();
+            let initial_state = build_initial_state(&scenario);
+            let state_manager = Arc::new(ExecutionStateManager::new(initial_state, diff_tx));
+
+            // Store for snapshot queries
+            self.execution_state_manager = Some(state_manager.clone());
+
+            // Spawn diff batch streaming task
+            let app_handle = self.app_handle.clone();
+            tauri::async_runtime::spawn(async move {
+                diff_batch_stream(diff_rx, &app_handle);
+            });
+
+            // Spawn scenario execution
             tauri::async_runtime::spawn(async move {
                 is_executing.store(true, Ordering::SeqCst);
-                scenario.execute();
+                scenario.execute(Some(&state_manager));
                 is_executing.store(false, Ordering::SeqCst);
             });
         } else {
             info!("No scenario loaded");
         }
+    }
+
+    /// Returns the current execution state snapshot, if an execution has been started.
+    pub fn get_execution_state(&self) -> Option<ExecutionState> {
+        self.execution_state_manager.as_ref().map(|sm| sm.snapshot())
     }
 
     /// Returns required variables as DTOs for the frontend.
@@ -414,6 +444,73 @@ impl ScenarioAppState {
         }
 
         info!("State cleared");
+    }
+}
+
+/// Builds the initial `ExecutionState` from a loaded scenario.
+fn build_initial_state(scenario: &Scenario) -> ExecutionState {
+    let steps = scenario
+        .steps()
+        .iter()
+        .map(|step| StepExecState {
+            index: step.index(),
+            task_description: step.task().description().to_string(),
+            status: StepStatus::Pending,
+            progress: None,
+            output: String::new(),
+            errors: Vec::new(),
+            on_fail_steps: step
+                .on_fail_steps()
+                .iter()
+                .map(|ofs| OnFailStepExecState {
+                    index: ofs.index(),
+                    task_description: ofs.task().description().to_string(),
+                    status: StepStatus::Pending,
+                    progress: None,
+                    output: String::new(),
+                    errors: Vec::new(),
+                })
+                .collect(),
+        })
+        .collect();
+
+    ExecutionState {
+        status: ExecutionStatus::Idle,
+        steps,
+    }
+}
+
+/// Reads diffs from the channel, batches them over 100ms windows,
+/// and emits them as a single Tauri event per batch.
+fn diff_batch_stream(
+    rx: std::sync::mpsc::Receiver<scenario_rs::state::types::StateDiff>,
+    app_handle: &AppHandle,
+) {
+    use scenario_rs::state::types::StateDiff;
+
+    loop {
+        // Block until first diff arrives (or channel closes)
+        let first: StateDiff = match rx.recv() {
+            Ok(diff) => diff,
+            Err(_) => break,
+        };
+
+        let mut batch = vec![first];
+        let deadline = Instant::now() + Duration::from_millis(100);
+
+        // Collect more diffs within the 100ms window
+        loop {
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                break;
+            }
+            match rx.recv_timeout(remaining) {
+                Ok(diff) => batch.push(diff),
+                Err(_) => break,
+            }
+        }
+
+        let _ = app_handle.emit("execution-diff", &batch);
     }
 }
 

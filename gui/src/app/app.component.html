@@ -53,7 +53,7 @@
           Execution progress:
         </expandable-title>
         <div class="section">
-          <execution-progress [steps]="steps" [isExecuting]="isExecuting()">
+          <execution-progress [steps]="steps" [stepExecStates]="stepExecStates()" [isExecuting]="isExecuting()">
           </execution-progress>
         </div>
       </expandable>

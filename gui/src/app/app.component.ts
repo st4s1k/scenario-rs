@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal, OnDestroy } from '@angular/core';
+import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, AbstractControl, ValidationErrors, AsyncValidatorFn } from "@angular/forms";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
@@ -15,6 +15,7 @@ import { TextFieldModule } from '@angular/cdk/text-field';
 import { ExpandableComponent } from './shared/expandable/expandable.component';
 import { TooltipComponent } from './shared/tooltip/tooltip.component';
 import { ExpandableTitleComponent } from './shared/expandable/expandable-title/expandable-title.component';
+import { ExecutionStateService } from './services/execution-state.service';
 
 interface RequiredFieldsForm {
   [key: string]: FormControl<string | null>;
@@ -74,6 +75,8 @@ export interface Step {
 export class AppComponent implements OnDestroy {
   Object = Object;
 
+  private executionStateService = inject(ExecutionStateService);
+
   scenarioConfigPath = new FormControl<string>('', {
     asyncValidators: this.configPathValidator(),
   });
@@ -97,7 +100,8 @@ export class AppComponent implements OnDestroy {
   requiredFieldsFormGroup = new FormGroup<RequiredFieldsForm>({});
   private requiredFieldsChangesSubscription?: Subscription;
 
-  isExecuting = signal(false);
+  isExecuting = this.executionStateService.isExecuting;
+  stepExecStates = computed(() => this.executionStateService.executionState()?.steps ?? []);
 
   executionLog = signal('');
   private pendingLogBuffer: string[] = [];
@@ -108,7 +112,6 @@ export class AppComponent implements OnDestroy {
   steps: Step[] = [];
 
   unlistenLogUpdates?: UnlistenFn;
-  unlistenExecutionStatus?: UnlistenFn;
 
   ngOnInit(): void {
     this.fetchConfigPath()
@@ -121,7 +124,7 @@ export class AppComponent implements OnDestroy {
 
     this.setupFormValueChangeListener();
     this.setupLogUpdatesListener();
-    this.setupExecutionStatusListener();
+    this.executionStateService.init();
   }
 
   ngOnDestroy(): void {
@@ -129,9 +132,7 @@ export class AppComponent implements OnDestroy {
     if (this.unlistenLogUpdates) {
       this.unlistenLogUpdates();
     }
-    if (this.unlistenExecutionStatus) {
-      this.unlistenExecutionStatus();
-    }
+    this.executionStateService.destroy();
     this.flushBufferedLog();
   }
 
@@ -303,12 +304,6 @@ export class AppComponent implements OnDestroy {
     });
     this.pendingLogBuffer.length = 0;
     this.flushTimeout = undefined;
-  }
-
-  private async setupExecutionStatusListener(): Promise<void> {
-    this.unlistenExecutionStatus = await listen<boolean>('execution-status', (event) => {
-      this.isExecuting.set(event.payload);
-    });
   }
 
   executeScenario(): void {

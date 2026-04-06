@@ -9,6 +9,8 @@ use crate::{
         errors::StepError, on_fail_steps::OnFailSteps, task::Task, tasks::Tasks, variables::Variables,
     },
     session::Session,
+    state::{ExecutionStateManager, TaskTracker},
+    state::types::StepStatus,
     trace::ScenarioEvent,
 };
 use tracing::{debug, instrument};
@@ -66,22 +68,27 @@ impl Step {
     )]
     pub(crate) fn execute(
         &self,
-        step: &Step,
         session: &Session,
         variables: &Variables,
+        state_manager: Option<&ExecutionStateManager>,
     ) -> Result<(), StepError> {
-        let description = step.task.description().to_string();
+        let description = self.task.description().to_string();
 
         debug!(
             scenario.event = ScenarioEvent::StepStarted.as_str(),
             task.description = description
         );
 
-        let error_message = step.task.error_message().to_string();
+        if let Some(sm) = state_manager {
+            sm.update_step_status(self.index, StepStatus::Running);
+        }
 
-        let task_result = match &step.task {
+        let error_message = self.task.error_message().to_string();
+        let tracker = state_manager.map(|sm| TaskTracker::for_step(sm, self.index));
+
+        let task_result = match &self.task {
             Task::RemoteSudo { remote_sudo, .. } => remote_sudo
-                .execute(session, variables)
+                .execute(session, variables, tracker.as_ref())
                 .map_err(|error| {
                     StepError::CannotExecuteRemoteSudoCommand(error, error_message.clone())
                 })
@@ -90,7 +97,7 @@ impl Step {
                     error
                 }),
             Task::SftpCopy { sftp_copy, .. } => sftp_copy
-                .execute(session, variables)
+                .execute(session, variables, tracker.as_ref())
                 .map_err(|error| {
                     StepError::CannotExecuteSftpCopyCommand(error, error_message.clone())
                 })
@@ -101,11 +108,18 @@ impl Step {
         };
 
         if let Err(error) = task_result {
-            step.execute_on_fail_steps(session, &variables)?;
+            if let Some(sm) = state_manager {
+                sm.update_step_status(self.index, StepStatus::Failed);
+                sm.add_step_error(self.index, error.to_string());
+            }
+            self.execute_on_fail_steps(session, &variables, state_manager)?;
             return Err(error);
         }
 
         debug!(scenario.event = ScenarioEvent::StepCompleted.as_str());
+        if let Some(sm) = state_manager {
+            sm.update_step_status(self.index, StepStatus::Completed);
+        }
         Ok(())
     }
 
@@ -113,9 +127,10 @@ impl Step {
         &self,
         session: &Session,
         variables: &Variables,
+        state_manager: Option<&ExecutionStateManager>,
     ) -> Result<(), StepError> {
         self.on_fail_steps
-            .execute(session, variables)
+            .execute(session, variables, state_manager, self.index)
             .map_err(StepError::CannotExecuteOnFailSteps)
             .map_err(|error| {
                 debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);

@@ -62,7 +62,7 @@ fn main() {
         .upsert(required_variables);
 
     // Execute the scenario
-    scenario.execute();
+    scenario.execute(None);
 }
 
 /// Parses a key-value pair from a string in the format "key=value".
