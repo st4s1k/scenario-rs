@@ -11,8 +11,8 @@ export class TooltipComponent {
   @Input() text: string = '';
   @Input() arrow: 'top' | 'left' = 'top';
 
-  @HostBinding('class.visible') private visible = false;
-  @HostBinding('class.transition') private transition = true;
+  @HostBinding('class.visible') protected visible = false;
+  @HostBinding('class.transition') protected transition = true;
   @HostBinding('class.arrow-top') get arrowTop() { return this.arrow === 'top'; }
   @HostBinding('class.arrow-left') get arrowLeft() { return this.arrow === 'left'; }
 

@@ -93,7 +93,7 @@ where
             .metadata()
             .fields()
             .iter()
-            .any(|f| f.name() == "event")
+            .any(|f| f.name() == "scenario.event")
         {
             return;
         }
