@@ -1,61 +1,25 @@
 use serde::Deserialize;
 use std::ops::{Deref, DerefMut};
 
-/// Configuration for fallback steps to execute when a scenario step fails.
-///
-/// This is a wrapper around a list of task names that should be executed
-/// in sequence when the parent step encounters an error.
-///
-/// # Examples
-///
-/// Creating a configuration with fallback tasks:
-///
-/// ```
-/// use scenario_rs_core::config::on_fail::OnFailStepsConfig;
-///
-/// // Define fallback tasks to run in sequence after a failure
-/// let cleanup_tasks = vec![
-///     "remove_temp_files".to_string(),
-///     "restore_backup".to_string(),
-///     "notify_admin".to_string()
-/// ];
-///
-/// let on_fail_config = OnFailStepsConfig::from(cleanup_tasks);
-///
-/// // Access the tasks using deref
-/// assert_eq!(on_fail_config.len(), 3);
-/// assert_eq!(on_fail_config[0], "remove_temp_files");
-/// assert_eq!(on_fail_config[1], "restore_backup");
-/// assert_eq!(on_fail_config[2], "notify_admin");
-/// ```
-///
-/// In a TOML configuration file:
-/// ```toml
-/// [[steps]]
-/// task = "deploy_application"
-/// on_fail = ["cleanup_files", "restore_previous_version"]
-/// ```
+/// Task names to execute as fallback when a step fails.
 #[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct OnFailStepsConfig(Vec<String>);
 
 impl Deref for OnFailStepsConfig {
     type Target = Vec<String>;
 
-    /// Dereferences to the underlying vector of task names.
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
 impl DerefMut for OnFailStepsConfig {
-    /// Provides mutable access to the underlying vector of task names.
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
 impl From<Vec<String>> for OnFailStepsConfig {
-    /// Creates a new `OnFailStepsConfig` from a vector of task names.
     fn from(tasks: Vec<String>) -> Self {
         OnFailStepsConfig(tasks)
     }

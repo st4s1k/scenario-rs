@@ -1,43 +1,15 @@
 use crate::scenario::errors::ScenarioConfigError;
 use serde::Deserialize;
 
-/// Partial configuration for authentication credentials that supports inheritance.
-///
-/// This struct defines the optional credentials used to authenticate with a remote server.
-/// If this configuration is merged with another, fields in the other take precedence.
-///
-/// # Examples
-///
-/// ```
-/// use scenario_rs_core::config::credentials::{PartialCredentialsConfig, CredentialsConfig};
-///
-/// let partial = PartialCredentialsConfig {
-///     username: Some("admin".to_string()),
-///     password: Some("secure_password".to_string()),
-/// };
-///
-/// let config = CredentialsConfig::try_from(partial).unwrap();
-/// assert_eq!(config.username, "admin");
-/// assert_eq!(config.password, Some("secure_password".to_string()));
-/// ```
+/// Partial credentials supporting inheritance/merging.
 #[derive(Deserialize, Clone, Debug, Default)]
 pub struct PartialCredentialsConfig {
-    /// Optional username to authenticate as on the remote server
     pub username: Option<String>,
-    /// Optional password for authentication (if not provided, SSH agent is used)
     pub password: Option<String>,
 }
 
 impl PartialCredentialsConfig {
-    /// Merges this configuration with another, with the other taking precedence.
-    ///
-    /// # Arguments
-    ///
-    /// * `other` - The configuration to merge with this one
-    ///
-    /// # Returns
-    ///
-    /// A new configuration that combines both configurations
+    /// Merges with `other`, where `other` takes precedence.
     pub fn merge(&self, other: &PartialCredentialsConfig) -> PartialCredentialsConfig {
         PartialCredentialsConfig {
             username: other.username.clone().or_else(|| self.username.clone()),
@@ -46,64 +18,16 @@ impl PartialCredentialsConfig {
     }
 }
 
-/// Configuration for authentication credentials.
-///
-/// This struct defines the credentials used to authenticate with a remote server.
-/// If password is not provided, SSH agent authentication will be attempted.
-///
-/// # Examples
-///
-/// Creating credentials with a password:
-///
-/// ```
-/// use scenario_rs_core::config::credentials::CredentialsConfig;
-///
-/// let credentials = CredentialsConfig {
-///     username: "admin".to_string(),
-///     password: Some("secure_password".to_string()),
-/// };
-///
-/// assert_eq!(credentials.username, "admin");
-/// assert_eq!(credentials.password, Some("secure_password".to_string()));
-/// ```
-///
-/// Creating credentials for SSH agent authentication:
-///
-/// ```
-/// use scenario_rs_core::config::credentials::CredentialsConfig;
-///
-/// let credentials = CredentialsConfig {
-///     username: "admin".to_string(),
-///     password: None,  // Will use SSH agent
-/// };
-///
-/// assert_eq!(credentials.username, "admin");
-/// assert!(credentials.password.is_none());
-/// ```
-///
-/// In a TOML configuration file:
-/// ```toml
-/// [credentials]
-/// username = "admin"
-/// password = "secure_password"  # Optional, remove to use SSH agent
-/// ```
+/// Complete credentials config. If password is `None`, SSH agent is used.
 #[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct CredentialsConfig {
-    /// The username to authenticate as on the remote server
     pub username: String,
-    /// Optional password for authentication (if not provided, SSH agent is used)
     pub password: Option<String>,
 }
 
 impl TryFrom<PartialCredentialsConfig> for CredentialsConfig {
     type Error = ScenarioConfigError;
 
-    /// Converts a partial configuration into a complete configuration.
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(CredentialsConfig)` - A complete configuration with all required fields
-    /// * `Err` - If any required fields are missing
     fn try_from(partial: PartialCredentialsConfig) -> Result<Self, Self::Error> {
         Ok(CredentialsConfig {
             username: partial

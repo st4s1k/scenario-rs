@@ -1,8 +1,4 @@
-//! Variable configurations for scenarios.
-//!
-//! This module defines configuration structures for variables used in scenarios,
-//! including both required variables (that must be provided at runtime) and
-//! defined variables (with predefined values in the configuration).
+//! Variable configurations: required (runtime) and defined (predefined values).
 
 use crate::{
     config::variables::{defined::DefinedVariablesConfig, required::RequiredVariablesConfig},
@@ -13,46 +9,25 @@ use serde::Deserialize;
 pub mod defined;
 pub mod required;
 
-/// Complete configuration for variables in a scenario.
-///
-/// This struct holds configurations for both required variables (that must be
-/// provided at runtime) and defined variables (predefined in the configuration).
+/// Complete variables config: required + defined.
 #[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct VariablesConfig {
-    /// Configuration for variables that must be provided at runtime
     #[serde(default)]
     pub required: RequiredVariablesConfig,
-    /// Configuration for variables with predefined values
     #[serde(default)]
     pub defined: DefinedVariablesConfig,
 }
 
-/// Partial configuration for variables that supports inheritance.
-///
-/// This structure represents an incomplete variables configuration that can be
-/// merged with another configuration, supporting hierarchical configuration.
+/// Partial variables config supporting inheritance/merging.
 #[derive(Deserialize, Clone, Debug, Default)]
 pub struct PartialVariablesConfig {
-    /// Optional configuration for required variables
     pub required: Option<RequiredVariablesConfig>,
-    /// Optional configuration for defined variables
     pub defined: Option<DefinedVariablesConfig>,
 }
 
 impl PartialVariablesConfig {
-    /// Merges this configuration with another, with special handling for conflicts.
-    ///
-    /// When merging, defined variables take precedence over required variables.
-    /// If a variable appears in both required and defined collections after merging,
-    /// it will be removed from required since it already has a defined value.
-    ///
-    /// # Arguments
-    ///
-    /// * `other` - The configuration to merge with this one
-    ///
-    /// # Returns
-    ///
-    /// A new configuration that combines both configurations
+    /// Merges with `other`. Defined variables take precedence: if a variable
+    /// appears in both required and defined after merging, it's removed from required.
     pub fn merge(&self, other: &PartialVariablesConfig) -> PartialVariablesConfig {
         let mut merged_required = match (&self.required, &other.required) {
             (Some(self_req), Some(other_req)) => self_req.merge(other_req),
@@ -82,13 +57,6 @@ impl PartialVariablesConfig {
 impl TryFrom<PartialVariablesConfig> for VariablesConfig {
     type Error = ScenarioConfigError;
 
-    /// Converts a partial configuration into a complete configuration.
-    ///
-    /// This fills in any missing sections with defaults.
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(VariablesConfig)` - A complete configuration with all sections present
     fn try_from(partial: PartialVariablesConfig) -> Result<Self, Self::Error> {
         // Using explicit match pattern for consistency with other similar implementations
         let required = match partial.required {

@@ -1,43 +1,15 @@
 use crate::scenario::errors::ScenarioConfigError;
 use serde::Deserialize;
 
-/// Partial configuration for a remote server connection that supports inheritance.
-///
-/// This struct defines the optional connection parameters for the remote server.
-/// If this configuration is merged with another, fields in the other take precedence.
-///
-/// # Examples
-///
-/// ```
-/// use scenario_rs_core::config::server::{PartialServerConfig, ServerConfig};
-///
-/// let partial = PartialServerConfig {
-///     host: Some("example.com".to_string()),
-///     port: Some(2222),
-/// };
-///
-/// let config = ServerConfig::try_from(partial).unwrap();
-/// assert_eq!(config.host, "example.com");
-/// assert_eq!(config.port, Some(2222));
-/// ```
+/// Partial server config supporting inheritance/merging.
 #[derive(Deserialize, Clone, Debug, Default)]
 pub struct PartialServerConfig {
-    /// Optional hostname or IP address of the target server
     pub host: Option<String>,
-    /// Optional SSH port to connect to (defaults to 22 if not specified)
     pub port: Option<u16>,
 }
 
 impl PartialServerConfig {
-    /// Merges this configuration with another, with the other taking precedence.
-    ///
-    /// # Arguments
-    ///
-    /// * `other` - The configuration to merge with this one
-    ///
-    /// # Returns
-    ///
-    /// A new configuration that combines both configurations
+    /// Merges with `other`, where `other` takes precedence.
     pub fn merge(&self, other: &PartialServerConfig) -> PartialServerConfig {
         PartialServerConfig {
             host: other.host.clone().or_else(|| self.host.clone()),
@@ -46,73 +18,16 @@ impl PartialServerConfig {
     }
 }
 
-/// Configuration for a remote server connection.
-///
-/// This struct defines the connection parameters for the remote server
-/// where deployment scenarios will be executed.
-///
-/// # Examples
-///
-/// Creating a server configuration with default port (22):
-///
-/// ```
-/// use scenario_rs_core::config::server::ServerConfig;
-///
-/// let config = ServerConfig {
-///     host: "example.com".to_string(),
-///     port: None,
-/// };
-///
-/// assert_eq!(config.host, "example.com");
-/// assert_eq!(config.port, None);
-/// ```
-///
-/// Creating a server configuration with a custom port:
-///
-/// ```
-/// use scenario_rs_core::config::server::ServerConfig;
-///
-/// let config = ServerConfig {
-///     host: "example.com".to_string(),
-///     port: Some(2222),
-/// };
-///
-/// assert_eq!(config.host, "example.com");
-/// assert_eq!(config.port, Some(2222));
-/// ```
-///
-/// Deserializing from TOML:
-///
-/// ```no_run
-/// use scenario_rs_core::config::server::ServerConfig;
-/// use toml;
-///
-/// let toml_str = r#"
-/// host = "example.com"
-/// port = 2222
-/// "#;
-///
-/// let config: ServerConfig = toml::from_str(toml_str).unwrap();
-/// assert_eq!(config.host, "example.com");
-/// assert_eq!(config.port, Some(2222));
-/// ```
+/// Complete server connection config. Port defaults to 22 if `None`.
 #[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct ServerConfig {
-    /// The hostname or IP address of the target server
     pub host: String,
-    /// The SSH port to connect to (defaults to 22 if not specified)
     pub port: Option<u16>,
 }
 
 impl TryFrom<PartialServerConfig> for ServerConfig {
     type Error = ScenarioConfigError;
 
-    /// Converts a partial configuration into a complete configuration.
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(ServerConfig)` - A complete configuration with all required fields
-    /// * `Err` - If any required fields are missing
     fn try_from(partial: PartialServerConfig) -> Result<Self, Self::Error> {
         Ok(ServerConfig {
             host: partial.host.ok_or(ScenarioConfigError::MissingHost)?,

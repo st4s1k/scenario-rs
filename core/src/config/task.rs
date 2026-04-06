@@ -1,94 +1,23 @@
 use serde::Deserialize;
 
-/// Configuration for a task in a scenario.
-///
-/// A task is a single operation that can be performed as part of a scenario,
-/// such as executing a command or copying a file.
-///
-/// # Examples
-///
-/// Creating a task that executes a command with sudo privileges:
-///
-/// ```
-/// use scenario_rs_core::config::task::{TaskConfig, TaskType};
-///
-/// let task = TaskConfig {
-///     description: "Update package index".to_string(),
-///     error_message: "Failed to update package index".to_string(),
-///     task_type: TaskType::RemoteSudo {
-///         command: "apt-get update".to_string(),
-///     },
-/// };
-///
-/// assert_eq!(task.description, "Update package index");
-/// ```
-///
-/// Deserializing from TOML:
-///
-/// ```no_run
-/// use scenario_rs_core::config::task::TaskConfig;
-/// use toml;
-///
-/// let toml_str = r#"
-/// description = "Copy configuration file"
-/// error_message = "Failed to copy config file"
-/// type = "SftpCopy"
-/// source_path = "/local/path/config.json"
-/// destination_path = "/remote/path/config.json"
-/// "#;
-///
-/// let task: TaskConfig = toml::from_str(toml_str).unwrap();
-/// ```
+/// A single task operation in a scenario (command execution or file copy).
 #[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct TaskConfig {
-    /// Human-readable description of what this task does
     pub description: String,
-    /// Error message to display if this task fails
     pub error_message: String,
-    /// The specific type of task and its associated configuration
     #[serde(flatten)]
     pub task_type: TaskType,
 }
 
-/// Defines the different types of tasks that can be performed in a scenario.
-///
-/// Each variant corresponds to a specific operation with its own configuration parameters.
-///
-/// # Examples
-///
-/// Creating a task type for executing a remote command with sudo:
-///
-/// ```
-/// use scenario_rs_core::config::task::TaskType;
-///
-/// let task_type = TaskType::RemoteSudo {
-///     command: "systemctl restart nginx".to_string(),
-/// };
-/// ```
-///
-/// Creating a task type for copying a file via SFTP:
-///
-/// ```
-/// use scenario_rs_core::config::task::TaskType;
-///
-/// let task_type = TaskType::SftpCopy {
-///     source_path: "/local/app/config.json".to_string(),
-///     destination_path: "/remote/app/config.json".to_string(),
-/// };
-/// ```
+/// The different task operations available.
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(tag = "type")]
 pub enum TaskType {
-    /// Execute a command with sudo privileges on a remote system.
     RemoteSudo {
-        /// The command to execute
         command: String,
     },
-    /// Copy a file from the local system to a remote system using SFTP.
     SftpCopy {
-        /// Path to the source file on the local system
         source_path: String,
-        /// Path to the destination on the remote system
         destination_path: String,
     },
 }

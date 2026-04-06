@@ -1,13 +1,9 @@
 use crate::config::steps::StepsConfig;
 use serde::Deserialize;
 
-/// Configuration for scenario execution.
-///
-/// This struct defines the execution flow of a scenario,
-/// including the sequence of steps to be performed.
+/// Execution flow configuration for a scenario.
 #[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct ExecuteConfig {
-    /// The ordered sequence of steps to execute in the scenario
     pub steps: StepsConfig,
 }
 
