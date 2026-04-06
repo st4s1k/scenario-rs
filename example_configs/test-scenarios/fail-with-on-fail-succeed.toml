@@ -1,0 +1,43 @@
+# Test: Step fails with unresolved variable, on-fail steps succeed
+# UI: Step 1 green (pass), Step 2 red (fail) → nested on-fail section with green steps
+# The on-fail steps use resolved variables so they succeed
+
+[credentials]
+username = "test_user"
+password = "test_pass"
+
+[server]
+host = "localhost"
+
+[execute]
+steps = [
+    { task = "stop_service" },
+    { task = "deploy_with_bad_var", on-fail = [
+        "rollback_deploy",
+        "start_service",
+    ] },
+]
+
+[tasks.stop_service]
+type = "RemoteSudo"
+description = "Stopping the service"
+command = "sudo systemctl stop myapp"
+error_message = "Failed to stop service"
+
+[tasks.deploy_with_bad_var]
+type = "RemoteSudo"
+description = "Deploying (will fail - unresolved variable)"
+command = "cp {missing_deploy_artifact} /opt/myapp/"
+error_message = "Deployment failed"
+
+[tasks.rollback_deploy]
+type = "RemoteSudo"
+description = "Rolling back deployment"
+command = "sudo cp /opt/myapp/backup/myapp.jar /opt/myapp/myapp.jar"
+error_message = "Rollback failed"
+
+[tasks.start_service]
+type = "RemoteSudo"
+description = "Starting the service"
+command = "sudo systemctl start myapp"
+error_message = "Failed to start service"

@@ -1,0 +1,20 @@
+# Test: Single RemoteSudo step with unresolved variable → fails at execution
+# UI: Red indicator, error expandable with resolution error, no on-fail section
+
+[credentials]
+username = "test_user"
+password = "test_pass"
+
+[server]
+host = "localhost"
+
+[execute]
+steps = [
+    { task = "run_bad_command" },
+]
+
+[tasks.run_bad_command]
+type = "RemoteSudo"
+description = "Running command with missing variable"
+command = "echo {missing_variable}"
+error_message = "Command failed due to unresolved variable"

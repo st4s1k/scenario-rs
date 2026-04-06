@@ -1,0 +1,18 @@
+# Test: Empty steps list
+# UI: "No steps to display" empty state
+
+[credentials]
+username = "test_user"
+password = "test_pass"
+
+[server]
+host = "localhost"
+
+[execute]
+steps = []
+
+[tasks.unused_task]
+type = "RemoteSudo"
+description = "This task is never referenced"
+command = "echo 'unused'"
+error_message = "Unused"

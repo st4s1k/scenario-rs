@@ -1,0 +1,49 @@
+# Test: Step fails with many on-fail recovery steps
+# UI: Failed step (red) → deeply nested on-fail list with 4 steps
+
+[credentials]
+username = "test_user"
+password = "test_pass"
+
+[server]
+host = "localhost"
+
+[execute]
+steps = [
+    { task = "deploy_fails", on-fail = [
+        "stop_service",
+        "restore_backup",
+        "cleanup_temp",
+        "start_service",
+    ] },
+]
+
+[tasks.deploy_fails]
+type = "RemoteSudo"
+description = "Deploying new version (will fail)"
+command = "mv {missing_artifact} /opt/app/"
+error_message = "Deployment failed"
+
+[tasks.stop_service]
+type = "RemoteSudo"
+description = "On-Fail: Stopping service"
+command = "sudo systemctl stop myapp"
+error_message = "Failed to stop service during recovery"
+
+[tasks.restore_backup]
+type = "RemoteSudo"
+description = "On-Fail: Restoring from backup"
+command = "sudo cp /opt/backup/myapp.jar /opt/app/myapp.jar"
+error_message = "Failed to restore backup"
+
+[tasks.cleanup_temp]
+type = "RemoteSudo"
+description = "On-Fail: Cleaning up temporary files"
+command = "sudo rm -rf /tmp/deploy-staging"
+error_message = "Failed to clean up temp files"
+
+[tasks.start_service]
+type = "RemoteSudo"
+description = "On-Fail: Restarting service"
+command = "sudo systemctl start myapp"
+error_message = "Failed to restart service during recovery"

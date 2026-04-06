@@ -1,0 +1,45 @@
+# Test: Only SftpCopy steps
+# UI: Multiple progress bars in sequence
+
+[credentials]
+username = "test_user"
+password = "test_pass"
+
+[server]
+host = "localhost"
+
+[execute]
+steps = [
+    { task = "upload_app" },
+    { task = "upload_config" },
+    { task = "upload_scripts" },
+]
+
+[variables.required]
+app_jar = { type = "Path", label = "Application JAR" }
+config_file = { type = "Path", label = "Config File" }
+scripts_archive = { type = "Path", label = "Scripts Archive" }
+
+[variables.defined]
+remote_base = "/home/{username}/deploy"
+
+[tasks.upload_app]
+type = "SftpCopy"
+description = "Uploading application JAR"
+source_path = "{app_jar}"
+destination_path = "{remote_base}/{basename:app_jar}"
+error_message = "Failed to upload application"
+
+[tasks.upload_config]
+type = "SftpCopy"
+description = "Uploading configuration"
+source_path = "{config_file}"
+destination_path = "{remote_base}/config/{basename:config_file}"
+error_message = "Failed to upload config"
+
+[tasks.upload_scripts]
+type = "SftpCopy"
+description = "Uploading deployment scripts"
+source_path = "{scripts_archive}"
+destination_path = "{remote_base}/scripts/{basename:scripts_archive}"
+error_message = "Failed to upload scripts"

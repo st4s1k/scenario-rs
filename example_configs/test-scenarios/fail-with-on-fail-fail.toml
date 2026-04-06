@@ -1,0 +1,28 @@
+# Test: Step fails, on-fail steps ALSO fail
+# UI: Step red (fail) → nested on-fail section with red steps (both error expandables visible)
+
+[credentials]
+username = "test_user"
+password = "test_pass"
+
+[server]
+host = "localhost"
+
+[execute]
+steps = [
+    { task = "deploy_with_bad_var", on-fail = [
+        "rollback_with_bad_var",
+    ] },
+]
+
+[tasks.deploy_with_bad_var]
+type = "RemoteSudo"
+description = "Deploying (will fail)"
+command = "cp {missing_source} /opt/myapp/"
+error_message = "Deployment failed"
+
+[tasks.rollback_with_bad_var]
+type = "RemoteSudo"
+description = "Rolling back (will also fail)"
+command = "cp {missing_backup} /opt/myapp/"
+error_message = "Rollback also failed"

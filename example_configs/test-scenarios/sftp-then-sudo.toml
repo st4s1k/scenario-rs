@@ -1,0 +1,34 @@
+# Test: SftpCopy then RemoteSudo, both succeed
+# UI: Progress bar for upload, then command output block
+
+[credentials]
+username = "test_user"
+password = "test_pass"
+
+[server]
+host = "localhost"
+
+[execute]
+steps = [
+    { task = "upload_config" },
+    { task = "apply_config" },
+]
+
+[variables.required]
+config_file = { type = "Path", label = "Config File" }
+
+[variables.defined]
+remote_config_dir = "/etc/myapp"
+
+[tasks.upload_config]
+type = "SftpCopy"
+description = "Uploading configuration file"
+source_path = "{config_file}"
+destination_path = "{remote_config_dir}/{basename:config_file}"
+error_message = "Failed to upload configuration file"
+
+[tasks.apply_config]
+type = "RemoteSudo"
+description = "Applying configuration"
+command = "sudo systemctl reload myapp"
+error_message = "Failed to apply configuration"

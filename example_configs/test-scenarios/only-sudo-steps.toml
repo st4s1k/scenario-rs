@@ -1,0 +1,34 @@
+# Test: Only RemoteSudo steps
+# UI: Multiple command output textareas in sequence
+
+[credentials]
+username = "test_user"
+password = "test_pass"
+
+[server]
+host = "localhost"
+
+[execute]
+steps = [
+    { task = "check_disk" },
+    { task = "check_memory" },
+    { task = "check_services" },
+]
+
+[tasks.check_disk]
+type = "RemoteSudo"
+description = "Checking disk usage"
+command = "df -h"
+error_message = "Disk check failed"
+
+[tasks.check_memory]
+type = "RemoteSudo"
+description = "Checking memory usage"
+command = "free -m"
+error_message = "Memory check failed"
+
+[tasks.check_services]
+type = "RemoteSudo"
+description = "Checking running services"
+command = "systemctl list-units --type=service --state=running"
+error_message = "Service check failed"
