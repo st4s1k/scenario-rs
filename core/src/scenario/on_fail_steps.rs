@@ -5,6 +5,7 @@ use crate::{
         variables::Variables,
     },
     session::Session,
+    trace::ScenarioEvent,
 };
 use std::ops::{Deref, DerefMut};
 use tracing::{debug, instrument};
@@ -99,7 +100,7 @@ impl TryFrom<(&Tasks, &OnFailStepsConfig)> for OnFailSteps {
                 .cloned()
                 .ok_or_else(|| OnFailError::InvalidOnFailStep(config_step.clone()))
                 .map_err(|error| {
-                    debug!(scenario.event = "error", scenario.error = %error);
+                    debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                     error
                 })?;
             let on_fail_step = OnFailStep::from((index, task));
@@ -144,13 +145,13 @@ impl OnFailSteps {
             return Ok(());
         }
 
-        debug!(scenario.event = "on_fail_steps_started");
+        debug!(scenario.event = ScenarioEvent::OnFailStepsStarted.as_str());
 
         for step in self.iter() {
             step.execute(session, variables)?;
         }
 
-        debug!(scenario.event = "on_fail_steps_completed");
+        debug!(scenario.event = ScenarioEvent::OnFailStepsCompleted.as_str());
 
         Ok(())
     }

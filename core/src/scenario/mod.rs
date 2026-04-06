@@ -5,6 +5,7 @@ use crate::{
         tasks::Tasks, variables::Variables,
     },
     session::Session,
+    trace::ScenarioEvent,
     utils::HasText,
 };
 use std::path::PathBuf;
@@ -164,7 +165,7 @@ impl TryFrom<ScenarioConfig> for Scenario {
         let execute = Execute::try_from((&tasks, &config.execute))
             .map_err(ScenarioError::CannotCreateExecuteFromConfig)
             .map_err(|error| {
-                debug!(scenario.event = "error", scenario.error = %error);
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 error
             })?;
 
@@ -200,7 +201,7 @@ impl TryFrom<PathBuf> for Scenario {
         let config = ScenarioConfig::try_from(path)
             .map_err(ScenarioError::CannotCreateScenarioFromConfig)
             .map_err(|error| {
-                debug!(scenario.event = "error", scenario.error = %error);
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 error
             })?;
         Scenario::try_from(config)
@@ -231,24 +232,24 @@ impl Scenario {
     /// If any step fails, execution is stopped and an error is logged.
     #[instrument(skip_all, name = "scenario")]
     pub fn execute(&self) {
-        debug!(scenario.event = "scenario_started");
+        debug!(scenario.event = ScenarioEvent::ScenarioStarted.as_str());
 
         let session = match Session::new(&self.server, &self.credentials) {
             Ok(session) => session,
             Err(error) => {
-                debug!(scenario.event = "error", scenario.error = %error);
-                debug!(scenario.event = "scenario_failed");
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
+                debug!(scenario.event = ScenarioEvent::ScenarioFailed.as_str());
                 return;
             }
         };
 
-        debug!(scenario.event = "session_created");
+        debug!(scenario.event = ScenarioEvent::SessionCreated.as_str());
 
         match self.execute.steps.execute(&session, &self.variables) {
-            Ok(_) => debug!(scenario.event = "scenario_completed"),
+            Ok(_) => debug!(scenario.event = ScenarioEvent::ScenarioCompleted.as_str()),
             Err(error) => {
-                debug!(scenario.event = "error", scenario.error = %error);
-                debug!(scenario.event = "scenario_failed");
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
+                debug!(scenario.event = ScenarioEvent::ScenarioFailed.as_str());
             },
         }
     }

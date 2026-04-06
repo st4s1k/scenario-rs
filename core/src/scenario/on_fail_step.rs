@@ -1,6 +1,7 @@
 use crate::{
     scenario::{errors::OnFailError, task::Task, variables::Variables},
     session::Session,
+    trace::ScenarioEvent,
 };
 use tracing::{debug, instrument};
 
@@ -41,7 +42,7 @@ impl OnFailStep {
         variables: &Variables,
     ) -> Result<(), OnFailError> {
         debug!(
-            scenario.event = "on_fail_step_started",
+            scenario.event = ScenarioEvent::OnFailStepStarted.as_str(),
             task.description = self.task.description()
         );
 
@@ -50,20 +51,20 @@ impl OnFailStep {
                 .execute(session, variables)
                 .map_err(OnFailError::CannotOnFailRemoteSudo)
                 .map_err(|error| {
-                    debug!(scenario.event = "error", scenario.error = %error);
+                    debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                     error
                 }),
             Task::SftpCopy { sftp_copy, .. } => sftp_copy
                 .execute(session, variables)
                 .map_err(OnFailError::CannotOnFailSftpCopy)
                 .map_err(|error| {
-                    debug!(scenario.event = "error", scenario.error = %error);
+                    debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                     error
                 }),
         };
 
         if result.is_ok() {
-            debug!(scenario.event = "on_fail_step_completed");
+            debug!(scenario.event = ScenarioEvent::OnFailStepCompleted.as_str());
         }
 
         result

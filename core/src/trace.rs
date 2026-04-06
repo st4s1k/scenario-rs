@@ -1,8 +1,123 @@
 use std::fmt;
+use std::str::FromStr;
 use tracing::{
     error,
     field::{Field, Visit},
 };
+
+/// The tracing field name used for scenario events.
+///
+/// This constant should be used when checking tracing metadata fields
+/// to avoid typos (e.g., `"event"` vs `"scenario.event"`).
+pub const SCENARIO_EVENT_FIELD: &str = "scenario.event";
+
+/// All possible scenario event types emitted via the tracing system.
+///
+/// These variants represent every lifecycle event that the scenario
+/// execution engine can produce. Consumers (CLI layer, GUI layer)
+/// match on these to decide how to display progress to the user.
+///
+/// # Examples
+///
+/// ```
+/// use scenario_rs_core::trace::ScenarioEvent;
+///
+/// assert_eq!(ScenarioEvent::ScenarioStarted.as_str(), "scenario_started");
+/// assert_eq!("sftp_copy_progress".parse::<ScenarioEvent>().unwrap(), ScenarioEvent::SftpCopyProgress);
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ScenarioEvent {
+    Error,
+    ScenarioStarted,
+    ScenarioCompleted,
+    ScenarioFailed,
+    SessionCreated,
+    CreateSessionStarted,
+    CreateSessionCompleted,
+    CreatedMockSession,
+    StepsStarted,
+    StepsCompleted,
+    StepStarted,
+    StepCompleted,
+    RemoteSudoStarted,
+    RemoteSudoOutput,
+    RemoteSudoCompleted,
+    SftpCopyStarted,
+    SftpCopyProgress,
+    SftpCopyCompleted,
+    OnFailStepsStarted,
+    OnFailStepsCompleted,
+    OnFailStepStarted,
+    OnFailStepCompleted,
+}
+
+impl ScenarioEvent {
+    /// Returns the canonical string representation used in tracing fields.
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Error => "error",
+            Self::ScenarioStarted => "scenario_started",
+            Self::ScenarioCompleted => "scenario_completed",
+            Self::ScenarioFailed => "scenario_failed",
+            Self::SessionCreated => "session_created",
+            Self::CreateSessionStarted => "create_session_started",
+            Self::CreateSessionCompleted => "create_session_completed",
+            Self::CreatedMockSession => "created_mock_session",
+            Self::StepsStarted => "steps_started",
+            Self::StepsCompleted => "steps_completed",
+            Self::StepStarted => "step_started",
+            Self::StepCompleted => "step_completed",
+            Self::RemoteSudoStarted => "remote_sudo_started",
+            Self::RemoteSudoOutput => "remote_sudo_output",
+            Self::RemoteSudoCompleted => "remote_sudo_completed",
+            Self::SftpCopyStarted => "sftp_copy_started",
+            Self::SftpCopyProgress => "sftp_copy_progress",
+            Self::SftpCopyCompleted => "sftp_copy_completed",
+            Self::OnFailStepsStarted => "on_fail_steps_started",
+            Self::OnFailStepsCompleted => "on_fail_steps_completed",
+            Self::OnFailStepStarted => "on_fail_step_started",
+            Self::OnFailStepCompleted => "on_fail_step_completed",
+        }
+    }
+}
+
+impl fmt::Display for ScenarioEvent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl FromStr for ScenarioEvent {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "error" => Ok(Self::Error),
+            "scenario_started" => Ok(Self::ScenarioStarted),
+            "scenario_completed" => Ok(Self::ScenarioCompleted),
+            "scenario_failed" => Ok(Self::ScenarioFailed),
+            "session_created" => Ok(Self::SessionCreated),
+            "create_session_started" => Ok(Self::CreateSessionStarted),
+            "create_session_completed" => Ok(Self::CreateSessionCompleted),
+            "created_mock_session" => Ok(Self::CreatedMockSession),
+            "steps_started" => Ok(Self::StepsStarted),
+            "steps_completed" => Ok(Self::StepsCompleted),
+            "step_started" => Ok(Self::StepStarted),
+            "step_completed" => Ok(Self::StepCompleted),
+            "remote_sudo_started" => Ok(Self::RemoteSudoStarted),
+            "remote_sudo_output" => Ok(Self::RemoteSudoOutput),
+            "remote_sudo_completed" => Ok(Self::RemoteSudoCompleted),
+            "sftp_copy_started" => Ok(Self::SftpCopyStarted),
+            "sftp_copy_progress" => Ok(Self::SftpCopyProgress),
+            "sftp_copy_completed" => Ok(Self::SftpCopyCompleted),
+            "on_fail_steps_started" => Ok(Self::OnFailStepsStarted),
+            "on_fail_steps_completed" => Ok(Self::OnFailStepsCompleted),
+            "on_fail_step_started" => Ok(Self::OnFailStepStarted),
+            "on_fail_step_completed" => Ok(Self::OnFailStepCompleted),
+            _ => Err(format!("Unknown scenario event: {}", s)),
+        }
+    }
+}
 
 /// A visitor struct for tracing events in scenarios.
 ///
@@ -63,7 +178,7 @@ use tracing::{
 /// visitor.record_u64(&field("steps.total"), 5);
 ///
 /// // Access the collected fields
-/// assert_eq!(visitor.scenario_event.unwrap(), "step_started");
+/// assert_eq!(visitor.scenario_event.as_deref().unwrap(), "step_started");
 /// assert_eq!(visitor.task_description.unwrap(), "Installing dependencies");
 /// assert_eq!(visitor.step_index.unwrap(), 1);
 /// assert_eq!(visitor.steps_total.unwrap(), 5);
@@ -274,7 +389,7 @@ mod tests {
         visitor.record_str(&field("ignored_field"), "Should be ignored");
 
         // Then
-        assert_eq!(visitor.scenario_event.unwrap(), "step_started");
+        assert_eq!(visitor.scenario_event.as_deref().unwrap(), "step_started");
         assert_eq!(visitor.task_description.unwrap(), "Installing dependencies");
         assert_eq!(visitor.remote_sudo_command.unwrap(), "apt-get update");
         assert_eq!(
@@ -338,7 +453,7 @@ mod tests {
         visitor.record_debug(&field("ignored_field"), &"Should be ignored");
 
         // Then
-        assert_eq!(visitor.scenario_event.unwrap(), "step_started");
+        assert_eq!(visitor.scenario_event.as_deref().unwrap(), "step_started");
         assert_eq!(visitor.scenario_error.unwrap(), "Connection failed");
         assert_eq!(visitor.task_description.unwrap(), "Installing dependencies");
         assert_eq!(visitor.remote_sudo_command.unwrap(), "apt-get update");

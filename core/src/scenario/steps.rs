@@ -7,6 +7,7 @@ use crate::{
     config::steps::StepsConfig,
     scenario::{errors::StepsError, step::Step, tasks::Tasks, variables::Variables},
     session::Session,
+    trace::ScenarioEvent,
 };
 use std::ops::{Deref, DerefMut};
 use tracing::{debug, instrument};
@@ -167,14 +168,14 @@ impl Steps {
             return Ok(());
         }
 
-        debug!(scenario.event = "steps_started");
+        debug!(scenario.event = ScenarioEvent::StepsStarted.as_str());
 
         for step in self.iter() {
             step.execute(step, session, variables)
                 .map_err(StepsError::CannotExecuteStep)?;
         }
 
-        debug!(scenario.event = "steps_completed");
+        debug!(scenario.event = ScenarioEvent::StepsCompleted.as_str());
         Ok(())
     }
 }

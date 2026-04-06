@@ -1,6 +1,7 @@
 use crate::{
     scenario::{credentials::Credentials, server::Server},
     session::mock::{MockChannel, MockSftp},
+    trace::ScenarioEvent,
     utils::{ArcMutex, Wrap},
 };
 use std::{net::TcpStream, path::Path};
@@ -326,24 +327,24 @@ impl Session {
     )]
     fn create_session(server: &Server, credentials: &Credentials) -> Result<Session, ssh2::Error> {
         trace!(
-            scenario.event = "create_session_started",
+            scenario.event = ScenarioEvent::CreateSessionStarted.as_str(),
             session.password = credentials.password.as_deref().unwrap_or("<ssh-agent>")
         );
 
         let host = &server.host;
         let port = &server.port;
         let tcp = TcpStream::connect(&format!("{host}:{port}")).map_err(|error| {
-            debug!(scenario.event = "error", scenario.error = %error);
+            debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
             ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO))
         })?;
 
         let mut real_session = ssh2::Session::new().map_err(|error| {
-            debug!(scenario.event = "error", scenario.error = %error);
+            debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
             error
         })?;
         real_session.set_tcp_stream(tcp);
         real_session.handshake().map_err(|error| {
-            debug!(scenario.event = "error", scenario.error = %error);
+            debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
             error
         })?;
 
@@ -354,16 +355,16 @@ impl Session {
             Some(pwd) => real_session
                 .userauth_password(username, pwd)
                 .map_err(|error| {
-                    debug!(scenario.event = "error", scenario.error = %error);
+                    debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                     error
                 })?,
             None => real_session.userauth_agent(username).map_err(|error| {
-                debug!(scenario.event = "error", scenario.error = %error);
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 error
             })?,
         }
 
-        debug!(scenario.event = "create_session_completed");
+        debug!(scenario.event = ScenarioEvent::CreateSessionCompleted.as_str());
 
         Ok(Session {
             inner: SessionType::Real(real_session),
@@ -395,7 +396,7 @@ impl Session {
         credentials: &Credentials,
     ) -> Result<Session, ssh2::Error> {
         trace!(
-            scenario.event = "created_mock_session",
+            scenario.event = ScenarioEvent::CreatedMockSession.as_str(),
             session.password = credentials.password.as_deref().unwrap_or("<ssh-agent>")
         );
 

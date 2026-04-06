@@ -1,6 +1,7 @@
 use crate::{
     scenario::{errors::RemoteSudoError, variables::Variables},
     session::Session,
+    trace::ScenarioEvent,
 };
 use tracing::{debug, instrument};
 
@@ -85,7 +86,7 @@ impl RemoteSudo {
             .map_err(RemoteSudoError::CannotResolveCommandPlaceholders)
             .map_err(|error| {
                 debug!(
-                    scenario.event = "error",
+                    scenario.event = ScenarioEvent::Error.as_str(),
                     scenario.error = %error,
                     remote_sudo.command = self.command
                 );
@@ -94,13 +95,13 @@ impl RemoteSudo {
 
         tracing::Span::current().record("remote_sudo.command", &command);
 
-        debug!(scenario.event = "remote_sudo_started");
+        debug!(scenario.event = ScenarioEvent::RemoteSudoStarted.as_str());
 
         let channel = session
             .channel_session()
             .map_err(RemoteSudoError::CannotEstablishSessionChannel)
             .map_err(|error| {
-                debug!(scenario.event = "error", scenario.error = %error);
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 error
             })?;
 
@@ -108,13 +109,13 @@ impl RemoteSudo {
             .lock()
             .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)
             .map_err(|error| {
-                debug!(scenario.event = "error", scenario.error = %error);
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 error
             })?
             .exec(&command)
             .map_err(RemoteSudoError::CannotExecuteRemoteCommand)
             .map_err(|error| {
-                debug!(scenario.event = "error", scenario.error = %error);
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 error
             })?;
 
@@ -123,18 +124,18 @@ impl RemoteSudo {
             .lock()
             .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)
             .map_err(|error| {
-                debug!(scenario.event = "error", scenario.error = %error);
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 error
             })?
             .read_to_string(&mut output)
             .map_err(RemoteSudoError::CannotReadChannelOutput)
             .map_err(|error| {
-                debug!(scenario.event = "error", scenario.error = %error);
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 error
             })?;
 
         debug!(
-            scenario.event = "remote_sudo_output",
+            scenario.event = ScenarioEvent::RemoteSudoOutput.as_str(),
             remote_sudo.output = output
         );
 
@@ -142,19 +143,19 @@ impl RemoteSudo {
             .lock()
             .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)
             .map_err(|error| {
-                debug!(scenario.event = "error", scenario.error = %error);
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 error
             })?
             .exit_status()
             .map_err(RemoteSudoError::CannotObtainRemoteCommandExitStatus)
             .map_err(|error| {
-                debug!(scenario.event = "error", scenario.error = %error);
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 error
             })?;
 
         if exit_status != 0 {
             debug!(
-                scenario.event = "error",
+                scenario.event = ScenarioEvent::Error.as_str(),
                 scenario.error = "Remote command failed with non-zero exit status",
                 remote_sudo.exit_status = exit_status as i64
             );
@@ -163,7 +164,7 @@ impl RemoteSudo {
             ));
         }
 
-        debug!(scenario.event = "remote_sudo_completed");
+        debug!(scenario.event = ScenarioEvent::RemoteSudoCompleted.as_str());
 
         Ok(())
     }

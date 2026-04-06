@@ -1,7 +1,7 @@
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
 use scenario_rs::{
-    trace::ScenarioEventVisitor,
+    trace::{ScenarioEvent, ScenarioEventVisitor, SCENARIO_EVENT_FIELD},
     utils::{ArcMutex, Wrap},
 };
 use std::{collections::HashMap, fmt};
@@ -93,7 +93,7 @@ where
             .metadata()
             .fields()
             .iter()
-            .any(|f| f.name() == "scenario.event")
+            .any(|f| f.name() == SCENARIO_EVENT_FIELD)
         {
             return;
         }
@@ -102,10 +102,14 @@ where
 
         event.record(&mut visitor);
 
-        let scenario_event = visitor.scenario_event.unwrap();
+        let scenario_event_str = visitor.scenario_event.unwrap();
+        let Ok(scenario_event) = scenario_event_str.parse::<ScenarioEvent>() else {
+            error!("Unrecognized event type: {}", scenario_event_str);
+            return;
+        };
 
-        match scenario_event.as_str() {
-            "error" => {
+        match scenario_event {
+            ScenarioEvent::Error => {
                 let mut bars = self.progress_bars.lock().unwrap();
                 for (_, bar) in bars.drain() {
                     bar.finish_and_clear();
@@ -117,13 +121,13 @@ where
                     error!("{}", "Scenario execution error".red());
                 }
             }
-            "scenario_started" => {
+            ScenarioEvent::ScenarioStarted => {
                 info!("{}", "Scenario started...".bright_blue());
             }
-            "scenario_completed" => {
+            ScenarioEvent::ScenarioCompleted => {
                 info!("{}", "Scenario completed successfully!".green());
             }
-            "step_started" => {
+            ScenarioEvent::StepStarted => {
                 if let (Some(index), Some(total), Some(desc)) = (
                     visitor.step_index,
                     visitor.steps_total,
@@ -140,12 +144,12 @@ where
                     );
                 }
             }
-            "remote_sudo_started" => {
+            ScenarioEvent::RemoteSudoStarted => {
                 if let Some(cmd) = visitor.remote_sudo_command {
                     info!("{}=[{}]", "CMD".yellow(), cmd.bright_cyan());
                 }
             }
-            "remote_sudo_output" => {
+            ScenarioEvent::RemoteSudoOutput => {
                 if let Some(output) = visitor.remote_sudo_output {
                     let trimmed = output.trim();
 
@@ -156,7 +160,7 @@ where
                     }
                 }
             }
-            "sftp_copy_started" => {
+            ScenarioEvent::SftpCopyStarted => {
                 if let (Some(source), Some(destination)) =
                     (visitor.sftp_copy_source, visitor.sftp_copy_destination)
                 {
@@ -166,7 +170,7 @@ where
                     self.get_or_create_progress_bar(&sftp_id);
                 }
             }
-            "sftp_copy_completed" => {
+            ScenarioEvent::SftpCopyCompleted => {
                 if let (Some(source), Some(destination)) =
                     (visitor.sftp_copy_source, visitor.sftp_copy_destination)
                 {
@@ -174,7 +178,7 @@ where
                     self.finish_progress_bar(&sftp_id, "SFTP copy completed");
                 }
             }
-            "sftp_copy_progress" => {
+            ScenarioEvent::SftpCopyProgress => {
                 if let (Some(current), Some(total), Some(source), Some(destination)) = (
                     visitor.sftp_copy_progress_current,
                     visitor.sftp_copy_progress_total,
@@ -189,13 +193,13 @@ where
                     pb.set_position(current);
                 }
             }
-            "on_fail_steps_started" => {
+            ScenarioEvent::OnFailStepsStarted => {
                 warn!("{}", "On-fail steps started...".red());
             }
-            "on_fail_steps_completed" => {
+            ScenarioEvent::OnFailStepsCompleted => {
                 info!("{}", "On-fail steps completed".green());
             }
-            "on_fail_step_started" => {
+            ScenarioEvent::OnFailStepStarted => {
                 if let (Some(index), Some(total), Some(desc)) = (
                     visitor.on_fail_step_index,
                     visitor.on_fail_steps_total,
@@ -212,17 +216,16 @@ where
                     );
                 }
             }
-            "create_session_started" => {}
-            "created_mock_session" => {}
-            "session_created" => {}
-            "steps_started" => {}
-            "step_completed" => {}
-            "remote_sudo_completed" => {}
-            "steps_completed" => {}
-            "on_fail_step_completed" => {}
-            _ => {
-                error!("Unrecognized event type: {}", scenario_event);
-            }
+            ScenarioEvent::CreateSessionStarted
+            | ScenarioEvent::CreateSessionCompleted
+            | ScenarioEvent::CreatedMockSession
+            | ScenarioEvent::SessionCreated
+            | ScenarioEvent::StepsStarted
+            | ScenarioEvent::StepCompleted
+            | ScenarioEvent::RemoteSudoCompleted
+            | ScenarioEvent::StepsCompleted
+            | ScenarioEvent::OnFailStepCompleted
+            | ScenarioEvent::ScenarioFailed => {}
         }
     }
 }
@@ -230,6 +233,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::trace::ScenarioEventLayer;
+    use scenario_rs::trace::ScenarioEvent;
     use tracing::{error, info, subscriber};
     use tracing_subscriber::{layer::SubscriberExt, Registry};
 
@@ -310,7 +314,7 @@ mod tests {
         let _guard = subscriber::set_default(subscriber);
 
         // When
-        error!(scenario.event = "error", scenario.error = "Test error");
+        error!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = "Test error");
 
         // Then
         assert_eq!(progress_bars.lock().unwrap().len(), 0);
@@ -326,7 +330,7 @@ mod tests {
 
         // When
         info!(
-            scenario.event = "sftp_copy_started",
+            scenario.event = ScenarioEvent::SftpCopyStarted.as_str(),
             sftp_copy.source = "/local/file.txt",
             sftp_copy.destination = "/remote/file.txt"
         );
@@ -348,7 +352,7 @@ mod tests {
 
         // When
         info!(
-            scenario.event = "sftp_copy_progress",
+            scenario.event = ScenarioEvent::SftpCopyProgress.as_str(),
             sftp_copy.source = "/local/file.txt",
             sftp_copy.destination = "/remote/file.txt",
             sftp_copy.progress.current = 50u64,
@@ -373,7 +377,7 @@ mod tests {
 
         // When
         info!(
-            scenario.event = "sftp_copy_completed",
+            scenario.event = ScenarioEvent::SftpCopyCompleted.as_str(),
             sftp_copy.source = "/local/file.txt",
             sftp_copy.destination = "/remote/file.txt"
         );

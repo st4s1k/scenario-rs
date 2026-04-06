@@ -11,6 +11,7 @@ use crate::{
             defined::DefinedVariables, required::RequiredVariables, resolved::ResolvedVariables,
         },
     },
+    trace::ScenarioEvent,
     utils::{HasPlaceholders, HasText, IsBlank, IsNotEmpty},
 };
 use std::{collections::HashMap, ops::Deref};
@@ -237,7 +238,7 @@ impl Variables {
             .filter(|(_, value)| value.is_blank())
             .for_each(|(key, _)| {
                 debug!(
-                    scenario.event = "error",
+                    scenario.event = ScenarioEvent::Error.as_str(),
                     scenario.error = format!("Variable '{}' has a blank value", key)
                 );
             });

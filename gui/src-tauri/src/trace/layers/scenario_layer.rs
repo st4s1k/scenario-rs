@@ -2,7 +2,7 @@ use crate::{
     trace::{frontend_event_handler::StepState, layers::EventLayer, AppEvent},
     utils::SendEvent,
 };
-use scenario_rs::trace::ScenarioEventVisitor;
+use scenario_rs::trace::{ScenarioEvent, ScenarioEventVisitor};
 use std::sync::mpsc::Sender;
 use tracing::span::Record;
 use tracing::{error, span::Attributes, Event, Id, Subscriber};
@@ -59,9 +59,13 @@ impl EventLayer for ScenarioEventLayer {
 
         const SCENARIO_PREFIX: &str = "[SCN]";
 
-        if let Some(scenario_event) = visitor.scenario_event {
-            match scenario_event.as_str() {
-                "error" => {
+        if let Some(scenario_event_str) = visitor.scenario_event {
+            let Ok(scenario_event) = scenario_event_str.parse::<ScenarioEvent>() else {
+                error!("Unrecognized event type: {}", scenario_event_str);
+                return;
+            };
+            match scenario_event {
+                ScenarioEvent::Error => {
                     if let Some(scenario_error) = visitor.scenario_error {
                         if let (Some(step_index), Some(steps_total)) =
                             (visitor.step_index, visitor.steps_total)
@@ -115,28 +119,28 @@ impl EventLayer for ScenarioEventLayer {
                         )));
                     }
                 }
-                "scenario_started" => {
+                ScenarioEvent::ScenarioStarted => {
                     self.sender.send_event(AppEvent::LogMessage(format!(
                         "{} Scenario started...",
                         SCENARIO_PREFIX
                     )));
                     self.sender.send_event(AppEvent::Execution(true));
                 }
-                "scenario_completed" => {
+                ScenarioEvent::ScenarioCompleted => {
                     self.sender.send_event(AppEvent::LogMessage(format!(
                         "{} Scenario completed successfully!",
                         SCENARIO_PREFIX
                     )));
                     self.sender.send_event(AppEvent::Execution(false));
                 }
-                "scenario_failed" => {
+                ScenarioEvent::ScenarioFailed => {
                     self.sender.send_event(AppEvent::LogMessage(format!(
                         "{} Scenario failed",
                         SCENARIO_PREFIX
                     )));
                     self.sender.send_event(AppEvent::Execution(false));
                 }
-                "step_started" => {
+                ScenarioEvent::StepStarted => {
                     if let (Some(step_index), Some(steps_total), Some(task_description)) = (
                         visitor.step_index,
                         visitor.steps_total,
@@ -156,7 +160,7 @@ impl EventLayer for ScenarioEventLayer {
                         });
                     }
                 }
-                "step_completed" => {
+                ScenarioEvent::StepCompleted => {
                     if let (Some(step_index), Some(steps_total)) =
                         (visitor.step_index, visitor.steps_total)
                     {
@@ -167,7 +171,7 @@ impl EventLayer for ScenarioEventLayer {
                         });
                     }
                 }
-                "remote_sudo_started" => {
+                ScenarioEvent::RemoteSudoStarted => {
                     if let (Some(step_index), Some(steps_total), Some(remote_sudo_command)) = (
                         visitor.step_index,
                         visitor.steps_total,
@@ -196,7 +200,7 @@ impl EventLayer for ScenarioEventLayer {
                         }
                     }
                 }
-                "remote_sudo_output" => {
+                ScenarioEvent::RemoteSudoOutput => {
                     if let (
                         Some(step_index),
                         Some(steps_total),
@@ -246,7 +250,7 @@ impl EventLayer for ScenarioEventLayer {
                         self.sender.send_event(AppEvent::LogPlainMessage(remote_sudo_output));
                     }
                 }
-                "sftp_copy_started" => {
+                ScenarioEvent::SftpCopyStarted => {
                     if let (
                         Some(step_index),
                         Some(steps_total),
@@ -297,7 +301,7 @@ impl EventLayer for ScenarioEventLayer {
                         }
                     }
                 }
-                "sftp_copy_completed" => {
+                ScenarioEvent::SftpCopyCompleted => {
                     if let (Some(step_index), Some(steps_total)) =
                         (visitor.step_index, visitor.steps_total)
                     {
@@ -322,7 +326,7 @@ impl EventLayer for ScenarioEventLayer {
                         }
                     }
                 }
-                "sftp_copy_progress" => {
+                ScenarioEvent::SftpCopyProgress => {
                     if let (
                         Some(sftp_copy_progress_current),
                         Some(sftp_copy_progress_total),
@@ -383,7 +387,7 @@ impl EventLayer for ScenarioEventLayer {
                         }
                     }
                 }
-                "on_fail_steps_started" => {
+                ScenarioEvent::OnFailStepsStarted => {
                     if let (Some(step_index), Some(steps_total), Some(on_fail_steps_total)) = (
                         visitor.step_index,
                         visitor.steps_total,
@@ -398,7 +402,7 @@ impl EventLayer for ScenarioEventLayer {
                         )));
                     }
                 }
-                "on_fail_steps_completed" => {
+                ScenarioEvent::OnFailStepsCompleted => {
                     if let (Some(step_index), Some(steps_total), Some(on_fail_steps_total)) = (
                         visitor.step_index,
                         visitor.steps_total,
@@ -413,7 +417,7 @@ impl EventLayer for ScenarioEventLayer {
                         )));
                     }
                 }
-                "on_fail_step_started" => {
+                ScenarioEvent::OnFailStepStarted => {
                     if let (
                         Some(step_index),
                         Some(steps_total),
@@ -445,7 +449,7 @@ impl EventLayer for ScenarioEventLayer {
                         });
                     }
                 }
-                "on_fail_step_completed" => {
+                ScenarioEvent::OnFailStepCompleted => {
                     if let (
                         Some(step_index),
                         Some(steps_total),
@@ -466,15 +470,13 @@ impl EventLayer for ScenarioEventLayer {
                         });
                     }
                 }
-                "create_session_started" => {}
-                "created_mock_session" => {}
-                "session_created" => {}
-                "steps_started" => {}
-                "remote_sudo_completed" => {}
-                "steps_completed" => {}
-                _ => {
-                    error!("Unrecognized event type: {}", scenario_event);
-                }
+                ScenarioEvent::CreateSessionStarted
+                | ScenarioEvent::CreateSessionCompleted
+                | ScenarioEvent::CreatedMockSession
+                | ScenarioEvent::SessionCreated
+                | ScenarioEvent::StepsStarted
+                | ScenarioEvent::RemoteSudoCompleted
+                | ScenarioEvent::StepsCompleted => {}
             }
         }
     }

@@ -9,6 +9,7 @@ use crate::{
         errors::StepError, on_fail_steps::OnFailSteps, task::Task, tasks::Tasks, variables::Variables,
     },
     session::Session,
+    trace::ScenarioEvent,
 };
 use tracing::{debug, instrument};
 
@@ -161,7 +162,7 @@ impl Step {
         let description = step.task.description().to_string();
 
         debug!(
-            scenario.event = "step_started",
+            scenario.event = ScenarioEvent::StepStarted.as_str(),
             task.description = description
         );
 
@@ -174,7 +175,7 @@ impl Step {
                     StepError::CannotExecuteRemoteSudoCommand(error, error_message.clone())
                 })
                 .map_err(|error| {
-                    debug!(scenario.event = "error", scenario.error = %error);
+                    debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                     error
                 }),
             Task::SftpCopy { sftp_copy, .. } => sftp_copy
@@ -183,7 +184,7 @@ impl Step {
                     StepError::CannotExecuteSftpCopyCommand(error, error_message.clone())
                 })
                 .map_err(|error| {
-                    debug!(scenario.event = "error", scenario.error = %error);
+                    debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                     error
                 }),
         };
@@ -193,7 +194,7 @@ impl Step {
             return Err(error);
         }
 
-        debug!(scenario.event = "step_completed");
+        debug!(scenario.event = ScenarioEvent::StepCompleted.as_str());
         Ok(())
     }
 
@@ -206,7 +207,7 @@ impl Step {
             .execute(session, variables)
             .map_err(StepError::CannotExecuteOnFailSteps)
             .map_err(|error| {
-                debug!(scenario.event = "error", scenario.error = %error);
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 error
             })
     }
