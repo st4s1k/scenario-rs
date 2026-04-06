@@ -14,61 +14,26 @@ use std::{
 
 use crate::config::variables::required::{RequiredVariablesConfig, VariableTypeConfig};
 
-/// A collection of required variables for a scenario.
-///
-/// This struct wraps a HashMap of variable names to `RequiredVariable` instances,
-/// providing methods for managing these variables and handling derived variables.
-///
-/// # Examples
-///
-/// ```
-/// use scenario_rs_core::config::variables::required::{RequiredVariablesConfig, RequiredVariableConfig, VariableTypeConfig};
-/// use scenario_rs_core::scenario::variables::required::RequiredVariables;
-/// use std::collections::HashMap;
-///
-/// // Create a configuration with one string variable
-/// let mut config_map = HashMap::new();
-/// config_map.insert(
-///     "username".to_string(),
-///     RequiredVariableConfig {
-///         label: Some("Username".to_string()),
-///         var_type: VariableTypeConfig::String,
-///         read_only: false,
-///     }
-/// );
-/// let config = RequiredVariablesConfig::from(config_map);
-///
-/// // Create RequiredVariables from the config
-/// let variables = RequiredVariables::from(&config);
-///
-/// // Access the variable
-/// let username = variables.get("username").unwrap();
-/// assert_eq!(username.label(), "Username");
-/// ```
+/// A collection of required (runtime-provided) variables for a scenario.
 #[derive(Clone, Debug, Default)]
 pub struct RequiredVariables(HashMap<String, RequiredVariable>);
 
 impl Deref for RequiredVariables {
     type Target = HashMap<String, RequiredVariable>;
 
-    /// Dereferences to the underlying HashMap for read operations.
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
 impl DerefMut for RequiredVariables {
-    /// Dereferences to the underlying HashMap for mutable operations.
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
 impl From<&RequiredVariablesConfig> for RequiredVariables {
-    /// Creates a `RequiredVariables` collection from a configuration.
-    ///
-    /// Initializes variables with appropriate types and default values based on
-    /// the configuration. Timestamp variables are initialized with the current time.
+    /// Creates `RequiredVariables` from config. Timestamp variables are initialized with current time.
     fn from(config: &RequiredVariablesConfig) -> Self {
         let mut required_variables = HashMap::<String, RequiredVariable>::new();
 
@@ -100,56 +65,15 @@ impl From<&RequiredVariablesConfig> for RequiredVariables {
 }
 
 impl RequiredVariables {
-    /// Creates a map of variable names to their values.
-    ///
-    /// This is useful when you need only the values without the additional metadata.
-    ///
-    /// # Returns
-    ///
-    /// A HashMap where keys are variable names and values are the corresponding variable values.
+    /// Creates a map of variable names to their current values.
     pub fn value_map(&self) -> HashMap<String, String> {
         self.iter()
             .map(|(key, var)| (key.clone(), var.value.clone()))
             .collect()
     }
 
-    /// Updates existing variables with new values and adds derived variables.
-    ///
-    /// For path variables, automatically creates basename variables when the path
-    /// points to a file. These basename variables are read-only and have the format
-    /// "basename:{original_variable_name}".
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use scenario_rs_core::config::variables::required::{RequiredVariablesConfig, RequiredVariableConfig, VariableTypeConfig};
-    /// # use scenario_rs_core::scenario::variables::required::RequiredVariables;
-    /// # use std::collections::HashMap;
-    ///
-    /// // Create a configuration with a path variable
-    /// let mut config_map = HashMap::new();
-    /// config_map.insert(
-    ///     "file_path".to_string(),
-    ///     RequiredVariableConfig {
-    ///         label: Some("File Path".to_string()),
-    ///         var_type: VariableTypeConfig::Path,
-    ///         read_only: false,
-    ///     }
-    /// );
-    /// let config = RequiredVariablesConfig::from(config_map);
-    ///
-    /// // Create RequiredVariables from the config
-    /// let mut variables = RequiredVariables::from(&config);
-    ///
-    /// // Update the file path variable
-    /// let mut updates = HashMap::new();
-    /// updates.insert("file_path".to_string(), "/temp/data.txt".to_string());
-    /// variables.upsert(updates);
-    ///
-    /// // A derived basename variable should be created
-    /// assert!(variables.contains_key("basename:file_path"));
-    /// assert_eq!(variables.get("basename:file_path").unwrap().value(), "data.txt");
-    /// ```
+    /// Updates variables with new values. For Path variables, automatically derives
+    /// read-only `basename:{name}` variables when the path points to a file.
     pub fn upsert(&mut self, variables: HashMap<String, String>) {
         let mut new_variables = HashMap::new();
 
@@ -210,7 +134,6 @@ pub struct RequiredVariable {
 impl Deref for RequiredVariable {
     type Target = String;
 
-    /// Dereferences to the underlying value of the variable.
     fn deref(&self) -> &Self::Target {
         &self.value
     }
