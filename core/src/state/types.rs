@@ -109,3 +109,154 @@ pub enum StateDiff {
         error: String,
     },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_execution_state() -> ExecutionState {
+        ExecutionState {
+            status: ExecutionStatus::Running,
+            steps: vec![StepExecState {
+                index: 0,
+                task_description: "deploy".into(),
+                status: StepStatus::Completed,
+                progress: Some(TaskProgress::SftpCopy {
+                    source: "/tmp/a".into(),
+                    destination: "/opt/b".into(),
+                    bytes_transferred: 50,
+                    bytes_total: 100,
+                }),
+                output: "done\n".into(),
+                errors: vec!["warning".into()],
+                on_fail_steps: vec![OnFailStepExecState {
+                    index: 0,
+                    task_description: "rollback".into(),
+                    status: StepStatus::Pending,
+                    progress: None,
+                    output: String::new(),
+                    errors: Vec::new(),
+                }],
+            }],
+        }
+    }
+
+    #[test]
+    fn execution_state_round_trip() {
+        let state = sample_execution_state();
+        let json = serde_json::to_string(&state).unwrap();
+        let restored: ExecutionState = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(restored.status, ExecutionStatus::Running);
+        assert_eq!(restored.steps.len(), 1);
+        assert_eq!(restored.steps[0].status, StepStatus::Completed);
+        assert_eq!(restored.steps[0].output, "done\n");
+        assert_eq!(restored.steps[0].errors, vec!["warning"]);
+        assert_eq!(restored.steps[0].on_fail_steps.len(), 1);
+        assert_eq!(restored.steps[0].on_fail_steps[0].status, StepStatus::Pending);
+    }
+
+    #[test]
+    fn task_progress_serde_has_type_tag() {
+        let p = TaskProgress::SftpCopy {
+            source: "a".into(),
+            destination: "b".into(),
+            bytes_transferred: 10,
+            bytes_total: 20,
+        };
+        let json = serde_json::to_value(&p).unwrap();
+        assert_eq!(json["type"], "SftpCopy");
+
+        let p2 = TaskProgress::RemoteSudo {
+            command: "ls".into(),
+            output: "file.txt".into(),
+        };
+        let json2 = serde_json::to_value(&p2).unwrap();
+        assert_eq!(json2["type"], "RemoteSudo");
+    }
+
+    #[test]
+    fn state_diff_serde_has_kind_tag() {
+        let cases = vec![
+            (StateDiff::ExecutionStatusChanged { status: ExecutionStatus::Completed }, "ExecutionStatusChanged"),
+            (StateDiff::StepStatusChanged { step_index: 0, status: StepStatus::Running }, "StepStatusChanged"),
+            (StateDiff::StepOutputAppended { step_index: 1, text: "hello".into() }, "StepOutputAppended"),
+            (StateDiff::StepErrorAdded { step_index: 0, error: "boom".into() }, "StepErrorAdded"),
+            (StateDiff::OnFailStepStatusChanged { step_index: 0, on_fail_step_index: 1, status: StepStatus::Failed }, "OnFailStepStatusChanged"),
+            (StateDiff::OnFailStepOutputAppended { step_index: 0, on_fail_step_index: 0, text: "out".into() }, "OnFailStepOutputAppended"),
+            (StateDiff::OnFailStepErrorAdded { step_index: 0, on_fail_step_index: 0, error: "err".into() }, "OnFailStepErrorAdded"),
+        ];
+
+        for (diff, expected_kind) in cases {
+            let json = serde_json::to_value(&diff).unwrap();
+            assert_eq!(json["kind"], expected_kind, "wrong kind tag for {:?}", diff);
+
+            // Round-trip
+            let restored: StateDiff = serde_json::from_value(json).unwrap();
+            let json2 = serde_json::to_value(&restored).unwrap();
+            assert_eq!(json2["kind"], expected_kind);
+        }
+    }
+
+    #[test]
+    fn step_progress_diff_round_trip() {
+        let diff = StateDiff::StepProgressUpdated {
+            step_index: 2,
+            progress: TaskProgress::SftpCopy {
+                source: "src".into(),
+                destination: "dst".into(),
+                bytes_transferred: 42,
+                bytes_total: 100,
+            },
+        };
+        let json = serde_json::to_string(&diff).unwrap();
+        let restored: StateDiff = serde_json::from_str(&json).unwrap();
+        let json2 = serde_json::to_value(&restored).unwrap();
+        assert_eq!(json2["kind"], "StepProgressUpdated");
+        assert_eq!(json2["step_index"], 2);
+        assert_eq!(json2["progress"]["type"], "SftpCopy");
+        assert_eq!(json2["progress"]["bytes_transferred"], 42);
+    }
+
+    #[test]
+    fn on_fail_progress_diff_round_trip() {
+        let diff = StateDiff::OnFailStepProgressUpdated {
+            step_index: 0,
+            on_fail_step_index: 3,
+            progress: TaskProgress::RemoteSudo {
+                command: "restart".into(),
+                output: "ok".into(),
+            },
+        };
+        let json = serde_json::to_string(&diff).unwrap();
+        let restored: StateDiff = serde_json::from_str(&json).unwrap();
+        let json2 = serde_json::to_value(&restored).unwrap();
+        assert_eq!(json2["kind"], "OnFailStepProgressUpdated");
+        assert_eq!(json2["on_fail_step_index"], 3);
+        assert_eq!(json2["progress"]["command"], "restart");
+    }
+
+    #[test]
+    fn execution_status_failed_serde() {
+        let status = ExecutionStatus::Failed { error: "connection lost".into() };
+        let json = serde_json::to_value(&status).unwrap();
+        let restored: ExecutionStatus = serde_json::from_value(json).unwrap();
+        assert_eq!(restored, ExecutionStatus::Failed { error: "connection lost".into() });
+    }
+
+    #[test]
+    fn all_step_statuses_serde() {
+        let statuses = vec![
+            StepStatus::Pending,
+            StepStatus::Running,
+            StepStatus::Completed,
+            StepStatus::Failed,
+            StepStatus::Skipped,
+        ];
+        for s in statuses {
+            let json = serde_json::to_value(&s).unwrap();
+            let restored: StepStatus = serde_json::from_value(json).unwrap();
+            assert_eq!(restored, s);
+        }
+    }
+}
