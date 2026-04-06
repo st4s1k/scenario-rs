@@ -58,7 +58,6 @@ impl TryFrom<PartialVariablesConfig> for VariablesConfig {
     type Error = ScenarioConfigError;
 
     fn try_from(partial: PartialVariablesConfig) -> Result<Self, Self::Error> {
-        // Using explicit match pattern for consistency with other similar implementations
         let required = match partial.required {
             Some(req) => req,
             None => RequiredVariablesConfig::default(),
