@@ -16,20 +16,47 @@ export class ExecutionStateService {
   });
 
   private unlistenDiff?: UnlistenFn;
+  private hydrating = false;
+  private pendingDiffs: StateDiff[][] = [];
 
   async init(): Promise<void> {
-    const state = await invoke<ExecutionState | null>('get_execution_state');
-    if (state) {
-      this.executionState.set(state);
-    }
+    await this.hydrate();
 
     this.unlistenDiff = await listen<StateDiff[]>('execution-diff', (event) => {
+      if (!this.executionState()) {
+        // State not yet available — queue diffs and hydrate
+        this.pendingDiffs.push(event.payload);
+        this.hydrateAndFlush();
+        return;
+      }
       this.applyDiffs(event.payload);
     });
   }
 
   async destroy(): Promise<void> {
     this.unlistenDiff?.();
+  }
+
+  private async hydrate(): Promise<void> {
+    const state = await invoke<ExecutionState | null>('get_execution_state');
+    if (state) {
+      this.executionState.set(state);
+    }
+  }
+
+  private async hydrateAndFlush(): Promise<void> {
+    if (this.hydrating) return;
+    this.hydrating = true;
+    try {
+      await this.hydrate();
+      // Apply any diffs that arrived while we were fetching
+      const queued = this.pendingDiffs.splice(0);
+      for (const batch of queued) {
+        this.applyDiffs(batch);
+      }
+    } finally {
+      this.hydrating = false;
+    }
   }
 
   private applyDiffs(diffs: StateDiff[]): void {
