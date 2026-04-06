@@ -26,51 +26,59 @@ args = ["test"]
 # --- Frontend ---
 
 [tasks.npm-install]
+workspace = false
 description = "Install frontend dependencies"
 cwd = "${GUI_DIR}"
-command = "npm"
-args = ["install"]
+script_runner = "@shell"
+script = ["npm install"]
 
 [tasks.ng-build]
+workspace = false
 description = "Build Angular frontend"
 dependencies = ["npm-install"]
 cwd = "${GUI_DIR}"
-command = "npm"
-args = ["run", "build"]
+script_runner = "@shell"
+script = ["npm run build"]
 
 # --- Tauri ---
 
 [tasks.tauri-dev]
+workspace = false
 description = "Run GUI in development mode"
 dependencies = ["npm-install"]
 cwd = "${GUI_DIR}"
-command = "npm"
-args = ["run", "tauri", "dev"]
+script_runner = "@shell"
+script = ["npm run tauri dev"]
 
 [tasks.tauri-build]
+workspace = false
 description = "Build GUI (release)"
 dependencies = ["npm-install"]
 cwd = "${GUI_DIR}"
-command = "npm"
-args = ["run", "tauri", "build"]
+script_runner = "@shell"
+script = ["npm run tauri build"]
 
 [tasks.tauri-build-debug]
+workspace = false
 description = "Build GUI (debug)"
 dependencies = ["npm-install"]
 cwd = "${GUI_DIR}"
-command = "npm"
-args = ["run", "tauri", "build", "--", "--debug"]
+script_runner = "@shell"
+script = ["npm run tauri build -- --debug"]
 
 # --- Composite ---
 
 [tasks.build-all]
+workspace = false
 description = "Build everything (Rust workspace + GUI debug)"
 dependencies = ["build", "tauri-build-debug"]
 
 [tasks.build-all-release]
+workspace = false
 description = "Build everything (Rust workspace + GUI release)"
 dependencies = ["build-release", "tauri-build"]
 
 [tasks.verify]
+workspace = false
 description = "Full verification: check + test + Angular build"
 dependencies = ["check", "test", "ng-build"]
