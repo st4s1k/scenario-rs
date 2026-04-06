@@ -215,6 +215,32 @@ https://github.com/user-attachments/assets/184b3300-50c1-4934-962a-7407656dbe38
 
 </details>
 
+## Build with cargo-make
+
+All build tasks can be run from the project root using [cargo-make](https://github.com/sagiegurari/cargo-make).
+
+### Setup
+
+```
+cargo install cargo-make
+```
+
+### Available Tasks
+
+| Command | Description |
+|---|---|
+| `cargo make check` | Run `cargo check` on the workspace |
+| `cargo make build` | Build the workspace (debug) |
+| `cargo make build-release` | Build the workspace (release) |
+| `cargo make test` | Run all tests |
+| `cargo make ng-build` | Build Angular frontend |
+| `cargo make tauri-dev` | Run GUI in development mode |
+| `cargo make tauri-build` | Build GUI (release) |
+| `cargo make tauri-build-debug` | Build GUI (debug) |
+| `cargo make build-all` | Build everything (Rust + GUI debug) |
+| `cargo make build-all-release` | Build everything (Rust + GUI release) |
+| `cargo make verify` | Full verification: check + test + Angular build |
+
 ## DIY
 
 ### ✨ [gui]

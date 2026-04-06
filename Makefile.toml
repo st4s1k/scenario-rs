@@ -1,0 +1,76 @@
+[env]
+GUI_DIR = "gui"
+
+# --- Rust workspace ---
+
+[tasks.check]
+description = "Run cargo check on the workspace"
+command = "cargo"
+args = ["check"]
+
+[tasks.build]
+description = "Build the workspace (debug)"
+command = "cargo"
+args = ["build"]
+
+[tasks.build-release]
+description = "Build the workspace (release)"
+command = "cargo"
+args = ["build", "--release"]
+
+[tasks.test]
+description = "Run all tests"
+command = "cargo"
+args = ["test"]
+
+# --- Frontend ---
+
+[tasks.npm-install]
+description = "Install frontend dependencies"
+cwd = "${GUI_DIR}"
+command = "npm"
+args = ["install"]
+
+[tasks.ng-build]
+description = "Build Angular frontend"
+dependencies = ["npm-install"]
+cwd = "${GUI_DIR}"
+command = "npm"
+args = ["run", "build"]
+
+# --- Tauri ---
+
+[tasks.tauri-dev]
+description = "Run GUI in development mode"
+dependencies = ["npm-install"]
+cwd = "${GUI_DIR}"
+command = "npm"
+args = ["run", "tauri", "dev"]
+
+[tasks.tauri-build]
+description = "Build GUI (release)"
+dependencies = ["npm-install"]
+cwd = "${GUI_DIR}"
+command = "npm"
+args = ["run", "tauri", "build"]
+
+[tasks.tauri-build-debug]
+description = "Build GUI (debug)"
+dependencies = ["npm-install"]
+cwd = "${GUI_DIR}"
+command = "npm"
+args = ["run", "tauri", "build", "--", "--debug"]
+
+# --- Composite ---
+
+[tasks.build-all]
+description = "Build everything (Rust workspace + GUI debug)"
+dependencies = ["build", "tauri-build-debug"]
+
+[tasks.build-all-release]
+description = "Build everything (Rust workspace + GUI release)"
+dependencies = ["build-release", "tauri-build"]
+
+[tasks.verify]
+description = "Full verification: check + test + Angular build"
+dependencies = ["check", "test", "ng-build"]
