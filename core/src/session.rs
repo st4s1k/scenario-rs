@@ -28,13 +28,12 @@ pub trait Write {
 
 /// SSH session to a remote server. Supports real connections and mock mode for testing.
 pub struct Session {
-    pub(crate) inner: SessionType,
+    pub inner: SessionType,
 }
 
-pub(crate) enum SessionType {
+pub enum SessionType {
     Real(ssh2::Session),
     Mock,
-    #[cfg(test)]
     Test {
         channel: ArcMutex<dyn Channel + Send + Sync>,
         sftp: ArcMutex<dyn Sftp + Send + Sync>,
@@ -60,7 +59,6 @@ impl Session {
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 Ok(ArcMutex::wrap(MockChannel))
             }
-            #[cfg(test)]
             SessionType::Test { channel, .. } => Ok(ArcMutex::clone(channel)),
         }
     }
@@ -74,7 +72,6 @@ impl Session {
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 Ok(ArcMutex::wrap(MockSftp))
             }
-            #[cfg(test)]
             SessionType::Test { sftp, .. } => Ok(ArcMutex::clone(sftp)),
         }
     }

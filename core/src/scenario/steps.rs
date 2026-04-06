@@ -46,6 +46,12 @@ impl TryFrom<(&Tasks, &StepsConfig)> for Steps {
     }
 }
 
+impl From<Vec<Step>> for Steps {
+    fn from(steps: Vec<Step>) -> Self {
+        Steps(steps)
+    }
+}
+
 impl Default for Steps {
     fn default() -> Self {
         Steps(Vec::new())
@@ -59,7 +65,7 @@ impl Steps {
         skip_all,
         fields(steps.total = self.len())
     )]
-    pub(crate) fn execute(
+    pub fn execute(
         &self,
         session: &Session,
         variables: &Variables,

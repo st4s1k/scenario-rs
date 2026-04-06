@@ -18,9 +18,9 @@ use tracing::{debug, instrument};
 /// A single step in a scenario: a task with optional on-fail recovery steps.
 #[derive(Clone, Debug)]
 pub struct Step {
-    pub(crate) index: usize,
-    pub(crate) task: Task,
-    pub(crate) on_fail_steps: OnFailSteps,
+    pub index: usize,
+    pub task: Task,
+    pub on_fail_steps: OnFailSteps,
 }
 
 impl TryFrom<(usize, &Tasks, &StepConfig)> for Step {

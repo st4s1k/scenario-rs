@@ -50,6 +50,12 @@ impl TryFrom<(&Tasks, &OnFailStepsConfig)> for OnFailSteps {
     }
 }
 
+impl From<Vec<OnFailStep>> for OnFailSteps {
+    fn from(steps: Vec<OnFailStep>) -> Self {
+        OnFailSteps(steps)
+    }
+}
+
 impl Default for OnFailSteps {
     fn default() -> Self {
         OnFailSteps(Vec::new())

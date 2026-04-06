@@ -10,7 +10,7 @@ use tracing::{debug, instrument};
 /// A remote command to be executed with sudo privileges.
 #[derive(Debug, Clone)]
 pub struct RemoteSudo {
-    pub(crate) command: String,
+    pub command: String,
 }
 
 impl RemoteSudo {
