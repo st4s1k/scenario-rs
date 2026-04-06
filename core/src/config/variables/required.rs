@@ -1,7 +1,4 @@
-//! Configuration for required variables in scenarios.
-//!
-//! This module provides configuration structures for variables that must be
-//! provided by users at runtime, with metadata about their type and presentation.
+//! Configuration for required variables that must be provided at runtime.
 
 use serde::Deserialize;
 use std::{
@@ -9,164 +6,32 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-/// Configuration for required variables in a scenario.
-///
-/// This struct represents a collection of variables that must be provided
-/// by users at runtime. Each variable includes metadata about its type,
-/// display label, and whether it's read-only.
-///
-/// # Examples
-///
-/// Creating an empty configuration:
-///
-/// ```
-/// use scenario_rs_core::config::variables::required::RequiredVariablesConfig;
-///
-/// let config = RequiredVariablesConfig::default();
-/// assert!(config.is_empty());
-/// ```
-///
-/// Creating a configuration programmatically:
-///
-/// ```
-/// use std::collections::HashMap;
-/// use scenario_rs_core::config::variables::required::{
-///     RequiredVariablesConfig, RequiredVariableConfig, VariableTypeConfig
-/// };
-///
-/// // Create configuration for a server IP variable
-/// let server_ip_config = RequiredVariableConfig {
-///     var_type: VariableTypeConfig::String,
-///     label: Some("Server IP Address".to_string()),
-///     read_only: false,
-/// };
-///
-/// // Create configuration for a backup path variable
-/// let backup_path_config = RequiredVariableConfig {
-///     var_type: VariableTypeConfig::Path,
-///     label: Some("Backup Directory".to_string()),
-///     read_only: true,
-/// };
-///
-/// // Create a HashMap of variables
-/// let mut variables = HashMap::new();
-/// variables.insert("server_ip".to_string(), server_ip_config);
-/// variables.insert("backup_path".to_string(), backup_path_config);
-///
-/// // Create the configuration
-/// let required_vars = RequiredVariablesConfig::from(variables);
-///
-/// assert_eq!(required_vars.len(), 2);
-/// assert!(required_vars.contains_key("server_ip"));
-/// assert!(required_vars.contains_key("backup_path"));
-/// ```
-///
-/// In a TOML configuration file:
-/// ```toml
-/// [variables.required.server_ip]
-/// type = "String"
-/// label = "Server IP Address"
-///
-/// [variables.required.backup_path]
-/// type = "Path"
-/// label = "Backup Directory"
-/// ```
+/// Map of variable names to their required variable configs.
 #[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct RequiredVariablesConfig(HashMap<String, RequiredVariableConfig>);
 
 impl Deref for RequiredVariablesConfig {
     type Target = HashMap<String, RequiredVariableConfig>;
 
-    /// Dereferences to the underlying HashMap of variable name-config pairs.
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
 impl DerefMut for RequiredVariablesConfig {
-    /// Provides mutable access to the underlying HashMap of variable name-config pairs.
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
 impl From<HashMap<String, RequiredVariableConfig>> for RequiredVariablesConfig {
-    /// Creates a new `RequiredVariablesConfig` from a HashMap of variable name-config pairs.
-    ///
-    /// This constructor allows for the creation of a `RequiredVariablesConfig` from an existing
-    /// HashMap, enabling flexibility in how variable configurations are initialized.
     fn from(variables: HashMap<String, RequiredVariableConfig>) -> Self {
         RequiredVariablesConfig(variables)
     }
 }
 
 impl RequiredVariablesConfig {
-    /// Merges this configuration with another, with other's values taking precedence.
-    ///
-    /// When a variable name exists in both configurations, the configuration from `other`
-    /// overrides the configuration from this instance.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::collections::HashMap;
-    /// use scenario_rs_core::config::variables::required::{
-    ///     RequiredVariablesConfig, RequiredVariableConfig, VariableTypeConfig
-    /// };
-    ///
-    /// // Create first configuration
-    /// let mut vars1 = HashMap::new();
-    /// vars1.insert(
-    ///     "username".to_string(),
-    ///     RequiredVariableConfig {
-    ///         var_type: VariableTypeConfig::String,
-    ///         label: Some("Username".to_string()),
-    ///         read_only: false,
-    ///     }
-    /// );
-    /// let config1 = RequiredVariablesConfig::from(vars1);
-    ///
-    /// // Create second configuration
-    /// let mut vars2 = HashMap::new();
-    /// vars2.insert(
-    ///     "username".to_string(),  // Will override existing
-    ///     RequiredVariableConfig {
-    ///         var_type: VariableTypeConfig::String,
-    ///         label: Some("Admin Username".to_string()), // Different label
-    ///         read_only: true, // Now read-only
-    ///     }
-    /// );
-    /// vars2.insert(
-    ///     "password".to_string(),  // New variable
-    ///     RequiredVariableConfig {
-    ///         var_type: VariableTypeConfig::String,
-    ///         label: Some("Password".to_string()),
-    ///         read_only: false,
-    ///     }
-    /// );
-    /// let config2 = RequiredVariablesConfig::from(vars2);
-    ///
-    /// // Merge configurations
-    /// let merged = config1.merge(&config2);
-    ///
-    /// assert_eq!(merged.len(), 2); // username (overridden) and password
-    ///
-    /// // Check the merged username config
-    /// let username_config = merged.get("username").unwrap();
-    /// assert_eq!(username_config.label, Some("Admin Username".to_string())); // From config2
-    /// assert_eq!(username_config.read_only, true); // From config2
-    ///
-    /// // Verify password was added
-    /// assert!(merged.contains_key("password"));
-    /// ```
-    ///
-    /// # Arguments
-    ///
-    /// * `other` - The configuration to merge with this one
-    ///
-    /// # Returns
-    ///
-    /// A new configuration containing all variables from both configurations
+    /// Merges with `other`, where `other` takes precedence on conflicts.
     pub fn merge(&self, other: &RequiredVariablesConfig) -> RequiredVariablesConfig {
         let mut merged = self.0.clone();
         for (key, value) in &other.0 {
@@ -176,104 +41,26 @@ impl RequiredVariablesConfig {
     }
 }
 
-/// Configuration for a single required variable.
-///
-/// This struct defines metadata about a required variable, including its
-/// type, display label, and whether it's read-only.
-///
-/// # Examples
-///
-/// Creating a string variable configuration:
-///
-/// ```
-/// use scenario_rs_core::config::variables::required::{
-///     RequiredVariableConfig, VariableTypeConfig
-/// };
-///
-/// let config = RequiredVariableConfig {
-///     var_type: VariableTypeConfig::String,
-///     label: Some("API Key".to_string()),
-///     read_only: true,
-/// };
-///
-/// assert_eq!(config.label, Some("API Key".to_string()));
-/// assert_eq!(config.read_only, true);
-/// ```
-///
-/// Creating a timestamp variable configuration:
-///
-/// ```
-/// use scenario_rs_core::config::variables::required::{
-///     RequiredVariableConfig, VariableTypeConfig
-/// };
-///
-/// let config = RequiredVariableConfig {
-///     var_type: VariableTypeConfig::Timestamp {
-///         format: "%Y-%m-%d %H:%M:%S".to_string()
-///     },
-///     label: Some("Deployment Time".to_string()),
-///     read_only: false,
-/// };
-///
-/// if let VariableTypeConfig::Timestamp { format } = &config.var_type {
-///     assert_eq!(format, "%Y-%m-%d %H:%M:%S");
-/// } else {
-///     panic!("Expected Timestamp variable type");
-/// }
-/// ```
+/// Metadata for a single required variable.
 #[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct RequiredVariableConfig {
-    /// The type of the variable (String, Path, or Timestamp)
     #[serde(flatten)]
     pub var_type: VariableTypeConfig,
-    /// Optional human-friendly label for this variable
     #[serde(default)]
     pub label: Option<String>,
-    /// Whether this variable can be changed after it's set
     #[serde(default)]
     pub read_only: bool,
 }
 
 /// Available types for required variables.
-///
-/// Different variable types have different behaviors and validation rules.
-///
-/// # Examples
-///
-/// Creating different variable types:
-///
-/// ```
-/// use scenario_rs_core::config::variables::required::VariableTypeConfig;
-///
-/// // A simple string variable
-/// let string_type = VariableTypeConfig::String;
-///
-/// // A path variable
-/// let path_type = VariableTypeConfig::Path;
-///
-/// // A timestamp variable with a specific format
-/// let timestamp_type = VariableTypeConfig::Timestamp {
-///     format: "%Y-%m-%d".to_string()
-/// };
-/// ```
-///
-/// Comparing variable types:
-///
-/// ```
-/// use scenario_rs_core::config::variables::required::VariableTypeConfig;
-///
-/// assert_eq!(VariableTypeConfig::String, VariableTypeConfig::String);
-/// assert_ne!(VariableTypeConfig::String, VariableTypeConfig::Path);
-/// ```
 #[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 #[serde(tag = "type")]
 pub enum VariableTypeConfig {
-    /// A simple text variable with no special handling
     #[default]
     String,
-    /// A filesystem path with special handling for basename extraction
+    /// Filesystem path — supports automatic basename extraction.
     Path,
-    /// A timestamp that's initialized with the current time in the specified format
+    /// Initialized with the current time in the given format.
     Timestamp { format: String },
 }
 

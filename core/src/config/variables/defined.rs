@@ -1,7 +1,4 @@
-//! Configuration for defined variables in scenarios.
-//!
-//! This module provides configuration structures for predefined variables
-//! that have values set in the scenario configuration files.
+//! Configuration for predefined variables with values set in config files.
 
 use serde::Deserialize;
 use std::{
@@ -9,132 +6,32 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-/// Configuration for predefined variables in a scenario.
-///
-/// This struct represents a collection of variables with preset values defined
-/// in the scenario configuration. These variables are available for use in the
-/// scenario without needing to be provided at runtime.
-///
-/// # Examples
-///
-/// Creating an empty configuration:
-///
-/// ```
-/// use scenario_rs_core::config::variables::defined::DefinedVariablesConfig;
-///
-/// let config = DefinedVariablesConfig::default();
-/// assert!(config.is_empty());
-/// ```
-///
-/// Creating a configuration with predefined variables:
-///
-/// ```
-/// use std::collections::HashMap;
-/// use scenario_rs_core::config::variables::defined::DefinedVariablesConfig;
-///
-/// let mut variables = HashMap::new();
-/// variables.insert("username".to_string(), "admin".to_string());
-/// variables.insert("app_dir".to_string(), "/opt/myapp".to_string());
-///
-/// let config = DefinedVariablesConfig::from(variables);
-/// assert_eq!(config.get("username"), Some(&"admin".to_string()));
-/// assert_eq!(config.len(), 2);
-/// ```
-///
-/// In a TOML configuration file:
-/// ```toml
-/// [variables.defined]
-/// username = "admin"
-/// app_dir = "/opt/myapp"
-/// ```
+/// Map of variable names to predefined values.
 #[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct DefinedVariablesConfig(HashMap<String, String>);
 
 impl Deref for DefinedVariablesConfig {
     type Target = HashMap<String, String>;
 
-    /// Dereferences to the underlying HashMap of variable name-value pairs.
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
 impl DerefMut for DefinedVariablesConfig {
-    /// Provides mutable access to the underlying HashMap of variable name-value pairs.
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
 impl From<HashMap<String, String>> for DefinedVariablesConfig {
-    /// Creates a `DefinedVariablesConfig` from a HashMap of variable name-value pairs.
-    ///
-    /// This constructor allows for the creation of a `DefinedVariablesConfig` from an existing
-    /// HashMap, enabling flexibility in how variable configurations are initialized.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::collections::HashMap;
-    /// use scenario_rs_core::config::variables::defined::DefinedVariablesConfig;
-    ///
-    /// let mut variables = HashMap::new();
-    /// variables.insert("hostname".to_string(), "example.com".to_string());
-    /// variables.insert("port".to_string(), "8080".to_string());
-    ///
-    /// let config = DefinedVariablesConfig::from(variables);
-    /// assert_eq!(config.get("hostname"), Some(&"example.com".to_string()));
-    /// assert_eq!(config.get("port"), Some(&"8080".to_string()));
-    /// ```
-    ///
-    /// # Arguments
-    ///
-    /// * `variables` - A HashMap containing variable names and their values
     fn from(variables: HashMap<String, String>) -> Self {
         DefinedVariablesConfig(variables)
     }
 }
 
 impl DefinedVariablesConfig {
-    /// Merges this configuration with another, with other's values taking precedence.
-    ///
-    /// When a variable name exists in both configurations, the value from `other`
-    /// overrides the value from this configuration.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::collections::HashMap;
-    /// use scenario_rs_core::config::variables::defined::DefinedVariablesConfig;
-    ///
-    /// // Create first configuration
-    /// let mut vars1 = HashMap::new();
-    /// vars1.insert("username".to_string(), "admin".to_string());
-    /// vars1.insert("port".to_string(), "8080".to_string());
-    /// let config1 = DefinedVariablesConfig::from(vars1);
-    ///
-    /// // Create second configuration with overlapping variable
-    /// let mut vars2 = HashMap::new();
-    /// vars2.insert("username".to_string(), "superuser".to_string()); // Will override
-    /// vars2.insert("host".to_string(), "example.com".to_string());   // Will be added
-    /// let config2 = DefinedVariablesConfig::from(vars2);
-    ///
-    /// // Merge configurations
-    /// let merged = config1.merge(&config2);
-    ///
-    /// // Check merged results
-    /// assert_eq!(merged.get("username"), Some(&"superuser".to_string())); // From config2
-    /// assert_eq!(merged.get("port"), Some(&"8080".to_string()));          // From config1
-    /// assert_eq!(merged.get("host"), Some(&"example.com".to_string()));   // From config2
-    /// ```
-    ///
-    /// # Arguments
-    ///
-    /// * `other` - The configuration to merge with this one
-    ///
-    /// # Returns
-    ///
-    /// A new configuration containing all variables from both configurations
+    /// Merges with `other`, where `other`'s values take precedence on conflicts.
     pub fn merge(&self, other: &DefinedVariablesConfig) -> DefinedVariablesConfig {
         let mut merged = self.0.clone();
         for (key, value) in &other.0 {
