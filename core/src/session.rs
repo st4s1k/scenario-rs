@@ -7,237 +7,30 @@ use crate::{
 use std::{net::TcpStream, path::Path};
 use tracing::{debug, instrument, trace};
 
-/// Defines operations for executing commands on a remote server via SSH.
-///
-/// This trait abstracts the operations needed to execute commands on a remote server
-/// over SSH, including execution, reading the output, and checking the exit status.
-///
-/// # Examples
-///
-/// ```
-/// # use scenario_rs_core::{
-/// #     scenario::{server::Server, credentials::Credentials},
-/// #     session::{Session, Channel},
-/// #     utils::HasText,
-/// # };
-/// #
-/// # // Create server and credentials objects properly via constructors
-/// # let config = scenario_rs_core::config::server::ServerConfig {
-/// #    host: "example.com".to_string(),
-/// #    port: Some(22),
-/// # };
-/// # let server = Server::from(&config);
-/// # let credentials = Credentials::from(&scenario_rs_core::config::credentials::CredentialsConfig {
-/// #    username: "user".to_string(),
-/// #    password: None,
-/// # });
-/// #
-/// // Now create a session and execute commands
-/// let session = Session::new(&server, &credentials).unwrap();
-///
-/// // Get a channel and execute a command
-/// let channel_mutex = session.channel_session().unwrap();
-/// let mut channel = channel_mutex.lock().unwrap();
-///
-/// // Execute a command
-/// channel.exec("ls -la").unwrap();
-///
-/// // Read command output
-/// let mut output = String::new();
-/// channel.read_to_string(&mut output).unwrap();
-/// assert!(output.has_text(), "Command output should not be empty");
-///
-/// // Check exit status
-/// let status = channel.exit_status().unwrap();
-/// assert_eq!(status, 0); // Command succeeded
-/// ```
+/// Operations for executing commands on a remote server via SSH.
 pub trait Channel {
-    /// Executes a command on the remote system.
-    ///
-    /// # Arguments
-    /// * `command` - The command to execute on the remote system.
-    ///
-    /// # Returns
-    /// * `Ok(())` if the command was successfully initiated
-    /// * `Err` if there was an error executing the command
     fn exec(&mut self, command: &str) -> Result<(), ssh2::Error>;
 
-    /// Reads the output of a command into a string.
-    ///
-    /// # Arguments
-    /// * `output` - String buffer to append the command output to
-    ///
-    /// # Returns
-    /// * `Ok(usize)` with the number of bytes read if successful
-    /// * `Err` if there was an error reading the command output
     fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error>;
 
-    /// Gets the exit status of the command.
-    ///
-    /// # Returns
-    /// * `Ok(i32)` with the exit code of the command
-    /// * `Err` if there was an error retrieving the exit status
     fn exit_status(&self) -> Result<i32, ssh2::Error>;
 }
 
-/// Defines operations for SFTP file transfer.
-///
-/// This trait abstracts the operations needed for file transfer via SFTP,
-/// primarily focused on creating remote files for writing.
-///
-/// # Examples
-///
-/// ```
-/// # use std::path::Path;
-/// # use scenario_rs_core::{
-/// #     config::{server::ServerConfig, credentials::CredentialsConfig},
-/// #     scenario::{server::Server, credentials::Credentials},
-/// #     session::{Session, Sftp, Write}
-/// # };
-/// #
-/// # // Create server and credentials objects properly via constructors
-/// # let server = Server::from(&ServerConfig {
-/// #     host: "example.com".to_string(),
-/// #     port: Some(22),
-/// # });
-/// # let credentials = Credentials::from(&CredentialsConfig {
-/// #     username: "user".to_string(),
-/// #     password: None,
-/// # });
-/// #
-/// // Create a session
-/// let session = Session::new(&server, &credentials).unwrap();
-///
-/// // Get an SFTP session
-/// let sftp_mutex = session.sftp().unwrap();
-/// let sftp = sftp_mutex.lock().unwrap();
-///
-/// // Create a file on the remote server
-/// let path = Path::new("/remote/path/file.txt");
-/// let mut file = sftp.create(path).unwrap();
-///
-/// // Write data to the file
-/// let data = b"Hello, world!";
-/// file.write_all(data).unwrap();
-/// ```
+/// SFTP file transfer operations.
 pub trait Sftp {
-    /// Creates a new file at the specified path for writing.
-    ///
-    /// # Arguments
-    /// * `path` - Path where the file should be created
-    ///
-    /// # Returns
-    /// * `Ok(Box<dyn Write>)` with a writer for the created file
-    /// * `Err` if there was an error creating the file
     fn create(&self, path: &Path) -> Result<Box<dyn Write>, ssh2::Error>;
 }
 
-/// Defines writing operations for remote files.
-///
-/// This trait provides operations for writing data to files on a remote server.
-/// It's typically returned by the `create` method of the `Sftp` trait.
-///
-/// # Examples
-///
-/// ```
-/// # use std::path::Path;
-/// # use scenario_rs_core::{
-/// #     config::{server::ServerConfig, credentials::CredentialsConfig},
-/// #     scenario::{server::Server, credentials::Credentials},
-/// #     session::{Session, Sftp, Write}
-/// # };
-/// #
-/// # // Create server and credentials objects properly via constructors
-/// # let server = Server::from(&ServerConfig {
-/// #     host: "example.com".to_string(),
-/// #     port: Some(22),
-/// # });
-/// # let credentials = Credentials::from(&CredentialsConfig {
-/// #     username: "user".to_string(),
-/// #     password: None,
-/// # });
-/// #
-/// // Create a session
-/// let session = Session::new(&server, &credentials).unwrap();
-///
-/// // Get an SFTP session and create a file
-/// let sftp_mutex = session.sftp().unwrap();
-/// let sftp = sftp_mutex.lock().unwrap();
-/// let mut file = sftp.create(Path::new("/remote/path/config.json")).unwrap();
-///
-/// // Write JSON data to the file
-/// let json_data = b"{\"name\": \"application\", \"version\": \"1.0.0\"}";
-/// file.write_all(json_data).unwrap();
-/// ```
+/// Write operations for remote files, returned by `Sftp::create`.
 pub trait Write {
-    /// Writes all bytes from a buffer to the remote file.
-    ///
-    /// # Arguments
-    /// * `buf` - The data to write
-    ///
-    /// # Returns
-    /// * `Ok(())` if all bytes were successfully written
-    /// * `Err` if there was an error writing the data
     fn write_all(&mut self, buf: &[u8]) -> Result<(), ssh2::Error>;
 }
 
-/// Represents an SSH session to a remote server.
-///
-/// This struct encapsulates an SSH connection to a remote server, providing methods
-/// to execute commands and transfer files. It supports both real SSH connections and
-/// mock implementations for testing and development.
-///
-/// # Examples
-///
-/// Creating a session:
-///
-/// ```no_run
-/// use scenario_rs_core::{
-///     config::{server::ServerConfig, credentials::CredentialsConfig},
-///     scenario::{server::Server, credentials::Credentials},
-///     session::Session,
-/// };
-///
-/// // Set up server connection information using config
-/// let server = Server::from(&ServerConfig {
-///     host: "example.com".to_string(),
-///     port: Some(22)
-/// });
-///
-/// // Set up authentication credentials using config
-/// let credentials = Credentials::from(&CredentialsConfig {
-///     username: "user".to_string(),
-///     password: Some("password".to_string()) // Or None to use SSH agent
-/// });
-///
-/// // Create a new session
-/// let session_result = Session::new(&server, &credentials);
-/// assert!(session_result.is_ok());
-///
-/// // Use session to create a channel for command execution
-/// let session = session_result.unwrap();
-/// let channel_result = session.channel_session();
-/// assert!(channel_result.is_ok());
-/// ```
-///
-/// Creating a mock session for testing:
-///
-/// ```
-/// use scenario_rs_core::session::Session;
-///
-/// // Create a default (mock) session
-/// let session = Session::default();
-///
-/// // This session can be used like a real one, but doesn't
-/// // actually connect to a remote server
-/// let channel = session.channel_session().unwrap();
-/// let sftp = session.sftp().unwrap();
-/// ```
+/// SSH session to a remote server. Supports real connections and mock mode for testing.
 pub struct Session {
     pub(crate) inner: SessionType,
 }
 
-/// The internal type of session (real or mock)
 pub(crate) enum SessionType {
     Real(ssh2::Session),
     Mock,
@@ -249,18 +42,7 @@ pub(crate) enum SessionType {
 }
 
 impl Session {
-    /// Creates a new session to the specified server using the provided credentials.
-    ///
-    /// In debug builds, this returns a mock session. In release builds, it creates
-    /// a real SSH connection to the server.
-    ///
-    /// # Arguments
-    /// * `server` - The server connection information
-    /// * `credentials` - The authentication credentials
-    ///
-    /// # Returns
-    /// * `Ok(Session)` if the session was created successfully
-    /// * `Err` if there was an error establishing the session
+    /// Returns a mock session in debug builds, a real SSH connection in release.
     pub fn new(server: &Server, credentials: &Credentials) -> Result<Self, ssh2::Error> {
         if cfg!(debug_assertions) {
             Self::create_mock_session(server, credentials)
@@ -269,11 +51,6 @@ impl Session {
         }
     }
 
-    /// Creates a command channel for executing remote commands.
-    ///
-    /// # Returns
-    /// * `Ok(Box<dyn Channel>)` with a channel for executing commands
-    /// * `Err` if there was an error creating the channel
     pub fn channel_session(&self) -> Result<ArcMutex<dyn Channel + Send + Sync>, ssh2::Error> {
         match &self.inner {
             SessionType::Real(real_session) => real_session
@@ -288,11 +65,6 @@ impl Session {
         }
     }
 
-    /// Creates an SFTP session for file transfer operations.
-    ///
-    /// # Returns
-    /// * `Ok(Box<dyn Sftp>)` with an SFTP session
-    /// * `Err` if there was an error creating the SFTP session
     pub fn sftp(&self) -> Result<ArcMutex<dyn Sftp + Send + Sync>, ssh2::Error> {
         match &self.inner {
             SessionType::Real(real_session) => real_session
@@ -307,15 +79,6 @@ impl Session {
         }
     }
 
-    /// Creates an SSH session to the specified server.
-    ///
-    /// # Arguments
-    /// * `server` - The server connection information
-    /// * `credentials` - The authentication credentials
-    ///
-    /// # Returns
-    /// * `Ok(Session)` if the connection was established successfully
-    /// * `Err` if there was an error connecting or authenticating
     #[instrument(
         name = "create_session",
         skip_all,
@@ -371,17 +134,6 @@ impl Session {
         })
     }
 
-    /// Creates a mock SSH session for testing or debugging.
-    ///
-    /// This doesn't actually connect to a server but simulates the behavior
-    /// with delays and mock responses.
-    ///
-    /// # Arguments
-    /// * `server` - The server connection information (for display only)
-    /// * `credentials` - The authentication credentials (for display only)
-    ///
-    /// # Returns
-    /// * `Ok(Session)` with a mock session
     #[instrument(
         name = "create_mock_session",
         skip_all,
@@ -409,7 +161,6 @@ impl Session {
 }
 
 impl Default for Session {
-    /// Creates a default session, which is a mock session.
     fn default() -> Self {
         Session {
             inner: SessionType::Mock,
@@ -457,12 +208,10 @@ impl Write for ssh2::File {
     }
 }
 
-/// Provides mock implementations for SSH components to use in tests and debugging.
 pub mod mock {
     use crate::session::{Channel, Sftp, Write};
     use std::path::Path;
 
-    /// Mock implementation of the `Channel` trait.
     pub struct MockChannel;
 
     impl Channel for MockChannel {
@@ -484,7 +233,6 @@ pub mod mock {
         }
     }
 
-    /// Mock implementation of the `Sftp` trait.
     pub struct MockSftp;
 
     impl Sftp for MockSftp {
@@ -494,7 +242,6 @@ pub mod mock {
         }
     }
 
-    /// Mock implementation of the `Write` trait.
     pub struct MockFile;
 
     impl Write for MockFile {

@@ -6,25 +6,12 @@ use tracing::{
 };
 
 /// The tracing field name used for scenario events.
-///
-/// This constant should be used when checking tracing metadata fields
-/// to avoid typos (e.g., `"event"` vs `"scenario.event"`).
 pub const SCENARIO_EVENT_FIELD: &str = "scenario.event";
 
 /// All possible scenario event types emitted via the tracing system.
 ///
-/// These variants represent every lifecycle event that the scenario
-/// execution engine can produce. Consumers (CLI layer, GUI layer)
-/// match on these to decide how to display progress to the user.
-///
-/// # Examples
-///
-/// ```
-/// use scenario_rs_core::trace::ScenarioEvent;
-///
-/// assert_eq!(ScenarioEvent::ScenarioStarted.as_str(), "scenario_started");
-/// assert_eq!("sftp_copy_progress".parse::<ScenarioEvent>().unwrap(), ScenarioEvent::SftpCopyProgress);
-/// ```
+/// Consumers (CLI layer, GUI layer) match on these to decide how to
+/// display progress to the user.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ScenarioEvent {
     Error,
@@ -119,116 +106,27 @@ impl FromStr for ScenarioEvent {
     }
 }
 
-/// A visitor struct for tracing events in scenarios.
-///
-/// This struct collects event fields from tracing spans and events,
-/// providing structured access to various event properties such as
-/// event type, descriptions, progress information, and error details.
-///
-/// # Examples
-///
-/// Creating a new visitor and collecting event fields:
-///
-/// ```
-/// use scenario_rs_core::trace::ScenarioEventVisitor;
-/// use tracing::field::{Field, Visit};
-///
-/// fn field(name: &str) -> Field {
-///     struct TestCallsite();
-///     impl tracing::callsite::Callsite for TestCallsite {
-///         fn set_interest(&self, _: tracing::subscriber::Interest) {
-///             unimplemented!()
-///         }
-///
-///         fn metadata(&self) -> &tracing::Metadata<'_> {
-///             &TEST_META
-///         }
-///     }
-///     static TEST_CALLSITE: TestCallsite = TestCallsite();
-///     static TEST_META: tracing::Metadata<'static> = tracing::metadata! {
-///         name: "field_test",
-///         target: module_path!(),
-///         level: tracing::metadata::Level::INFO,
-///         fields: &[
-///             "scenario.event",
-///             "task.description",
-///             "remote_sudo.command",
-///             "step.index",
-///             "steps.total",
-///             "on_fail_step.index",
-///             "on_fail_steps.total",
-///         ],
-///         callsite: &TEST_CALLSITE,
-///         kind: tracing::metadata::Kind::SPAN,
-///     };
-///
-///     tracing::field::AsField::as_field(name, &TEST_META).unwrap()
-/// }
-///
-/// // Create a new visitor
-/// let mut visitor = ScenarioEventVisitor::default();
-///
-/// // Record string fields
-/// visitor.record_str(&field("scenario.event"), "step_started");
-/// visitor.record_str(&field("task.description"), "Installing dependencies");
-/// visitor.record_str(&field("remote_sudo.command"), "apt-get install -y nginx");
-///
-/// // Record numeric fields
-/// visitor.record_u64(&field("step.index"), 1);
-/// visitor.record_u64(&field("steps.total"), 5);
-///
-/// // Access the collected fields
-/// assert_eq!(visitor.scenario_event.as_deref().unwrap(), "step_started");
-/// assert_eq!(visitor.task_description.unwrap(), "Installing dependencies");
-/// assert_eq!(visitor.step_index.unwrap(), 1);
-/// assert_eq!(visitor.steps_total.unwrap(), 5);
-/// ```
+/// Collects event fields from tracing spans and events,
+/// providing structured access to event properties.
 #[derive(Debug, Clone)]
 pub struct ScenarioEventVisitor {
-    /// Type of the scenario event (e.g., "step_started", "task_completed")
     pub scenario_event: Option<String>,
-    /// Error message if an error occurred
     pub scenario_error: Option<String>,
-    /// Human-readable description of the event
     pub task_description: Option<String>,
-    /// Command being executed, if applicable
     pub remote_sudo_command: Option<String>,
-    /// Output from command execution
     pub remote_sudo_output: Option<String>,
-    /// Exit status of the command, if applicable
     pub remote_sudo_exit_status: Option<i64>,
-    /// Source path for file transfer operations
     pub sftp_copy_source: Option<String>,
-    /// Destination path for file transfer operations
     pub sftp_copy_destination: Option<String>,
-    /// Current progress value (e.g., bytes transferred)
     pub sftp_copy_progress_current: Option<u64>,
-    /// Total expected progress value
     pub sftp_copy_progress_total: Option<u64>,
-    /// Current step/task index in a sequence
     pub step_index: Option<usize>,
-    /// Total number of steps in the current operation
     pub steps_total: Option<usize>,
-    /// Current on-fail step index in a sequence
     pub on_fail_step_index: Option<usize>,
-    /// Total number of on-fail steps
     pub on_fail_steps_total: Option<usize>,
 }
 
 impl ScenarioEventVisitor {
-    /// Creates a new empty visitor.
-    ///
-    /// All fields are initialized to `None`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use scenario_rs_core::trace::ScenarioEventVisitor;
-    ///
-    /// let visitor = ScenarioEventVisitor::new();
-    /// assert!(visitor.scenario_event.is_none());
-    /// assert!(visitor.task_description.is_none());
-    /// ```
     pub fn new() -> Self {
         Self::default()
     }
