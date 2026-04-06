@@ -108,8 +108,6 @@ mod tests {
     };
     use std::sync::mpsc;
 
-    // -- Helpers --
-
     struct SuccessChannel;
     impl Channel for SuccessChannel {
         fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> { Ok(()) }
@@ -226,8 +224,6 @@ mod tests {
         (ExecutionStateManager::new(state, tx), rx)
     }
 
-    // -- Tests --
-
     #[test]
     fn test_execute_remote_sudo_success() {
         // Given
@@ -299,12 +295,9 @@ mod tests {
         assert!(result.is_ok());
         let diffs: Vec<_> = rx.try_iter().collect();
         assert!(diffs.len() >= 2, "expected at least Running + Completed diffs, got {}", diffs.len());
-
-        // First diff: status → Running
         assert!(matches!(&diffs[0],
             crate::state::types::StateDiff::OnFailStepStatusChanged { step_index: 0, on_fail_step_index: 0, status: StepStatus::Running }
         ));
-        // Last diff: status → Completed
         assert!(matches!(diffs.last().unwrap(),
             crate::state::types::StateDiff::OnFailStepStatusChanged { step_index: 0, on_fail_step_index: 0, status: StepStatus::Completed }
         ));
@@ -329,8 +322,6 @@ mod tests {
         assert!(matches!(&diffs[0],
             crate::state::types::StateDiff::OnFailStepStatusChanged { step_index: 0, on_fail_step_index: 0, status: StepStatus::Running }
         ));
-
-        // Should have Failed status and an error message
         let has_failed = diffs.iter().any(|d| matches!(d,
             crate::state::types::StateDiff::OnFailStepStatusChanged { status: StepStatus::Failed, .. }
         ));

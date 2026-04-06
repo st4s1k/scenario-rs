@@ -21,8 +21,6 @@ use scenario_rs_core::{
 };
 use std::sync::mpsc;
 
-// -- Mock helpers --
-
 struct SuccessChannel;
 impl Channel for SuccessChannel {
     fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
@@ -131,11 +129,9 @@ fn collect_diffs(rx: &mpsc::Receiver<StateDiff>) -> Vec<StateDiff> {
     rx.try_iter().collect()
 }
 
-// -- Tests --
-
 #[test]
 fn single_step_success_emits_running_then_completed() {
-    // Given: one RemoteSudo step
+    // Given
     let steps = Steps::from(vec![Step {
         index: 0,
         task: make_sudo_task("echo", "echo hi"),
@@ -157,8 +153,6 @@ fn single_step_success_emits_running_then_completed() {
     // Then
     assert!(result.is_ok());
     let diffs = collect_diffs(&rx);
-
-    // Step should go Running → Completed
     let status_diffs: Vec<_> = diffs
         .iter()
         .filter_map(|d| match d {
@@ -169,15 +163,13 @@ fn single_step_success_emits_running_then_completed() {
     assert_eq!(status_diffs.len(), 2);
     assert_eq!(status_diffs[0], (0, StepStatus::Running));
     assert_eq!(status_diffs[1], (0, StepStatus::Completed));
-
-    // Snapshot should show completed
     let snap = sm.snapshot();
     assert_eq!(snap.steps[0].status, StepStatus::Completed);
 }
 
 #[test]
 fn multi_step_success_all_complete() {
-    // Given: three steps
+    // Given
     let steps = Steps::from(vec![
         Step { index: 0, task: make_sudo_task("step1", "echo 1"), on_fail_steps: OnFailSteps::default() },
         Step { index: 1, task: make_sudo_task("step2", "echo 2"), on_fail_steps: OnFailSteps::default() },
@@ -206,8 +198,6 @@ fn multi_step_success_all_complete() {
     for (i, step) in snap.steps.iter().enumerate() {
         assert_eq!(step.status, StepStatus::Completed, "step {i} should be Completed");
     }
-
-    // Verify ordering: each step goes Running then Completed in sequence
     let diffs = collect_diffs(&rx);
     let status_diffs: Vec<_> = diffs
         .iter()
@@ -227,7 +217,7 @@ fn multi_step_success_all_complete() {
 
 #[test]
 fn step_failure_stops_execution_and_remaining_stay_pending() {
-    // Given: 3 steps, step 1 will fail (channel error)
+    // Given
     let steps = Steps::from(vec![
         Step { index: 0, task: make_sudo_task("pass", "echo ok"), on_fail_steps: OnFailSteps::default() },
         Step { index: 1, task: make_sudo_task("fail", "bad cmd"), on_fail_steps: OnFailSteps::default() },
@@ -247,24 +237,16 @@ fn step_failure_stops_execution_and_remaining_stay_pending() {
         tx,
     );
 
-    // When: use fail_session — all channels fail, but step 0 needs to succeed
-    // Actually, we need step 0 to succeed and step 1 to fail.
-    // Since mock sessions can't vary per step, let's use success_session and
-    // make step 1 depend on SftpCopy with a FailSftp. Instead, let's make step 0 SftpCopy
-    // (succeeds) and step 1 RemoteSudo with fail session.
-    // Actually the simplest: just use fail_session for all - step 0 will fail immediately.
+    // When
     let result = steps.execute(&fail_session(), &Variables::default(), Some(&sm));
 
-    // Then: step 0 fails, steps 1-2 stay Pending
+    // Then
     assert!(result.is_err());
     let snap = sm.snapshot();
     assert_eq!(snap.steps[0].status, StepStatus::Failed);
     assert_eq!(snap.steps[1].status, StepStatus::Pending);
     assert_eq!(snap.steps[2].status, StepStatus::Pending);
-
-    // Error recorded
     assert!(!snap.steps[0].errors.is_empty());
-
     let diffs = collect_diffs(&rx);
     let has_failed = diffs.iter().any(|d| matches!(d,
         StateDiff::StepStatusChanged { step_index: 0, status: StepStatus::Failed }
@@ -274,7 +256,7 @@ fn step_failure_stops_execution_and_remaining_stay_pending() {
 
 #[test]
 fn on_fail_steps_execute_after_step_failure() {
-    // Given: step 0 fails, has 2 on-fail recovery steps
+    // Given
     let steps = Steps::from(vec![Step {
         index: 0,
         task: make_sudo_task("deploy", "deploy.sh"),
@@ -293,7 +275,7 @@ fn on_fail_steps_execute_after_step_failure() {
         tx,
     );
 
-    // When: fail session (main step fails, but on-fail also fails because same session)
+    // When
     let result = steps.execute(&fail_session(), &Variables::default(), Some(&sm));
 
     // Then
@@ -302,8 +284,6 @@ fn on_fail_steps_execute_after_step_failure() {
     assert_eq!(snap.steps[0].status, StepStatus::Failed);
 
     let diffs = collect_diffs(&rx);
-
-    // On-fail step 0 should have been attempted (Running)
     let on_fail_running = diffs.iter().any(|d| matches!(d,
         StateDiff::OnFailStepStatusChanged { step_index: 0, on_fail_step_index: 0, status: StepStatus::Running }
     ));
@@ -312,7 +292,7 @@ fn on_fail_steps_execute_after_step_failure() {
 
 #[test]
 fn on_fail_steps_succeed_with_success_session_and_main_step_sftp_fail() {
-    // Given: step 0 is SftpCopy that fails, on-fail steps are RemoteSudo that succeed
+    // Given
     struct FailSftp;
     impl Sftp for FailSftp {
         fn create(
@@ -325,8 +305,8 @@ fn on_fail_steps_succeed_with_success_session_and_main_step_sftp_fail() {
 
     let session = Session {
         inner: SessionType::Test {
-            channel: ArcMutex::wrap(SuccessChannel), // On-fail RemoteSudo will succeed
-            sftp: ArcMutex::wrap(FailSftp),          // Main SftpCopy will fail
+            channel: ArcMutex::wrap(SuccessChannel),
+            sftp: ArcMutex::wrap(FailSftp),
         },
     };
 
@@ -350,11 +330,10 @@ fn on_fail_steps_succeed_with_success_session_and_main_step_sftp_fail() {
     // When
     let result = steps.execute(&session, &Variables::default(), Some(&sm));
 
-    // Then: step failed but on-fail succeeded
-    assert!(result.is_err()); // step failure is still propagated
+    // Then
+    assert!(result.is_err());
     let snap = sm.snapshot();
     assert_eq!(snap.steps[0].status, StepStatus::Failed);
-
     let diffs = collect_diffs(&rx);
     let on_fail_completed = diffs.iter().any(|d| matches!(d,
         StateDiff::OnFailStepStatusChanged { step_index: 0, on_fail_step_index: 0, status: StepStatus::Completed }
@@ -364,6 +343,7 @@ fn on_fail_steps_succeed_with_success_session_and_main_step_sftp_fail() {
 
 #[test]
 fn remote_sudo_step_emits_progress_and_output() {
+    // Given & When
     let steps = Steps::from(vec![Step {
         index: 0,
         task: make_sudo_task("cmd", "echo hello"),
@@ -381,15 +361,12 @@ fn remote_sudo_step_emits_progress_and_output() {
 
     steps.execute(&success_session(), &Variables::default(), Some(&sm)).unwrap();
 
+    // Then
     let diffs = collect_diffs(&rx);
-
-    // Should have progress update with RemoteSudo type
     let has_progress = diffs.iter().any(|d| matches!(d,
         StateDiff::StepProgressUpdated { step_index: 0, progress: TaskProgress::RemoteSudo { .. } }
     ));
     assert!(has_progress, "expected RemoteSudo progress update");
-
-    // Should have output appended
     let has_output = diffs.iter().any(|d| matches!(d,
         StateDiff::StepOutputAppended { step_index: 0, .. }
     ));
@@ -398,6 +375,7 @@ fn remote_sudo_step_emits_progress_and_output() {
 
 #[test]
 fn empty_steps_succeed_immediately() {
+    // Given & When & Then
     let steps = Steps::default();
 
     let (tx, rx) = mpsc::channel();
@@ -418,13 +396,12 @@ fn empty_steps_succeed_immediately() {
 
 #[test]
 fn execution_without_state_manager_still_works() {
+    // Given & When & Then
     let steps = Steps::from(vec![Step {
         index: 0,
         task: make_sudo_task("cmd", "echo"),
         on_fail_steps: OnFailSteps::default(),
     }]);
-
-    // Passing None simulates CLI usage (no state tracking)
     let result = steps.execute(&success_session(), &Variables::default(), None);
     assert!(result.is_ok());
 }

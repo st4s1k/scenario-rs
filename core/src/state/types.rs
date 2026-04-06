@@ -143,10 +143,14 @@ mod tests {
 
     #[test]
     fn execution_state_round_trip() {
+        // Given
         let state = sample_execution_state();
+
+        // When
         let json = serde_json::to_string(&state).unwrap();
         let restored: ExecutionState = serde_json::from_str(&json).unwrap();
 
+        // Then
         assert_eq!(restored.status, ExecutionStatus::Running);
         assert_eq!(restored.steps.len(), 1);
         assert_eq!(restored.steps[0].status, StepStatus::Completed);
@@ -158,6 +162,7 @@ mod tests {
 
     #[test]
     fn task_progress_serde_has_type_tag() {
+        // Given & When & Then
         let p = TaskProgress::SftpCopy {
             source: "a".into(),
             destination: "b".into(),
@@ -177,6 +182,7 @@ mod tests {
 
     #[test]
     fn state_diff_serde_has_kind_tag() {
+        // Given
         let cases = vec![
             (StateDiff::ExecutionStatusChanged { status: ExecutionStatus::Completed }, "ExecutionStatusChanged"),
             (StateDiff::StepStatusChanged { step_index: 0, status: StepStatus::Running }, "StepStatusChanged"),
@@ -188,10 +194,9 @@ mod tests {
         ];
 
         for (diff, expected_kind) in cases {
+            // When & Then
             let json = serde_json::to_value(&diff).unwrap();
             assert_eq!(json["kind"], expected_kind, "wrong kind tag for {:?}", diff);
-
-            // Round-trip
             let restored: StateDiff = serde_json::from_value(json).unwrap();
             let json2 = serde_json::to_value(&restored).unwrap();
             assert_eq!(json2["kind"], expected_kind);
@@ -200,6 +205,7 @@ mod tests {
 
     #[test]
     fn step_progress_diff_round_trip() {
+        // Given
         let diff = StateDiff::StepProgressUpdated {
             step_index: 2,
             progress: TaskProgress::SftpCopy {
@@ -209,9 +215,13 @@ mod tests {
                 bytes_total: 100,
             },
         };
+
+        // When
         let json = serde_json::to_string(&diff).unwrap();
         let restored: StateDiff = serde_json::from_str(&json).unwrap();
         let json2 = serde_json::to_value(&restored).unwrap();
+
+        // Then
         assert_eq!(json2["kind"], "StepProgressUpdated");
         assert_eq!(json2["step_index"], 2);
         assert_eq!(json2["progress"]["type"], "SftpCopy");
@@ -220,6 +230,7 @@ mod tests {
 
     #[test]
     fn on_fail_progress_diff_round_trip() {
+        // Given
         let diff = StateDiff::OnFailStepProgressUpdated {
             step_index: 0,
             on_fail_step_index: 3,
@@ -228,9 +239,13 @@ mod tests {
                 output: "ok".into(),
             },
         };
+
+        // When
         let json = serde_json::to_string(&diff).unwrap();
         let restored: StateDiff = serde_json::from_str(&json).unwrap();
         let json2 = serde_json::to_value(&restored).unwrap();
+
+        // Then
         assert_eq!(json2["kind"], "OnFailStepProgressUpdated");
         assert_eq!(json2["on_fail_step_index"], 3);
         assert_eq!(json2["progress"]["command"], "restart");
@@ -238,14 +253,20 @@ mod tests {
 
     #[test]
     fn execution_status_failed_serde() {
+        // Given
         let status = ExecutionStatus::Failed { error: "connection lost".into() };
+
+        // When
         let json = serde_json::to_value(&status).unwrap();
         let restored: ExecutionStatus = serde_json::from_value(json).unwrap();
+
+        // Then
         assert_eq!(restored, ExecutionStatus::Failed { error: "connection lost".into() });
     }
 
     #[test]
     fn all_step_statuses_serde() {
+        // Given
         let statuses = vec![
             StepStatus::Pending,
             StepStatus::Running,
