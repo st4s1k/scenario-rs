@@ -9,10 +9,7 @@ use tracing_subscriber::{
 
 mod trace;
 
-/// Command-line interface for the scenario runner.
-///
-/// This tool executes deployment scenarios defined in configuration files.
-/// It supports setting required variables and controlling log verbosity.
+/// CLI for executing deployment scenarios from TOML configuration files.
 #[derive(Parser, Debug)]
 #[command(version)]
 struct Cli {
@@ -29,11 +26,6 @@ struct Cli {
     required_variables: Vec<(String, String)>,
 }
 
-/// Application entry point.
-///
-/// Parses command-line arguments, initializes the scenario from the specified
-/// configuration file, sets up tracing with custom event handling, applies any
-/// required variables, and executes the scenario.
 fn main() {
     let cli: Cli = Cli::parse();
 
