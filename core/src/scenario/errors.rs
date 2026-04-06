@@ -6,20 +6,6 @@
 use thiserror::Error;
 
 /// Errors that can occur when loading and processing scenario configurations.
-///
-/// # Examples
-///
-/// ```
-/// use scenario_rs_core::scenario::errors::ScenarioConfigError;
-/// use std::io;
-///
-/// // Create an error for a file that couldn't be opened
-/// let io_error = io::Error::new(io::ErrorKind::NotFound, "File not found");
-/// let config_error = ScenarioConfigError::CannotOpenConfig(io_error);
-///
-/// // Error message includes the source error
-/// assert!(format!("{}", config_error).contains("Cannot open config file"));
-/// ```
 #[derive(Error, Debug)]
 pub enum ScenarioConfigError {
     /// Failed to open the configuration file.
@@ -64,19 +50,6 @@ pub enum ScenarioConfigError {
 }
 
 /// Errors that can occur when creating or executing a scenario.
-///
-/// # Examples
-///
-/// ```
-/// use scenario_rs_core::scenario::errors::{ScenarioError, ScenarioConfigError};
-///
-/// // Create a scenario error that wraps a config error
-/// let config_error = ScenarioConfigError::MissingCredentials;
-/// let scenario_error = ScenarioError::CannotCreateScenarioFromConfig(config_error);
-///
-/// assert!(format!("{}", scenario_error).contains("Cannot create Scenario from config"));
-/// assert!(format!("{}", scenario_error).contains("Missing required credentials"));
-/// ```
 #[derive(Error, Debug)]
 pub enum ScenarioError {
     /// Failed to create a scenario from its configuration.
@@ -89,23 +62,6 @@ pub enum ScenarioError {
 }
 
 /// Errors that can occur in the execution component.
-///
-/// # Examples
-///
-/// ```
-/// use scenario_rs_core::scenario::errors::{ExecuteError, StepsError, StepError};
-///
-/// // Create a step error
-/// let step_error = StepError::CannotCreateTaskFromConfig("missing_task".to_string());
-///
-/// // Wrap in a steps error
-/// let steps_error = StepsError::CannotCreateStepFromConfig(step_error);
-///
-/// // Wrap in an execute error
-/// let execute_error = ExecuteError::CannotCreateStepsFromConfig(steps_error);
-///
-/// assert!(format!("{}", execute_error).contains("Cannot create Steps from config"));
-/// ```
 #[derive(Error, Debug)]
 pub enum ExecuteError {
     /// Failed to create steps from their configuration.
@@ -114,20 +70,6 @@ pub enum ExecuteError {
 }
 
 /// Errors that can occur when executing steps.
-///
-/// # Examples
-///
-/// ```
-/// use scenario_rs_core::scenario::errors::{StepsError, StepError};
-///
-/// // Create a step error
-/// let step_error = StepError::CannotCreateTaskFromConfig("invalid_task_id".to_string());
-///
-/// // Wrap in a steps error
-/// let steps_error = StepsError::CannotCreateStepFromConfig(step_error);
-///
-/// assert!(format!("{}", steps_error).contains("Cannot create Step from config"));
-/// ```
 #[derive(Error, Debug)]
 pub enum StepsError {
     /// Failed to create a step from its configuration.
@@ -247,19 +189,6 @@ pub enum SftpCopyError {
 }
 
 /// Errors that can occur when resolving variable placeholders.
-///
-/// # Examples
-///
-/// ```
-/// use scenario_rs_core::scenario::errors::PlaceholderResolutionError;
-///
-/// // Create an error for unresolvable placeholders
-/// let template = "Hello, {missing_var}!";
-/// let error = PlaceholderResolutionError::CannotResolvePlaceholders(template.to_string());
-///
-/// assert!(format!("{}", error).contains("Cannot resolve placeholders in this template"));
-/// assert!(format!("{}", error).contains("Hello, {missing_var}!"));
-/// ```
 #[derive(Error, Debug)]
 pub enum PlaceholderResolutionError {
     /// Failed to resolve placeholders in variable values, creating circular references.

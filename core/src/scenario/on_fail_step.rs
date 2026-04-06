@@ -7,9 +7,7 @@ use tracing::{debug, instrument};
 
 #[derive(Clone, Debug)]
 pub struct OnFailStep {
-    /// The index of the on-fail step in the step
     pub(crate) index: usize,
-    /// The primary task to be executed
     pub(crate) task: Task,
 }
 

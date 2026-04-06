@@ -12,35 +12,7 @@ use std::fs::File;
 #[cfg(test)]
 use tests::TestFile as File;
 
-/// Represents an SFTP copy operation from a local file to a remote destination
-///
-/// This struct holds source and destination paths for transferring a file
-/// from the local system to a remote system using SFTP protocol.
-///
-/// # Examples
-///
-/// ```
-/// use scenario_rs_core::scenario::sftp_copy::SftpCopy;
-///
-/// let copy_operation = SftpCopy {
-///     source_path: "/path/to/local/file.txt".to_string(),
-///     destination_path: "/remote/path/file.txt".to_string(),
-/// };
-///
-/// assert_eq!(copy_operation.source_path(), "/path/to/local/file.txt");
-/// assert_eq!(copy_operation.destination_path(), "/remote/path/file.txt");
-/// ```
-///
-/// Path variables can contain placeholders that will be resolved during execution:
-///
-/// ```
-/// use scenario_rs_core::scenario::sftp_copy::SftpCopy;
-///
-/// let copy_operation = SftpCopy {
-///     source_path: "/path/to/{file_name}".to_string(),
-///     destination_path: "/home/{username}/{file_name}".to_string(),
-/// };
-/// ```
+/// An SFTP copy operation from a local file to a remote destination.
 #[derive(Debug, Clone)]
 pub struct SftpCopy {
     pub source_path: String,
@@ -58,16 +30,7 @@ impl SftpCopy {
         &self.destination_path
     }
 
-    /// Executes the SFTP copy operation
-    ///
-    /// # Arguments
-    ///
-    /// * `session` - The SSH session to use for SFTP operations
-    /// * `variables` - Variables to resolve placeholders in paths
-    ///
-    /// # Returns
-    ///
-    /// `Ok(())` if the copy completed successfully, otherwise an appropriate `SftpCopyError`
+    /// Executes the SFTP copy operation.
     #[instrument(
         name = "sftp_copy",
         skip_all,

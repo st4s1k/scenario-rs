@@ -10,68 +10,7 @@ use crate::{
 use std::ops::{Deref, DerefMut};
 use tracing::{debug, instrument};
 
-/// Represents a collection of on-fail steps that will be executed when a scenario step fails.
-///
-/// This struct wraps a vector of `OnFailStep` instances that are executed in sequence
-/// when the main scenario execution encounters an error.
-///
-/// # Examples
-///
-/// Creating an empty set of on-fail steps:
-///
-/// ```
-/// use scenario_rs_core::scenario::on_fail_steps::OnFailSteps;
-///
-/// // Create an empty set of recovery steps
-/// let on_fail_steps = OnFailSteps::default();
-/// assert!(on_fail_steps.is_empty());
-/// ```
-///
-/// Converting from a configuration:
-///
-/// ```
-/// use std::collections::HashMap;
-/// use scenario_rs_core::{
-///     scenario::{
-///         on_fail_step::OnFailStep,
-///         on_fail_steps::OnFailSteps,
-///         task::Task,
-///         tasks::Tasks
-///     },
-///     config::task::{TaskConfig, TaskType}
-/// };
-///
-/// // Set up the task map
-/// let mut task_map = HashMap::new();
-///
-/// // Create a cleanup task
-/// let config = TaskConfig {
-///     description: "Cleanup task".to_string(),
-///     error_message: "Cleanup failed".to_string(),
-///     task_type: TaskType::RemoteSudo {
-///         command: "rm -rf /tmp/deployment".to_string(),
-///     },
-/// };
-/// let cleanup_task = Task::from(&config);
-/// task_map.insert("cleanup".to_string(), cleanup_task);
-///
-/// // Create all available tasks
-/// let tasks = Tasks::from(task_map);
-///
-/// // Create a vector of task names for on-fail steps
-/// let task_names = vec!["cleanup".to_string()];
-///
-/// // Create empty on_fail_steps and add tasks manually
-/// let mut on_fail_steps = OnFailSteps::default();
-/// for (idx, name) in task_names.iter().enumerate() {
-///     if let Some(task) = tasks.get(name).cloned() {
-///         let on_fail_step = OnFailStep::from((idx, task));
-///         on_fail_steps.push(on_fail_step);
-///     }
-/// }
-///
-/// assert_eq!(on_fail_steps.len(), 1);
-/// ```
+/// Recovery steps executed when a scenario step fails.
 #[derive(Clone, Debug)]
 pub struct OnFailSteps(Vec<OnFailStep>);
 
@@ -118,19 +57,6 @@ impl Default for OnFailSteps {
 
 impl OnFailSteps {
     /// Executes all on-fail tasks in sequence.
-    ///
-    /// This method is called when the main scenario execution fails. It runs through
-    /// all the recovery tasks defined in the on-fail configuration.
-    ///
-    /// # Arguments
-    ///
-    /// * `session` - The current SSH session
-    /// * `variables` - Variables available for substitution in commands
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(())` if all on-fail tasks executed successfully
-    /// * `Err(OnFailError)` if any on-fail task failed to execute
     #[instrument(
         name = "on_fail_steps",
         skip_all,

@@ -1,73 +1,12 @@
 use crate::config::credentials::CredentialsConfig;
 
-/// Represents authentication credentials used for scenarios.
-///
-/// This struct stores the username and optional password for authentication
-/// purposes within the scenario system.
-///
-/// # Examples
-///
-/// Creating credentials with a password:
-///
-/// ```
-/// use scenario_rs_core::scenario::credentials::Credentials;
-///
-/// let credentials = Credentials::new(
-///    "testuser".to_string(),
-///    Some("testpass".to_string()),
-/// );
-///
-/// assert_eq!(credentials.username(), "testuser");
-/// assert_eq!(credentials.password(), Some("testpass"));
-/// ```
-///
-/// Creating credentials without a password (for key-based authentication):
-///
-/// ```
-/// use scenario_rs_core::scenario::credentials::Credentials;
-///
-/// let credentials = Credentials::new(
-///    "testuser".to_string(),
-///    None,
-/// );
-///
-/// assert_eq!(credentials.username(), "testuser");
-/// assert_eq!(credentials.password(), None);
-/// ```
+/// Authentication credentials (username + optional password) for scenarios.
 #[derive(Clone, Debug)]
 pub struct Credentials {
-    /// The username for authentication.
     pub(crate) username: String,
-    /// An optional password for authentication.
-    /// May be None if password authentication is not required.
     pub(crate) password: Option<String>,
 }
 
-/// Converts a CredentialsConfig into a Credentials struct.
-///
-/// This implementation allows for seamless creation of Credentials
-/// from configuration data.
-///
-/// # Examples
-///
-/// ```
-/// use scenario_rs_core::{
-///     config::credentials::CredentialsConfig,
-///     scenario::credentials::Credentials
-/// };
-///
-/// // Create a credentials config
-/// let config = CredentialsConfig {
-///     username: "configuser".to_string(),
-///     password: Some("configpass".to_string()),
-/// };
-///
-/// // Convert config to credentials
-/// let credentials = Credentials::from(&config);
-///
-/// assert_eq!(credentials.username(), "configuser");
-/// assert_eq!(credentials.password(), Some("configpass"));
-/// ```
 impl From<&CredentialsConfig> for Credentials {
     fn from(credentials_config: &CredentialsConfig) -> Self {
         Credentials {

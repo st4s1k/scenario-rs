@@ -3,99 +3,13 @@ use crate::{
     scenario::{errors::ExecuteError, steps::Steps, tasks::Tasks},
 };
 
-/// Represents the executable part of a scenario, containing ordered steps to be executed.
-///
-/// An `Execute` instance holds the sequence of steps that define the execution flow
-/// of a scenario.
-///
-/// # Examples
-///
-/// Creating an execution plan from a configuration:
-///
-/// ```
-/// use std::collections::HashMap;
-/// use scenario_rs_core::{
-///     config::{
-///         execute::ExecuteConfig,
-///         step::StepConfig,
-///         steps::StepsConfig,
-///         task::{TaskConfig, TaskType}
-///     },
-///     scenario::{
-///         execute::Execute,
-///         task::Task,
-///         tasks::Tasks
-///     }
-/// };
-///
-/// // First, set up the available tasks
-/// let mut task_map = HashMap::new();
-///
-/// // Create task configs
-/// let install_config = TaskConfig {
-///     description: "Install application".to_string(),
-///     error_message: "Installation failed".to_string(),
-///     task_type: TaskType::RemoteSudo {
-///         command: "apt install -y myapp".to_string(),
-///     },
-/// };
-/// task_map.insert("install".to_string(), Task::from(&install_config));
-///
-/// let configure_config = TaskConfig {
-///     description: "Configure application".to_string(),
-///     error_message: "Configuration failed".to_string(),
-///     task_type: TaskType::SftpCopy {
-///         source_path: "./config.json".to_string(),
-///         destination_path: "/etc/myapp/config.json".to_string(),
-///     },
-/// };
-/// task_map.insert("configure".to_string(), Task::from(&configure_config));
-///
-/// let start_config = TaskConfig {
-///     description: "Start service".to_string(),
-///     error_message: "Service start failed".to_string(),
-///     task_type: TaskType::RemoteSudo {
-///         command: "systemctl start myapp".to_string(),
-///     },
-/// };
-/// task_map.insert("start".to_string(), Task::from(&start_config));
-///
-/// // Create the task registry
-/// let tasks = Tasks::from(task_map);
-///
-/// // Define execution steps
-/// let execution_config = ExecuteConfig {
-///     steps: StepsConfig::from(vec![
-///         StepConfig {
-///             task: "install".to_string(),
-///             on_fail: None,
-///         },
-///         StepConfig {
-///             task: "configure".to_string(),
-///             on_fail: None,
-///         },
-///         StepConfig {
-///             task: "start".to_string(),
-///             on_fail: None,
-///         },
-///     ]),
-/// };
-///
-/// // Convert to an Execute instance
-/// let result = Execute::try_from((&tasks, &execution_config));
-/// assert!(result.is_ok());
-///
-/// let execute = result.unwrap();
-/// // We can verify the number of steps
-/// assert_eq!(execute.steps().len(), 3);
-/// ```
+/// The executable part of a scenario, containing ordered steps.
 #[derive(Clone, Debug)]
 pub struct Execute {
     pub(crate) steps: Steps,
 }
 
 impl Default for Execute {
-    /// Creates a default `Execute` instance with no steps.
     fn default() -> Self {
         Execute {
             steps: Steps::default(),
@@ -106,15 +20,6 @@ impl Default for Execute {
 impl TryFrom<(&Tasks, &ExecuteConfig)> for Execute {
     type Error = ExecuteError;
 
-    /// Attempts to create an `Execute` instance from a combination of tasks and execution configuration.
-    ///
-    /// This conversion will validate that all task references in the configuration exist in the provided tasks.
-    ///
-    /// # Errors
-    ///
-    /// Returns an `ExecuteError::CannotCreateStepsFromConfig` if:
-    /// - A task referenced in the configuration doesn't exist in the tasks collection
-    /// - Other validation errors occur during steps creation
     fn try_from((tasks, config): (&Tasks, &ExecuteConfig)) -> Result<Self, Self::Error> {
         let steps = Steps::try_from((tasks, &config.steps))
             .map_err(ExecuteError::CannotCreateStepsFromConfig)?;

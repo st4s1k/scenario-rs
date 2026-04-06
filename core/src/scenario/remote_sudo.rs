@@ -5,52 +5,13 @@ use crate::{
 };
 use tracing::{debug, instrument};
 
-/// Represents a remote command to be executed with sudo privileges
-///
-/// This struct holds a command string to be executed on a remote session
-/// with elevated permissions.
-///
-/// # Examples
-///
-/// ```
-/// use scenario_rs_core::scenario::remote_sudo::RemoteSudo;
-///
-/// // Create a simple sudo command
-/// let sudo_command = RemoteSudo::new("apt-get update".to_string());
-///
-/// assert_eq!(sudo_command.command(), "apt-get update");
-/// ```
-///
-/// Using placeholders that will be replaced with variables during execution:
-///
-/// ```
-/// use scenario_rs_core::scenario::remote_sudo::RemoteSudo;
-///
-/// // Create a command that uses placeholders
-/// let sudo_command = RemoteSudo::new("mkdir -p /home/{username}/data".to_string());
-/// assert_eq!(sudo_command.command(), "mkdir -p /home/{username}/data");
-/// ```
+/// A remote command to be executed with sudo privileges.
 #[derive(Debug, Clone)]
 pub struct RemoteSudo {
     pub(crate) command: String,
 }
 
 impl RemoteSudo {
-    /// Creates a new `RemoteSudo` instance with the given command string
-    ///
-    /// # Arguments
-    /// * `command` - The command string to be executed with sudo privileges
-    ///
-    /// # Returns
-    /// * `RemoteSudo` - A new instance of `RemoteSudo` with the specified command
-    /// # Examples
-    /// ```
-    /// use scenario_rs_core::scenario::remote_sudo::RemoteSudo;
-    ///
-    /// let sudo_command = RemoteSudo::new("ls -l".to_string());
-    ///
-    /// assert_eq!(sudo_command.command(), "ls -l");
-    /// ```
     pub fn new(command: String) -> Self {
         RemoteSudo { command }
     }
@@ -60,17 +21,7 @@ impl RemoteSudo {
         &self.command
     }
 
-    /// Executes the sudo command on the remote session
-    ///
-    /// # Arguments
-    ///
-    /// * `session` - The session to execute the command on
-    /// * `variables` - Variables to resolve placeholders in the command
-    ///
-    /// # Returns
-    ///
-    /// `Ok(())` if the command executed successfully with exit code 0,
-    /// otherwise an appropriate `RemoteSudoError`
+    /// Executes the sudo command on the remote session.
     #[instrument(
         name = "remote_sudo",
         skip_all,

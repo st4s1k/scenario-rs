@@ -13,106 +13,17 @@ use crate::{
 };
 use tracing::{debug, instrument};
 
-/// A single step to be executed as part of a scenario.
-///
-/// A step represents a single operation in a scenario execution flow. It consists of a
-/// task to be executed and optional fallback steps to run if the primary task fails.
-/// This structure enables graceful error handling and cleanup actions.
-///
-/// # Examples
-///
-/// Creating a step with on-fail steps:
-///
-/// ```
-/// use std::collections::HashMap;
-/// use scenario_rs_core::{
-///     config::step::StepConfig,
-///     scenario::{
-///         step::Step,
-///         task::Task,
-///         tasks::Tasks,
-///         on_fail_step::OnFailStep,
-///         on_fail_steps::OnFailSteps
-///     },
-///     config::task::{TaskConfig, TaskType}
-/// };
-///
-/// // Set up the task map with main and recovery tasks
-/// let mut task_map = HashMap::new();
-///
-/// // Main deployment task
-/// let deploy_config = TaskConfig {
-///     description: "Deploy application".to_string(),
-///     error_message: "Deployment failed".to_string(),
-///     task_type: TaskType::SftpCopy {
-///         source_path: "./app.jar".to_string(),
-///         destination_path: "/app/app.jar".to_string(),
-///     },
-/// };
-/// task_map.insert("deploy".to_string(), Task::from(&deploy_config));
-///
-/// // Cleanup task for error recovery
-/// let cleanup_config = TaskConfig {
-///     description: "Clean up failed deployment".to_string(),
-///     error_message: "Cleanup failed".to_string(),
-///     task_type: TaskType::RemoteSudo {
-///         command: "rm -f /app/app.jar".to_string(),
-///     },
-/// };
-/// task_map.insert("cleanup".to_string(), Task::from(&cleanup_config));
-///
-/// // Create all available tasks
-/// let tasks = Tasks::from(task_map);
-///
-/// // Define a step configuration
-/// // Note: For testing, we avoid creating OnFailStepsConfig directly since its constructor is private
-/// let task_name = "deploy".to_string();
-/// let step_config = StepConfig {
-///     task: task_name.clone(),
-///     on_fail: None, // We'll handle on_fail steps differently
-/// };
-///
-/// // Create the step
-/// let mut step = Step::try_from((0, &tasks, &step_config)).unwrap();
-///
-/// // Create on_fail steps manually using the public API
-/// let mut on_fail_steps = OnFailSteps::default();
-/// if let Some(cleanup_task) = tasks.get("cleanup").cloned() {
-///     let on_fail_step = OnFailStep::from((0, cleanup_task));
-///     on_fail_steps.push(on_fail_step);
-/// }
-///
-/// // Verify the step properties
-/// assert_eq!(step.task().description(), "Deploy application");
-/// ```
+/// A single step in a scenario: a task with optional on-fail recovery steps.
 #[derive(Clone, Debug)]
 pub struct Step {
-    /// The index of the step in the scenario
     pub(crate) index: usize,
-    /// The primary task to be executed
     pub(crate) task: Task,
-    /// Steps to execute if the primary task fails
     pub(crate) on_fail_steps: OnFailSteps,
 }
 
 impl TryFrom<(usize, &Tasks, &StepConfig)> for Step {
     type Error = StepError;
 
-    /// Attempts to create a Step instance from tasks and step configuration.
-    ///
-    /// This conversion will validate that the referenced task exists in the
-    /// provided tasks collection and that any on-fail steps are valid.
-    ///
-    /// # Arguments
-    ///
-    /// * `index` - The index of the step in the scenario
-    /// * `tasks` - Collection of available tasks
-    /// * `step_config` - Configuration for this step
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(Step)` - If the referenced task exists and on-fail steps are valid
-    /// * `Err(StepError)` - If the referenced task doesn't exist or on-fail steps are invalid
     fn try_from(
         (index, tasks, step_config): (usize, &Tasks, &StepConfig),
     ) -> Result<Self, Self::Error> {

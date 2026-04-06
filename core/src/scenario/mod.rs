@@ -25,31 +25,7 @@ pub mod task;
 pub mod tasks;
 pub mod variables;
 
-/// A complete deployment scenario that can be executed on a remote server.
-///
-/// A Scenario represents a collection of tasks, steps, and variables organized for
-/// executing a specific deployment workflow. It encapsulates all necessary information
-/// including server details, credentials, variables, and the sequence of operations
-/// to perform.
-///
-/// # Example
-///
-/// ```
-/// use scenario_rs_core::{
-///     config::scenario::ScenarioConfig,
-///     scenario::Scenario
-/// };
-/// use std::collections::HashMap;
-///
-/// // Create a variables config
-/// let mut scenario_config = ScenarioConfig::default();
-///
-/// // Create a scenario from the config
-/// let scenario = Scenario::try_from(scenario_config).expect("Failed to create scenario from config");
-///
-/// // Access scenario properties
-/// assert_eq!(scenario.steps().len(), 0);
-/// ```
+/// A complete deployment scenario ready for execution on a remote server.
 #[derive(Clone, Debug)]
 pub struct Scenario {
     pub(crate) server: Server,
@@ -60,91 +36,18 @@ pub struct Scenario {
 }
 
 impl Scenario {
-    /// Returns a reference to the scenario's variables.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use scenario_rs_core::{
-    ///     config::scenario::ScenarioConfig,
-    ///     scenario::Scenario
-    /// };
-    ///
-    /// let config = ScenarioConfig::default();
-    /// let scenario = Scenario::try_from(config).unwrap();
-    /// let variables = scenario.variables();
-    ///
-    /// assert!(variables.defined().is_empty());
-    /// ```
     pub fn variables(&self) -> &Variables {
         &self.variables
     }
 
-    /// Returns a mutable reference to the scenario's variables.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use scenario_rs_core::{
-    ///     config::scenario::ScenarioConfig,
-    ///     scenario::Scenario
-    /// };
-    /// use std::collections::HashMap;
-    ///
-    /// let config = ScenarioConfig::default();
-    /// let mut scenario = Scenario::try_from(config).unwrap();
-    ///
-    /// // Add a defined variable
-    /// let mut defined = HashMap::new();
-    /// defined.insert("hostname".to_string(), "example.com".to_string());
-    /// scenario.variables_mut().defined_mut().extend(defined);
-    ///
-    /// // Verify the variable was added
-    /// assert_eq!(
-    ///     scenario.variables().defined().get("hostname"),
-    ///     Some(&"example.com".to_string())
-    /// );
-    /// ```
     pub fn variables_mut(&mut self) -> &mut Variables {
         &mut self.variables
     }
 
-    /// Returns a reference to the scenario's tasks.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use scenario_rs_core::{
-    ///     config::scenario::ScenarioConfig,
-    ///     scenario::Scenario
-    /// };
-    ///
-    /// let config = ScenarioConfig::default();
-    /// let scenario = Scenario::try_from(config).unwrap();
-    ///
-    /// let tasks = scenario.tasks();
-    /// assert!(tasks.is_empty());
-    /// ```
     pub fn tasks(&self) -> &Tasks {
         &self.tasks
     }
 
-    /// Returns a reference to the scenario's steps.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use scenario_rs_core::{
-    ///     config::scenario::ScenarioConfig,
-    ///     scenario::Scenario
-    /// };
-    ///
-    /// let config = ScenarioConfig::default();
-    /// let scenario = Scenario::try_from(config).unwrap();
-    ///
-    /// let steps = scenario.steps();
-    /// assert!(steps.is_empty());
-    /// ```
     pub fn steps(&self) -> &steps::Steps {
         &self.execute.steps
     }
@@ -153,11 +56,6 @@ impl Scenario {
 impl TryFrom<ScenarioConfig> for Scenario {
     type Error = ScenarioError;
 
-    /// Attempts to create a Scenario from a configuration.
-    ///
-    /// This converts a configuration structure into a fully initialized Scenario
-    /// ready for execution. It sets up all necessary components including server
-    /// connection details, credentials, tasks, and variables.
     fn try_from(config: ScenarioConfig) -> Result<Self, Self::Error> {
         let server = Server::from(&config.server);
         let credentials = Credentials::from(&config.credentials);
@@ -193,10 +91,6 @@ impl TryFrom<ScenarioConfig> for Scenario {
 impl TryFrom<PathBuf> for Scenario {
     type Error = ScenarioError;
 
-    /// Creates a Scenario from a configuration file path.
-    ///
-    /// Loads and parses the configuration file at the given path, then
-    /// initializes a Scenario from it.
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         let config = ScenarioConfig::try_from(path)
             .map_err(ScenarioError::CannotCreateScenarioFromConfig)
@@ -211,10 +105,6 @@ impl TryFrom<PathBuf> for Scenario {
 impl TryFrom<&str> for Scenario {
     type Error = ScenarioError;
 
-    /// Creates a Scenario from a configuration file path string.
-    ///
-    /// Convenience method that converts the string to a PathBuf and loads
-    /// the scenario from that path.
     fn try_from(path: &str) -> Result<Self, Self::Error> {
         let path = PathBuf::from(path);
         Scenario::try_from(path)
@@ -222,14 +112,7 @@ impl TryFrom<&str> for Scenario {
 }
 
 impl Scenario {
-    /// Executes the scenario on the remote server.
-    ///
-    /// This method:
-    /// 1. Creates an SSH session to the target server
-    /// 2. Executes all steps in the defined order
-    /// 3. Logs progress via the tracing system
-    ///
-    /// If any step fails, execution is stopped and an error is logged.
+    /// Executes the scenario: creates SSH session, runs steps, logs progress.
     #[instrument(skip_all, name = "scenario")]
     pub fn execute(&self) {
         debug!(scenario.event = ScenarioEvent::ScenarioStarted.as_str());
