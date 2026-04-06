@@ -5,8 +5,27 @@ on:
   push:
     tags:
       - "v*.*.*"
+  pull_request:
+    branches: [main]
 
 jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: install dependencies (ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Run tests
+        run: cargo test --workspace
+
   publish-tauri:
     permissions:
       contents: write
