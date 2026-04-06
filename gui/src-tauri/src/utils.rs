@@ -21,23 +21,8 @@ impl<'a, T: Send> SafeLock<T> for State<'a, Mutex<T>> {
     }
 }
 
-/// Trait for safely sending events through a channel.
-///
-/// This trait provides a convenient wrapper around channel sending that handles
-/// errors when the receiver has been dropped.
-///
-/// # Examples
-///
-/// ```
-/// # use std::sync::mpsc;
-/// # use scenario_rs_core::utils::SendEvent;
-///
-/// let (tx, rx) = mpsc::channel();
-/// tx.send_event("Scenario started");
-/// assert_eq!(rx.recv().unwrap(), "Scenario started");
-/// ```
+/// Trait for safely sending events through a channel, logging errors if the receiver is dropped.
 pub trait SendEvent<T> {
-    /// Sends an event through the channel, logging any errors if the channel is closed.
     fn send_event(&self, event: T);
 }
 
