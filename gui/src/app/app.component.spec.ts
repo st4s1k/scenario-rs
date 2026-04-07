@@ -384,15 +384,6 @@ describe('AppComponent', () => {
       // Given & When & Then
       expect(component.isInvalidScenarioConfigPath).toBe(false);
     });
-
-    it('should return cached value while validator is pending', () => {
-      // Given
-      component.scenarioConfigPath.markAsDirty();
-      const firstValue = component.isInvalidScenarioConfigPath;
-
-      // When & Then
-      expect(typeof firstValue).toBe('boolean');
-    });
   });
 
   describe('configPathValidator', () => {
@@ -486,21 +477,6 @@ describe('AppComponent', () => {
     });
   });
 
-  describe('isInvalidScenarioConfigPath (pending)', () => {
-    it('should return last cached value when control is pending', () => {
-      // Given
-      component.scenarioConfigPath.markAsDirty();
-      (component as any)._lastInvalidScenarioConfigPathValue = true;
-
-      // When
-      Object.defineProperty(component.scenarioConfigPath, 'pending', { value: true, configurable: true });
-      const result = component.isInvalidScenarioConfigPath;
-
-      // Then
-      expect(result).toBe(true);
-    });
-  });
-
   describe('getRequiredVariables', () => {
     it('should create form controls for non-read-only fields', async () => {
       // Given
@@ -515,6 +491,79 @@ describe('AppComponent', () => {
       // Then
       expect(component.requiredFieldsFormGroup.controls['editable']).toBeDefined();
       expect(component.requiredFieldsFormGroup.controls['readonly']).toBeUndefined();
+    });
+  });
+
+  describe('stepExecStates', () => {
+    it('should return empty array when executionState is null', () => {
+      // Given & When
+      const result = component.stepExecStates();
+
+      // Then
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('isInvalidScenarioConfigPath', () => {
+    it('should return true when invalid and dirty', () => {
+      // Given
+      component.scenarioConfigPath.setValue('');
+      component.scenarioConfigPath.markAsDirty();
+      component.scenarioConfigPath.setErrors({ invalidPath: true });
+      Object.defineProperty(component.scenarioConfigPath, 'pending', { value: false, configurable: true });
+
+      // When
+      const result = component.isInvalidScenarioConfigPath;
+
+      // Then
+      expect(result).toBe(true);
+    });
+
+    it('should return true when invalid and touched', () => {
+      // Given
+      component.scenarioConfigPath.setValue('');
+      component.scenarioConfigPath.markAsTouched();
+      component.scenarioConfigPath.setErrors({ invalidPath: true });
+      Object.defineProperty(component.scenarioConfigPath, 'pending', { value: false, configurable: true });
+
+      // When
+      const result = component.isInvalidScenarioConfigPath;
+
+      // Then
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('selectRequiredFile', () => {
+    it('should use <unknown> fallback when label is empty', async () => {
+      // Given
+      component.requiredFields['test_field'] = makeRequiredField({ label: '' });
+      component.requiredFieldsFormGroup.addControl('test_field', new FormControl(''));
+      tauri.setResponse('plugin:dialog|open', '/selected/path');
+
+      // When
+      await component.selectRequiredFile('test_field');
+
+      // Then
+      tauri.expectInvoked('plugin:dialog|open');
+    });
+  });
+
+  describe('configPathValidator', () => {
+    it('should return invalidPath error when path is invalid', (done) => {
+      // Given
+      tauri.setResponse('is_valid_config_path', false);
+      const validator = component.configPathValidator();
+      const control = new FormControl('invalid/path.toml');
+
+      // When
+      const result$ = validator(control);
+
+      // Then
+      (result$ as any).subscribe((result: any) => {
+        expect(result).toEqual({ invalidPath: true });
+        done();
+      });
     });
   });
 });

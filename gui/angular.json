@@ -72,7 +72,11 @@
             "tsConfig": "tsconfig.spec.json",
             "karmaConfig": "karma.conf.js",
             "assets": ["src/assets"],
-            "styles": ["src/styles.scss"]
+            "styles": ["src/styles.scss"],
+            "codeCoverageExclude": [
+              "src/test-setup.ts",
+              "src/app/testing/**"
+            ]
           }
         }
       }

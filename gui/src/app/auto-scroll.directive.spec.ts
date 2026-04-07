@@ -110,14 +110,22 @@ describe('AutoScrollDirective', () => {
       (directive as any).pending = false;
       Object.defineProperty(mockTextArea, 'scrollHeight', { value: 1000, configurable: true });
       Object.defineProperty(mockTextArea, 'isConnected', { value: true, configurable: true });
+      let capturedScrollTop = -1;
+      Object.defineProperty(mockTextArea, 'scrollTop', {
+        get: () => capturedScrollTop,
+        set: (v: number) => { capturedScrollTop = v; },
+        configurable: true,
+      });
 
       // When
       (directive as any).scheduleScroll();
 
       // Then
       requestAnimationFrame(() => {
-        expect(mockTextArea.scrollTop).toBe(1000);
-        done();
+        requestAnimationFrame(() => {
+          expect(capturedScrollTop).toBe(1000);
+          done();
+        });
       });
     });
 

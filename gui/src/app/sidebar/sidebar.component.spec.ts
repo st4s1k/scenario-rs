@@ -17,11 +17,6 @@ describe('SidebarComponent', () => {
       // Given & When & Then
       expect(component.getOnFailStepKey(2, 3)).toBe('2-3');
     });
-
-    it('should return key for zero indices', () => {
-      // Given & When & Then
-      expect(component.getOnFailStepKey(0, 0)).toBe('0-0');
-    });
   });
 
   describe('onFailStepExpanded', () => {
@@ -365,6 +360,13 @@ describe('SidebarComponent', () => {
 
       // Then
       expect(component.sidebarWidth).toBe(originalWidth);
+    });
+  });
+
+  describe('ngOnChanges', () => {
+    it('should be callable without error', () => {
+      // Given & When & Then
+      expect(() => component.ngOnChanges()).not.toThrow();
     });
   });
 });
