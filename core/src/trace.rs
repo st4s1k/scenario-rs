@@ -246,7 +246,8 @@ impl Visit for ScenarioEventVisitor {
 
 #[cfg(test)]
 mod tests {
-    use crate::trace::ScenarioEventVisitor;
+    use crate::trace::{ScenarioEvent, ScenarioEventVisitor};
+    use std::str::FromStr;
     use tracing::field::{Field, Visit};
 
     #[test]
@@ -415,6 +416,13 @@ mod tests {
             target: module_path!(),
             level: tracing::metadata::Level::INFO,
             fields: &[
+                    "message",
+
+                    "session.host",
+                    "session.username",
+                    "session.password",
+                    "session.port",
+
                     "scenario.event",
                     "scenario.error",
                     "task.description",
@@ -441,5 +449,133 @@ mod tests {
         };
 
         tracing::field::AsField::as_field(name, &TEST_META).unwrap()
+    }
+
+    #[test]
+    fn test_scenario_event_from_str_error() {
+        // Given
+        let input = "totally_unknown_event";
+
+        // When
+        let result = ScenarioEvent::from_str(input);
+
+        // Then
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "Unknown scenario event: totally_unknown_event"
+        );
+    }
+
+    #[test]
+    fn test_scenario_event_display_roundtrip() {
+        // Given
+        let events = vec![
+            ScenarioEvent::Error,
+            ScenarioEvent::ScenarioStarted,
+            ScenarioEvent::ScenarioCompleted,
+            ScenarioEvent::ScenarioFailed,
+            ScenarioEvent::SessionCreated,
+            ScenarioEvent::CreateSessionStarted,
+            ScenarioEvent::CreateSessionCompleted,
+            ScenarioEvent::CreatedMockSession,
+            ScenarioEvent::StepsStarted,
+            ScenarioEvent::StepsCompleted,
+            ScenarioEvent::StepStarted,
+            ScenarioEvent::StepCompleted,
+            ScenarioEvent::RemoteSudoStarted,
+            ScenarioEvent::RemoteSudoOutput,
+            ScenarioEvent::RemoteSudoCompleted,
+            ScenarioEvent::SftpCopyStarted,
+            ScenarioEvent::SftpCopyProgress,
+            ScenarioEvent::SftpCopyCompleted,
+            ScenarioEvent::OnFailStepsStarted,
+            ScenarioEvent::OnFailStepsCompleted,
+            ScenarioEvent::OnFailStepStarted,
+            ScenarioEvent::OnFailStepCompleted,
+        ];
+
+        for event in events {
+            // When
+            let display_str = event.to_string();
+            let parsed = ScenarioEvent::from_str(&display_str).unwrap();
+
+            // Then
+            assert_eq!(event, parsed);
+            assert_eq!(display_str, event.as_str());
+        }
+    }
+
+    #[test]
+    fn test_visitor_record_str_session_fields_ignored() {
+        // Given
+        let mut visitor = ScenarioEventVisitor::default();
+
+        // When
+        visitor.record_str(&field("message"), "some message");
+        visitor.record_str(&field("session.host"), "192.168.1.1");
+        visitor.record_str(&field("session.username"), "admin");
+        visitor.record_str(&field("session.password"), "secret");
+
+        // Then
+        assert!(visitor.scenario_event.is_none());
+        assert!(visitor.scenario_error.is_none());
+        assert!(visitor.task_description.is_none());
+    }
+
+    #[test]
+    fn test_visitor_record_debug_session_fields_ignored() {
+        // Given
+        let mut visitor = ScenarioEventVisitor::default();
+
+        // When
+        visitor.record_debug(&field("message"), &"some message");
+        visitor.record_debug(&field("session.host"), &"192.168.1.1");
+        visitor.record_debug(&field("session.username"), &"admin");
+        visitor.record_debug(&field("session.password"), &"secret");
+
+        // Then
+        assert!(visitor.scenario_event.is_none());
+        assert!(visitor.scenario_error.is_none());
+        assert!(visitor.task_description.is_none());
+    }
+
+    #[test]
+    fn test_visitor_record_u64_session_port_ignored() {
+        // Given
+        let mut visitor = ScenarioEventVisitor::default();
+
+        // When
+        visitor.record_u64(&field("session.port"), 22);
+
+        // Then
+        assert!(visitor.sftp_copy_progress_current.is_none());
+        assert!(visitor.sftp_copy_progress_total.is_none());
+        assert!(visitor.step_index.is_none());
+        assert!(visitor.steps_total.is_none());
+    }
+
+    #[test]
+    fn test_visitor_merge_fills_none_from_other() {
+        // Given
+        let mut base = ScenarioEventVisitor::default();
+        base.scenario_event = Some("step_started".to_string());
+
+        let mut other = ScenarioEventVisitor::default();
+        other.scenario_error = Some("timeout".to_string());
+        other.task_description = Some("Deploy".to_string());
+        other.step_index = Some(2);
+        other.steps_total = Some(5);
+        other.scenario_event = Some("should_not_override".to_string());
+
+        // When
+        base.merge(&other);
+
+        // Then
+        assert_eq!(base.scenario_event.unwrap(), "step_started");
+        assert_eq!(base.scenario_error.unwrap(), "timeout");
+        assert_eq!(base.task_description.unwrap(), "Deploy");
+        assert_eq!(base.step_index.unwrap(), 2);
+        assert_eq!(base.steps_total.unwrap(), 5);
     }
 }
