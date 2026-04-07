@@ -242,7 +242,6 @@ cargo install cargo-make
 | `cargo make build-all` | Build everything (Rust + GUI debug) |
 | `cargo make build-all-release` | Build everything (Rust + GUI release) |
 | `cargo make verify` | Full verification: check + all tests + Angular build |
-| `cargo make coverage-lcov` | Generate LCOV coverage report for CI (requires [cargo-tarpaulin](https://github.com/xd009642/tarpaulin)) |
 
 ## DIY
 

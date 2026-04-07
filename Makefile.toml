@@ -97,12 +97,3 @@ dependencies = ["build-release", "tauri-build"]
 workspace = false
 description = "Full verification: check + all tests + Angular build"
 dependencies = ["check", "test-all", "ng-build"]
-
-# --- Coverage ---
-
-[tasks.coverage-lcov]
-clear = true
-workspace = false
-description = "Generate LCOV coverage report for CI (requires cargo-tarpaulin)"
-script_runner = "@shell"
-script = ["cargo tarpaulin --workspace --out lcov --output-dir coverage --skip-clean"]
