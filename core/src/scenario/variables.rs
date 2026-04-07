@@ -452,4 +452,44 @@ mod tests {
         defined_vars.insert("url".to_string(), "https://{hostname}:{port}".to_string());
         DefinedVariables::from(defined_vars)
     }
+
+    #[test]
+    fn test_variables_resolve_filters_empty_values() {
+        // Given
+        let mut variables = Variables::default();
+        variables
+            .defined_mut()
+            .insert("name".to_string(), "Alice".to_string());
+        variables.required_mut().insert(
+            "empty_var".to_string(),
+            RequiredVariable::default().with_value("".to_string()),
+        );
+
+        // When
+        let result = variables.resolve_placeholders("{name}");
+
+        // Then
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Alice");
+    }
+
+    #[test]
+    fn test_variables_resolved_with_blank_values_logs_warning() {
+        // Given
+        let mut variables = Variables::default();
+        variables
+            .defined_mut()
+            .insert("hostname".to_string(), "example.com".to_string());
+        variables
+            .defined_mut()
+            .insert("empty_key".to_string(), "".to_string());
+
+        // When
+        let result = variables.resolved();
+
+        // Then
+        assert!(result.is_ok());
+        let resolved = result.unwrap();
+        assert_eq!(resolved.get("hostname"), Some(&"example.com".to_string()));
+    }
 }
