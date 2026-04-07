@@ -1025,4 +1025,31 @@ mod tests {
             other => panic!("Expected LogMessage, got {other:?}"),
         }
     }
+
+    #[test]
+    fn test_on_record_merges_span_data() {
+        // Given & When
+        let events = collect_events(|| {
+            let span = span!(
+                Level::INFO,
+                "step",
+                step.index = tracing::field::Empty,
+                steps.total = 1u64,
+                task.description = "Dynamic step"
+            );
+            span.record("step.index", 0u64);
+            let _guard = span.entered();
+            event!(Level::INFO, scenario.event = "step_started");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("[1/1]"), "expected [1/1] in: {msg}");
+                assert!(msg.contains("Dynamic step"), "expected description in: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
 }
