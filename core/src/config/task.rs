@@ -32,8 +32,39 @@ impl Default for TaskType {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::config::task::{TaskConfig, TaskType};
     use toml;
+
+    #[test]
+    fn test_task_type_default_is_remote_sudo() {
+        // Given & When
+        let task_type = TaskType::default();
+
+        // Then
+        assert_eq!(
+            task_type,
+            TaskType::RemoteSudo {
+                command: String::new()
+            }
+        );
+    }
+
+    #[test]
+    fn test_task_config_default() {
+        // Given & When
+        let config = TaskConfig::default();
+
+        // Then
+        assert_eq!(config.description, "");
+        assert_eq!(config.error_message, "");
+        assert_eq!(
+            config.task_type,
+            TaskType::RemoteSudo {
+                command: String::new()
+            }
+        );
+    }
 
     #[test]
     fn test_task_config_remote_sudo_deserialization() {
