@@ -232,9 +232,9 @@ cargo install cargo-make
 | `cargo make check` | Run `cargo check` on the workspace |
 | `cargo make build` | Build the workspace (debug) |
 | `cargo make build-release` | Build the workspace (release) |
-| `cargo make test` | Run all Rust tests |
-| `cargo make ng-test` | Run Angular unit tests |
-| `cargo make test-all` | Run all tests (Rust + Angular) |
+| `cargo make test` | Run Rust tests with coverage (requires [cargo-tarpaulin](https://github.com/xd009642/tarpaulin)) |
+| `cargo make ng-test` | Run Angular unit tests with coverage |
+| `cargo make test-all` | Run all tests with coverage (Rust + Angular) |
 | `cargo make ng-build` | Build Angular frontend |
 | `cargo make tauri-dev` | Run GUI in development mode |
 | `cargo make tauri-build` | Build GUI (release) |
@@ -242,7 +242,6 @@ cargo install cargo-make
 | `cargo make build-all` | Build everything (Rust + GUI debug) |
 | `cargo make build-all-release` | Build everything (Rust + GUI release) |
 | `cargo make verify` | Full verification: check + all tests + Angular build |
-| `cargo make coverage` | Generate HTML coverage report (requires [cargo-tarpaulin](https://github.com/xd009642/tarpaulin)) |
 | `cargo make coverage-lcov` | Generate LCOV coverage report for CI (requires [cargo-tarpaulin](https://github.com/xd009642/tarpaulin)) |
 
 ## DIY
