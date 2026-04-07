@@ -31,9 +31,9 @@ fn load_deploy_scenario() {
 fn load_child_with_parent_inheritance() {
     // Given & When
     let config = ScenarioConfig::try_from(example_config("deploy-service-one.toml"));
-    assert!(config.is_ok(), "failed to load deploy-service-one.toml: {:?}", config.err());
 
     // Then
+    assert!(config.is_ok(), "failed to load deploy-service-one.toml: {:?}", config.err());
     let config = config.unwrap();
     assert_eq!(config.server.host, "service-one.example.com");
     assert_eq!(config.server.port, Some(23));
@@ -44,9 +44,9 @@ fn load_child_with_parent_inheritance() {
 fn load_second_child_with_parent_inheritance() {
     // Given & When
     let config = ScenarioConfig::try_from(example_config("deploy-service-two.toml"));
-    assert!(config.is_ok(), "failed to load deploy-service-two.toml: {:?}", config.err());
 
     // Then
+    assert!(config.is_ok(), "failed to load deploy-service-two.toml: {:?}", config.err());
     let config = config.unwrap();
     assert_eq!(config.server.host, "service-two.example.com");
 }
@@ -121,8 +121,6 @@ fn invalid_toml_returns_cannot_read_config() {
 
     // When
     let result = ScenarioConfig::try_from(path.clone());
-    let _ = std::fs::remove_file(&path);
-    let _ = std::fs::remove_dir(&dir);
 
     // Then
     assert!(
@@ -130,6 +128,8 @@ fn invalid_toml_returns_cannot_read_config() {
         "expected CannotReadConfig, got: {:?}",
         result
     );
+    let _ = std::fs::remove_file(&path);
+    let _ = std::fs::remove_dir(&dir);
 }
 
 #[test]
@@ -158,8 +158,6 @@ error_message = "e"
 
     // When
     let result = ScenarioConfig::try_from(path.clone());
-    let _ = std::fs::remove_file(&path);
-    let _ = std::fs::remove_dir(&dir);
 
     // Then
     assert!(
@@ -167,6 +165,8 @@ error_message = "e"
         "expected MissingCredentials, got: {:?}",
         result
     );
+    let _ = std::fs::remove_file(&path);
+    let _ = std::fs::remove_dir(&dir);
 }
 
 #[test]
@@ -195,8 +195,6 @@ error_message = "e"
 
     // When
     let result = ScenarioConfig::try_from(path.clone());
-    let _ = std::fs::remove_file(&path);
-    let _ = std::fs::remove_dir(&dir);
 
     // Then
     assert!(
@@ -204,6 +202,8 @@ error_message = "e"
         "expected MissingServer, got: {:?}",
         result
     );
+    let _ = std::fs::remove_file(&path);
+    let _ = std::fs::remove_dir(&dir);
 }
 
 #[test]
@@ -232,8 +232,6 @@ error_message = "e"
 
     // When
     let result = ScenarioConfig::try_from(path.clone());
-    let _ = std::fs::remove_file(&path);
-    let _ = std::fs::remove_dir(&dir);
 
     // Then
     assert!(
@@ -241,6 +239,8 @@ error_message = "e"
         "expected MissingExecute, got: {:?}",
         result
     );
+    let _ = std::fs::remove_file(&path);
+    let _ = std::fs::remove_dir(&dir);
 }
 
 #[test]
@@ -266,8 +266,6 @@ steps = [{ task = "t" }]
 
     // When
     let result = ScenarioConfig::try_from(path.clone());
-    let _ = std::fs::remove_file(&path);
-    let _ = std::fs::remove_dir(&dir);
 
     // Then
     assert!(
@@ -275,6 +273,8 @@ steps = [{ task = "t" }]
         "expected MissingTasks, got: {:?}",
         result
     );
+    let _ = std::fs::remove_file(&path);
+    let _ = std::fs::remove_dir(&dir);
 }
 
 #[test]
@@ -282,11 +282,8 @@ fn circular_parent_returns_error() {
     // Given
     let dir = std::env::temp_dir().join("scenario_rs_test_circular");
     std::fs::create_dir_all(&dir).unwrap();
-
     let a_path = dir.join("a.toml");
     let b_path = dir.join("b.toml");
-
-    // Given
     let b_toml_path = b_path.display().to_string().replace('\\', "/");
     let a_toml_path = a_path.display().to_string().replace('\\', "/");
     std::fs::write(&a_path, format!("parent = \"{b_toml_path}\"")).unwrap();
@@ -294,9 +291,6 @@ fn circular_parent_returns_error() {
 
     // When
     let result = ScenarioConfig::try_from(a_path.clone());
-    let _ = std::fs::remove_file(&a_path);
-    let _ = std::fs::remove_file(&b_path);
-    let _ = std::fs::remove_dir(&dir);
 
     // Then
     assert!(
@@ -304,6 +298,9 @@ fn circular_parent_returns_error() {
         "expected CircularDependency, got: {:?}",
         result
     );
+    let _ = std::fs::remove_file(&a_path);
+    let _ = std::fs::remove_file(&b_path);
+    let _ = std::fs::remove_dir(&dir);
 }
 
 #[test]
@@ -316,8 +313,6 @@ fn parent_not_found_returns_error() {
 
     // When
     let result = ScenarioConfig::try_from(path.clone());
-    let _ = std::fs::remove_file(&path);
-    let _ = std::fs::remove_dir(&dir);
 
     // Then
     assert!(
@@ -325,4 +320,6 @@ fn parent_not_found_returns_error() {
         "expected ParentConfigNotFound, got: {:?}",
         result
     );
+    let _ = std::fs::remove_file(&path);
+    let _ = std::fs::remove_dir(&dir);
 }

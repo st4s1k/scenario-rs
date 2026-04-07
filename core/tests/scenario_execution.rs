@@ -343,13 +343,12 @@ fn on_fail_steps_succeed_with_success_session_and_main_step_sftp_fail() {
 
 #[test]
 fn remote_sudo_step_emits_progress_and_output() {
-    // Given & When
+    // Given
     let steps = Steps::from(vec![Step {
         index: 0,
         task: make_sudo_task("cmd", "echo hello"),
         on_fail_steps: OnFailSteps::default(),
     }]);
-
     let (tx, rx) = mpsc::channel();
     let sm = ExecutionStateManager::new(
         ExecutionState {
@@ -359,6 +358,7 @@ fn remote_sudo_step_emits_progress_and_output() {
         tx,
     );
 
+    // When
     steps.execute(&success_session(), &Variables::default(), Some(&sm)).unwrap();
 
     // Then

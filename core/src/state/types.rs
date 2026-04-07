@@ -274,9 +274,13 @@ mod tests {
             StepStatus::Failed,
             StepStatus::Skipped,
         ];
+
         for s in statuses {
+            // When
             let json = serde_json::to_value(&s).unwrap();
             let restored: StepStatus = serde_json::from_value(json).unwrap();
+
+            // Then
             assert_eq!(restored, s);
         }
     }
