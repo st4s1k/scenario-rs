@@ -380,3 +380,345 @@ impl EventLayer for ScenarioEventLayer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::trace::{
+        layers::{scenario_layer::ScenarioEventLayer, EventLayer},
+        AppEvent,
+    };
+    use std::sync::mpsc;
+    use tracing::{event, span, subscriber, Level, Subscriber};
+    use tracing_subscriber::{
+        layer::Context, prelude::*, registry::LookupSpan, Layer, Registry,
+    };
+
+    struct TestScenarioLayer(ScenarioEventLayer);
+
+    impl<S> Layer<S> for TestScenarioLayer
+    where
+        S: Subscriber + for<'a> LookupSpan<'a>,
+    {
+        fn on_new_span(
+            &self,
+            attrs: &tracing::span::Attributes<'_>,
+            id: &tracing::span::Id,
+            ctx: Context<'_, S>,
+        ) {
+            self.0.on_new_span(attrs, id, ctx);
+        }
+
+        fn on_record(
+            &self,
+            id: &tracing::span::Id,
+            record: &tracing::span::Record<'_>,
+            ctx: Context<'_, S>,
+        ) {
+            self.0.on_record(id, record, ctx);
+        }
+
+        fn on_event(&self, event: &tracing::Event<'_>, ctx: Context<'_, S>) {
+            self.0.process_event(event, ctx);
+        }
+    }
+
+    fn collect_events(f: impl FnOnce()) -> Vec<AppEvent> {
+        let (sender, receiver) = mpsc::channel();
+        let layer = TestScenarioLayer(ScenarioEventLayer::new(sender));
+        let test_subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(test_subscriber);
+        f();
+        receiver.try_iter().collect()
+    }
+
+    #[test]
+    fn test_scenario_started_emits_log_message() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::INFO, scenario.event = "scenario_started");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => assert!(msg.contains("Scenario started"), "got: {msg}"),
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_scenario_completed_emits_log_message() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::INFO, scenario.event = "scenario_completed");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("Scenario completed"), "got: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_scenario_failed_emits_log_message() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::INFO, scenario.event = "scenario_failed");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("Scenario failed"), "got: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_error_with_step_context_emits_formatted_message() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 0u64,
+                steps.total = 3u64
+            )
+            .entered();
+            event!(
+                Level::ERROR,
+                scenario.event = "error",
+                scenario.error = "connection refused"
+            );
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("[1/3]"), "expected [1/3] in: {msg}");
+                assert!(msg.contains("connection refused"), "expected error in: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_error_without_context_emits_generic_message() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::ERROR, scenario.event = "error");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(
+                    msg.contains("Scenario execution failed"),
+                    "got: {msg}"
+                );
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_step_started_emits_formatted_message() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 1u64,
+                steps.total = 5u64,
+                task.description = "Deploy service"
+            )
+            .entered();
+            event!(Level::INFO, scenario.event = "step_started");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("[2/5]"), "expected [2/5] in: {msg}");
+                assert!(msg.contains("Deploy service"), "expected description in: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_remote_sudo_output_emits_header_and_plain_message() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 0u64,
+                steps.total = 1u64
+            )
+            .entered();
+            event!(
+                Level::INFO,
+                scenario.event = "remote_sudo_output",
+                remote_sudo.output = "command output here"
+            );
+        });
+
+        // Then
+        assert_eq!(events.len(), 2);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("Output:"), "expected 'Output:' in: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+        match &events[1] {
+            AppEvent::LogPlainMessage(text) => {
+                assert_eq!(text, "command output here");
+            }
+            other => panic!("Expected LogPlainMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_sftp_copy_started_emits_source_and_destination() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 0u64,
+                steps.total = 2u64,
+                sftp_copy.source = "/local/file.tar",
+                sftp_copy.destination = "/remote/file.tar"
+            )
+            .entered();
+            event!(Level::INFO, scenario.event = "sftp_copy_started");
+        });
+
+        // Then
+        assert_eq!(events.len(), 2);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("/local/file.tar"), "expected source in: {msg}");
+            }
+            other => panic!("Expected LogMessage for source, got {other:?}"),
+        }
+        match &events[1] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("/remote/file.tar"), "expected dest in: {msg}");
+            }
+            other => panic!("Expected LogMessage for dest, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_sftp_copy_completed_emits_log_message() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 0u64,
+                steps.total = 1u64
+            )
+            .entered();
+            event!(Level::INFO, scenario.event = "sftp_copy_completed");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("SFTP copy finished"), "got: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_sftp_copy_progress_emits_percentage() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 0u64,
+                steps.total = 1u64,
+                sftp_copy.progress.current = 500u64,
+                sftp_copy.progress.total = 1000u64
+            )
+            .entered();
+            event!(Level::INFO, scenario.event = "sftp_copy_progress");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("50.0%"), "expected 50.0%% in: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_on_fail_steps_started_emits_log_message() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 0u64,
+                steps.total = 3u64,
+                on_fail_steps.total = 2u64
+            )
+            .entered();
+            event!(Level::INFO, scenario.event = "on_fail_steps_started");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(
+                    msg.contains("Starting failure recovery steps"),
+                    "got: {msg}"
+                );
+                assert!(msg.contains("(2)"), "expected on-fail count in: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_step_completed_emits_nothing() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::INFO, scenario.event = "step_completed");
+        });
+
+        // Then
+        assert!(events.is_empty(), "expected no events for step_completed");
+    }
+
+    #[test]
+    fn test_unrecognized_event_emits_nothing() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::INFO, scenario.event = "totally_unknown_event_xyz");
+        });
+
+        // Then
+        assert!(events.is_empty(), "expected no events for unrecognized event");
+    }
+}
