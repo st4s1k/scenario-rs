@@ -62,3 +62,49 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::trace::{frontend_layer::FrontendLayer, AppEvent};
+    use std::sync::mpsc;
+    use tracing::{event, span, subscriber, Level};
+    use tracing_subscriber::{prelude::*, Registry};
+
+    #[test]
+    fn test_frontend_layer_routes_gui_events_to_app_layer() {
+        // Given
+        let (sender, receiver) = mpsc::channel();
+        let layer = FrontendLayer::from(sender);
+        let test_subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(test_subscriber);
+
+        // When
+        event!(Level::INFO, message = "Application log message");
+
+        // Then
+        let events: Vec<AppEvent> = receiver.try_iter().collect();
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("Application log message"), "got: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_frontend_layer_on_new_span_for_gui_module_is_noop() {
+        // Given
+        let (sender, receiver) = mpsc::channel();
+        let layer = FrontendLayer::from(sender);
+        let test_subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(test_subscriber);
+
+        // When
+        let _span = span!(Level::INFO, "test_span", step.index = 1u64).entered();
+
+        // Then
+        let events: Vec<AppEvent> = receiver.try_iter().collect();
+        assert!(events.is_empty());
+    }
+}
