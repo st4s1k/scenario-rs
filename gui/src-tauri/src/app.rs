@@ -734,7 +734,7 @@ mod tests {
     #[test]
     fn test_build_initial_state_from_scenario() {
         // Given
-        let scenario = Scenario::try_from("example_configs/example-scenario.toml")
+        let scenario = Scenario::try_from("../../example_configs/example-scenario.toml")
             .expect("Failed to load example scenario");
 
         // When
@@ -760,7 +760,7 @@ mod tests {
     #[test]
     fn test_required_variable_dto_from_scenario() {
         // Given
-        let scenario = Scenario::try_from("example_configs/example-scenario.toml")
+        let scenario = Scenario::try_from("../../example_configs/example-scenario.toml")
             .expect("Failed to load example scenario");
 
         // When
