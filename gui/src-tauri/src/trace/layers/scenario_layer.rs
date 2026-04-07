@@ -721,4 +721,305 @@ mod tests {
         // Then
         assert!(events.is_empty(), "expected no events for unrecognized event");
     }
+
+    #[test]
+    fn test_error_with_on_fail_step_context() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 0u64,
+                steps.total = 3u64,
+                on_fail_step.index = 1u64,
+                on_fail_steps.total = 2u64
+            )
+            .entered();
+            event!(
+                Level::ERROR,
+                scenario.event = "error",
+                scenario.error = "recovery timeout"
+            );
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("[1/3]"), "expected [1/3] in: {msg}");
+                assert!(msg.contains("[on-fail]"), "expected [on-fail] in: {msg}");
+                assert!(msg.contains("[2/2]"), "expected [2/2] in: {msg}");
+                assert!(msg.contains("recovery timeout"), "expected error in: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_error_with_error_message_no_step_context() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(
+                Level::ERROR,
+                scenario.event = "error",
+                scenario.error = "global failure"
+            );
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("global failure"), "expected error in: {msg}");
+                assert!(!msg.contains("["), "should not contain step context: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_remote_sudo_started_emits_command() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 0u64,
+                steps.total = 2u64,
+                remote_sudo.command = "systemctl restart app"
+            )
+            .entered();
+            event!(Level::INFO, scenario.event = "remote_sudo_started");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("[1/2]"), "expected [1/2] in: {msg}");
+                assert!(msg.contains("systemctl restart app"), "expected command in: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_remote_sudo_started_with_on_fail_context() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 0u64,
+                steps.total = 2u64,
+                on_fail_step.index = 0u64,
+                on_fail_steps.total = 1u64,
+                remote_sudo.command = "recovery cmd"
+            )
+            .entered();
+            event!(Level::INFO, scenario.event = "remote_sudo_started");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("[on-fail]"), "expected [on-fail] in: {msg}");
+                assert!(msg.contains("[1/1]"), "expected [1/1] in: {msg}");
+                assert!(msg.contains("recovery cmd"), "expected command in: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_remote_sudo_output_with_on_fail_context() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 0u64,
+                steps.total = 1u64,
+                on_fail_step.index = 0u64,
+                on_fail_steps.total = 1u64
+            )
+            .entered();
+            event!(
+                Level::INFO,
+                scenario.event = "remote_sudo_output",
+                remote_sudo.output = "recovery output"
+            );
+        });
+
+        // Then
+        assert_eq!(events.len(), 2);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("[on-fail]"), "expected [on-fail] in: {msg}");
+                assert!(msg.contains("Output:"), "expected 'Output:' in: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+        match &events[1] {
+            AppEvent::LogPlainMessage(text) => {
+                assert_eq!(text, "recovery output");
+            }
+            other => panic!("Expected LogPlainMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_sftp_copy_started_with_on_fail_context() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 0u64,
+                steps.total = 2u64,
+                on_fail_step.index = 0u64,
+                on_fail_steps.total = 1u64,
+                sftp_copy.source = "/backup/file.tar",
+                sftp_copy.destination = "/remote/file.tar"
+            )
+            .entered();
+            event!(Level::INFO, scenario.event = "sftp_copy_started");
+        });
+
+        // Then
+        assert_eq!(events.len(), 2);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("[on-fail]"), "expected [on-fail] in: {msg}");
+                assert!(msg.contains("/backup/file.tar"), "expected source in: {msg}");
+            }
+            other => panic!("Expected LogMessage for source, got {other:?}"),
+        }
+        match &events[1] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("[on-fail]"), "expected [on-fail] in: {msg}");
+                assert!(msg.contains("/remote/file.tar"), "expected dest in: {msg}");
+            }
+            other => panic!("Expected LogMessage for dest, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_sftp_copy_completed_with_on_fail_context() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 0u64,
+                steps.total = 1u64,
+                on_fail_step.index = 0u64,
+                on_fail_steps.total = 1u64
+            )
+            .entered();
+            event!(Level::INFO, scenario.event = "sftp_copy_completed");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("[on-fail]"), "expected [on-fail] in: {msg}");
+                assert!(msg.contains("SFTP copy finished"), "got: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_sftp_copy_progress_with_on_fail_context() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 0u64,
+                steps.total = 1u64,
+                on_fail_step.index = 0u64,
+                on_fail_steps.total = 1u64,
+                sftp_copy.progress.current = 750u64,
+                sftp_copy.progress.total = 1000u64
+            )
+            .entered();
+            event!(Level::INFO, scenario.event = "sftp_copy_progress");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("[on-fail]"), "expected [on-fail] in: {msg}");
+                assert!(msg.contains("75.0%"), "expected 75.0%% in: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_on_fail_steps_completed_emits_log_message() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 0u64,
+                steps.total = 3u64,
+                on_fail_steps.total = 2u64
+            )
+            .entered();
+            event!(Level::INFO, scenario.event = "on_fail_steps_completed");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(
+                    msg.contains("Failure recovery steps completed"),
+                    "got: {msg}"
+                );
+                assert!(msg.contains("(2)"), "expected on-fail count in: {msg}");
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_on_fail_step_started_emits_log_message() {
+        // Given & When
+        let events = collect_events(|| {
+            let _span = span!(
+                Level::INFO,
+                "step",
+                step.index = 1u64,
+                steps.total = 3u64,
+                on_fail_step.index = 0u64,
+                on_fail_steps.total = 2u64,
+                task.description = "Rollback deployment"
+            )
+            .entered();
+            event!(Level::INFO, scenario.event = "on_fail_step_started");
+        });
+
+        // Then
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            AppEvent::LogMessage(msg) => {
+                assert!(msg.contains("[2/3]"), "expected [2/3] in: {msg}");
+                assert!(msg.contains("[on-fail]"), "expected [on-fail] in: {msg}");
+                assert!(msg.contains("[1/2]"), "expected [1/2] in: {msg}");
+                assert!(
+                    msg.contains("Rollback deployment"),
+                    "expected description in: {msg}"
+                );
+            }
+            other => panic!("Expected LogMessage, got {other:?}"),
+        }
+    }
 }
