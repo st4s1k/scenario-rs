@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ExecutionStateService } from './execution-state.service';
+import { setupTauriMock, TauriTestHarness } from '../testing/tauri-mocks';
 import {
   ExecutionState,
   StepExecState,
@@ -362,6 +363,100 @@ describe('ExecutionStateService', () => {
 
       // Then
       expect(service.executionState()).not.toBe(original);
+    });
+  });
+
+  describe('init', () => {
+    let tauri: TauriTestHarness;
+
+    beforeEach(() => {
+      tauri = setupTauriMock({
+        'get_execution_state': null,
+      });
+    });
+
+    it('should invoke get_execution_state to hydrate', async () => {
+      // Given & When
+      await service.init();
+
+      // Then
+      tauri.expectInvoked('get_execution_state');
+    });
+
+    it('should set executionState when hydrate returns state', async () => {
+      // Given
+      const state = makeState({ status: { kind: 'Running' } });
+      tauri.setResponse('get_execution_state', state);
+
+      // When
+      await service.init();
+
+      // Then
+      expect(service.executionState()).toEqual(state);
+    });
+
+    it('should register listener for execution-diff events', async () => {
+      // Given & When
+      await service.init();
+
+      // Then
+      tauri.expectInvoked('plugin:event|listen');
+      const calls = tauri.invokeSpy.calls.allArgs();
+      const listenCall = calls.find((a: any[]) => a[0] === 'plugin:event|listen');
+      expect(listenCall![1].event).toBe('execution-diff');
+    });
+
+    it('should apply diffs received via event listener', async () => {
+      // Given
+      const state = makeState({ steps: [makeStep()] });
+      tauri.setResponse('get_execution_state', state);
+      await service.init();
+
+      // When
+      tauri.emitEvent('execution-diff', [{ kind: 'StepStatusChanged', step_index: 0, status: 'Running' }]);
+
+      // Then
+      expect(service.executionState()!.steps[0].status).toBe('Running');
+    });
+
+    it('should queue diffs and hydrate when state is null on diff arrival', async () => {
+      // Given
+      let getExecStateCallCount = 0;
+      tauri.setResponse('get_execution_state', () => {
+        getExecStateCallCount++;
+        if (getExecStateCallCount === 1) return null;
+        return makeState({ steps: [makeStep()] });
+      });
+      await service.init();
+
+      // When
+      tauri.emitEvent('execution-diff', [{ kind: 'StepStatusChanged', step_index: 0, status: 'Running' }]);
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Then
+      expect(getExecStateCallCount).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('destroy', () => {
+    it('should call unlisten function', async () => {
+      // Given
+      const tauri = setupTauriMock({
+        'get_execution_state': null,
+      });
+      await service.init();
+
+      // When
+      await service.destroy();
+
+      // Then
+      tauri.expectInvoked('plugin:event|unlisten');
+    });
+
+    it('should not throw when called without init', async () => {
+      // Given & When & Then
+      await expectAsync(service.destroy()).toBeResolved();
     });
   });
 });
