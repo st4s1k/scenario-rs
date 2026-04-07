@@ -129,6 +129,18 @@ mod tests {
         assert!(visitor.message.is_none());
     }
 
+    #[test]
+    fn test_appvisitor_record_str_with_unknown_field() {
+        // Given
+        let mut visitor = AppEventVisitor::default();
+
+        // When
+        visitor.record_str(&field("ignored_field"), "some value");
+
+        // Then
+        assert!(visitor.message.is_none());
+    }
+
     fn field(name: &str) -> Field {
         struct TestCallsite();
         impl tracing::callsite::Callsite for TestCallsite {
