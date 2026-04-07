@@ -139,6 +139,30 @@ mod tests {
         assert_eq!(visitor.message.unwrap(), "");
     }
 
+    #[test]
+    fn test_appvisitor_record_debug_with_message() {
+        // Given
+        let mut visitor = AppEventVisitor::default();
+
+        // When
+        visitor.record_debug(&field("message"), &"Debug message content");
+
+        // Then
+        assert_eq!(visitor.message.unwrap(), "Debug message content");
+    }
+
+    #[test]
+    fn test_appvisitor_record_debug_with_non_message_field() {
+        // Given
+        let mut visitor = AppEventVisitor::default();
+
+        // When
+        visitor.record_debug(&field("ignored_field"), &"some value");
+
+        // Then
+        assert!(visitor.message.is_none());
+    }
+
     fn field(name: &str) -> Field {
         struct TestCallsite();
         impl tracing::callsite::Callsite for TestCallsite {
