@@ -374,5 +374,50 @@ describe('ExecutionProgressComponent', () => {
       // Then
       expect(component.onFailStatusColor()).toBe('green');
     });
+
+    it('should leave onFailStatusColor undefined when no on-fail steps exist', () => {
+      // Given
+      component.stepExecStates = [makeExecState({ status: 'Running', on_fail_steps: [] })];
+
+      // When
+      triggerChanges(component, {
+        stepExecStates: { prev: null, curr: component.stepExecStates, first: true },
+      });
+
+      // Then
+      expect(component.onFailStatusColor()).toBeUndefined();
+    });
+  });
+
+  describe('syncUi for Skipped status', () => {
+    it('should leave statusColor undefined for Skipped status', () => {
+      // Given
+      component.stepExecStates = [makeExecState({ status: 'Skipped' })];
+
+      // When
+      triggerChanges(component, {
+        stepExecStates: { prev: null, curr: component.stepExecStates, first: true },
+      });
+
+      // Then
+      expect(component.uiStates[0].statusColor()).toBeUndefined();
+    });
+  });
+
+  describe('syncUi with onFailExecStates', () => {
+    it('should use onFailExecStates for display when provided', () => {
+      // Given
+      component.onFailExecStates = [
+        makeOnFailExecState({ status: 'Running' }),
+      ];
+
+      // When
+      triggerChanges(component, {
+        stepExecStates: { prev: null, curr: [], first: true },
+      });
+
+      // Then
+      expect(component.uiStates[0].statusColor()).toBe('blue');
+    });
   });
 });
