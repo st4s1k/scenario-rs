@@ -601,4 +601,61 @@ mod tests {
         assert_ne!(timestamp_type1, timestamp_type3);
         assert_ne!(path_type, timestamp_type1);
     }
+
+    #[test]
+    fn test_required_variables_value_map() {
+        // Given
+        let mut vars = RequiredVariables::default();
+        vars.insert(
+            "var1".to_string(),
+            RequiredVariable::default().with_value("value1".to_string()),
+        );
+        vars.insert(
+            "var2".to_string(),
+            RequiredVariable::default().with_value("value2".to_string()),
+        );
+
+        // When
+        let map = vars.value_map();
+
+        // Then
+        assert_eq!(map.len(), 2);
+        assert_eq!(map.get("var1"), Some(&"value1".to_string()));
+        assert_eq!(map.get("var2"), Some(&"value2".to_string()));
+    }
+
+    #[test]
+    fn test_required_variable_not_read_only() {
+        // Given
+        let read_only_var = RequiredVariable::default().with_read_only(true);
+        let writable_var = RequiredVariable::default().with_read_only(false);
+
+        // When & Then
+        assert!(!read_only_var.not_read_only());
+        assert!(writable_var.not_read_only());
+    }
+
+    #[test]
+    fn test_required_variable_with_var_type() {
+        // Given
+        let variable = RequiredVariable::default();
+
+        // When
+        let path_var = variable.with_var_type(VariableType::Path);
+
+        // Then
+        assert_eq!(path_var.var_type(), &VariableType::Path);
+    }
+
+    #[test]
+    fn test_required_variable_with_read_only() {
+        // Given
+        let variable = RequiredVariable::default();
+
+        // When
+        let read_only_var = variable.with_read_only(true);
+
+        // Then
+        assert!(read_only_var.read_only());
+    }
 }
