@@ -516,7 +516,15 @@ fn diff_batch_stream(
 
 #[cfg(test)]
 mod tests {
-    use crate::app::{ConfigPathData, RequiredVariableDTO, ScenarioAppStateConfig};
+    use crate::app::{
+        build_initial_state, ConfigPathData, OnFailStepDTO, RequiredVariableDTO,
+        ScenarioAppStateConfig, StepDTO, TaskDTO,
+    };
+    use scenario_rs::scenario::{
+        on_fail_step::OnFailStep, on_fail_steps::OnFailSteps, remote_sudo::RemoteSudo,
+        sftp_copy::SftpCopy, step::Step, task::Task, Scenario,
+    };
+    use scenario_rs::state::types::{ExecutionStatus, StepStatus};
     use std::collections::HashMap;
 
     #[test]
@@ -602,5 +610,173 @@ mod tests {
         // Then
         assert_eq!(state_config.last_config_path, config_path);
         assert!(state_config.config_paths.is_empty());
+    }
+
+    #[test]
+    fn test_task_dto_from_remote_sudo_task() {
+        // Given
+        let task = Task::RemoteSudo {
+            description: "Stop service".to_string(),
+            error_message: "Failed to stop".to_string(),
+            remote_sudo: RemoteSudo::new("systemctl stop myapp".to_string()),
+        };
+
+        // When
+        let dto = TaskDTO::from(&task);
+
+        // Then
+        assert_eq!(dto.description, "Stop service");
+        assert_eq!(dto.error_message, "Failed to stop");
+        assert_eq!(dto.task_type, "RemoteSudo");
+        assert_eq!(dto.command.as_deref(), Some("systemctl stop myapp"));
+        assert!(dto.source_path.is_none());
+        assert!(dto.destination_path.is_none());
+    }
+
+    #[test]
+    fn test_task_dto_from_sftp_copy_task() {
+        // Given
+        let task = Task::SftpCopy {
+            description: "Upload file".to_string(),
+            error_message: "Upload failed".to_string(),
+            sftp_copy: SftpCopy {
+                source_path: "/local/app.jar".to_string(),
+                destination_path: "/remote/app.jar".to_string(),
+            },
+        };
+
+        // When
+        let dto = TaskDTO::from(&task);
+
+        // Then
+        assert_eq!(dto.description, "Upload file");
+        assert_eq!(dto.error_message, "Upload failed");
+        assert_eq!(dto.task_type, "SftpCopy");
+        assert!(dto.command.is_none());
+        assert_eq!(dto.source_path.as_deref(), Some("/local/app.jar"));
+        assert_eq!(dto.destination_path.as_deref(), Some("/remote/app.jar"));
+    }
+
+    #[test]
+    fn test_on_fail_step_dto_from_on_fail_step() {
+        // Given
+        let task = Task::RemoteSudo {
+            description: "Restart service".to_string(),
+            error_message: "Restart failed".to_string(),
+            remote_sudo: RemoteSudo::new("systemctl restart myapp".to_string()),
+        };
+        let on_fail_step = OnFailStep::from((2, task));
+
+        // When
+        let dto = OnFailStepDTO::from(&on_fail_step);
+
+        // Then
+        assert_eq!(dto.index, 2);
+        assert_eq!(dto.task.description, "Restart service");
+        assert_eq!(dto.task.task_type, "RemoteSudo");
+    }
+
+    #[test]
+    fn test_step_dto_from_step_without_on_fail() {
+        // Given
+        let step = Step {
+            index: 0,
+            task: Task::RemoteSudo {
+                description: "Run migration".to_string(),
+                error_message: "Migration failed".to_string(),
+                remote_sudo: RemoteSudo::new("migrate".to_string()),
+            },
+            on_fail_steps: OnFailSteps::default(),
+        };
+
+        // When
+        let dto = StepDTO::from(&step);
+
+        // Then
+        assert_eq!(dto.index, 0);
+        assert_eq!(dto.task.description, "Run migration");
+        assert!(dto.on_fail_steps.is_empty());
+    }
+
+    #[test]
+    fn test_step_dto_from_step_with_on_fail_steps() {
+        // Given
+        let recovery_task = Task::RemoteSudo {
+            description: "Rollback".to_string(),
+            error_message: "Rollback failed".to_string(),
+            remote_sudo: RemoteSudo::new("rollback".to_string()),
+        };
+        let on_fail = OnFailSteps::from(vec![OnFailStep::from((0, recovery_task))]);
+        let step = Step {
+            index: 1,
+            task: Task::SftpCopy {
+                description: "Deploy".to_string(),
+                error_message: "Deploy failed".to_string(),
+                sftp_copy: SftpCopy {
+                    source_path: "/src".to_string(),
+                    destination_path: "/dst".to_string(),
+                },
+            },
+            on_fail_steps: on_fail,
+        };
+
+        // When
+        let dto = StepDTO::from(&step);
+
+        // Then
+        assert_eq!(dto.index, 1);
+        assert_eq!(dto.task.task_type, "SftpCopy");
+        assert_eq!(dto.on_fail_steps.len(), 1);
+        assert_eq!(dto.on_fail_steps[0].index, 0);
+        assert_eq!(dto.on_fail_steps[0].task.description, "Rollback");
+    }
+
+    #[test]
+    fn test_build_initial_state_from_scenario() {
+        // Given
+        let scenario = Scenario::try_from("example_configs/example-scenario.toml")
+            .expect("Failed to load example scenario");
+
+        // When
+        let state = build_initial_state(&scenario);
+
+        // Then
+        assert_eq!(state.status, ExecutionStatus::Idle);
+        assert!(!state.steps.is_empty());
+        for step in &state.steps {
+            assert_eq!(step.status, StepStatus::Pending);
+            assert!(step.output.is_empty());
+            assert!(step.errors.is_empty());
+            assert!(step.progress.is_none());
+            for ofs in &step.on_fail_steps {
+                assert_eq!(ofs.status, StepStatus::Pending);
+                assert!(ofs.output.is_empty());
+                assert!(ofs.errors.is_empty());
+                assert!(ofs.progress.is_none());
+            }
+        }
+    }
+
+    #[test]
+    fn test_required_variable_dto_from_scenario() {
+        // Given
+        let scenario = Scenario::try_from("example_configs/example-scenario.toml")
+            .expect("Failed to load example scenario");
+
+        // When
+        let required_vars = scenario.variables().required();
+        let dtos: Vec<_> = required_vars
+            .iter()
+            .map(|(_, rv)| super::RequiredVariableDTO::from(rv))
+            .collect();
+
+        // Then
+        assert!(!dtos.is_empty());
+        for dto in &dtos {
+            assert!(!dto.label.is_empty());
+            assert!(
+                dto.var_type == "text" || dto.var_type == "path" || dto.var_type == "timestamp"
+            );
+        }
     }
 }
