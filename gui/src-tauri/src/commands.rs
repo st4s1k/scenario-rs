@@ -97,3 +97,62 @@ pub fn get_execution_state(
     let state = state.safe_lock();
     state.get_execution_state()
 }
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::OsStr;
+    use std::path::Path;
+
+    fn is_valid_config_path_inner(path: &str) -> bool {
+        let path = Path::new(path);
+        path.exists() && path.is_file() && path.extension() == Some(OsStr::new("toml"))
+    }
+
+    #[test]
+    fn test_valid_toml_file() {
+        // Given
+        let path = "Cargo.toml";
+
+        // When
+        let result = is_valid_config_path_inner(path);
+
+        // Then
+        assert!(result);
+    }
+
+    #[test]
+    fn test_nonexistent_file() {
+        // Given
+        let path = "/nonexistent/path/config.toml";
+
+        // When
+        let result = is_valid_config_path_inner(path);
+
+        // Then
+        assert!(!result);
+    }
+
+    #[test]
+    fn test_wrong_extension() {
+        // Given
+        let path = "Cargo.lock";
+
+        // When
+        let result = is_valid_config_path_inner(path);
+
+        // Then
+        assert!(!result);
+    }
+
+    #[test]
+    fn test_directory_path() {
+        // Given
+        let path = "src";
+
+        // When
+        let result = is_valid_config_path_inner(path);
+
+        // Then
+        assert!(!result);
+    }
+}
