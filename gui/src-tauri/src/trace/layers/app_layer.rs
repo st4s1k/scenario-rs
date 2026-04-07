@@ -152,7 +152,6 @@ mod tests {
         }
     }
 
-    // Test helpers
     struct TestAppEventLayer(AppEventLayer);
 
     impl<S> Layer<S> for TestAppEventLayer

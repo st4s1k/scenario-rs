@@ -76,7 +76,7 @@ mod tests {
         let (sender, receiver) = mpsc::channel::<String>();
         drop(receiver);
 
-        // When & Then (should not panic, just logs the error)
+        // When & Then
         sender.send_event("orphaned".to_string());
     }
 }

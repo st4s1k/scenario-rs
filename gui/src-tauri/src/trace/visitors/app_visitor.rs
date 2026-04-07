@@ -139,7 +139,6 @@ mod tests {
         assert_eq!(visitor.message.unwrap(), "");
     }
 
-    // Test helpers
     fn field(name: &str) -> Field {
         struct TestCallsite();
         impl tracing::callsite::Callsite for TestCallsite {
