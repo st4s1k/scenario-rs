@@ -26,3 +26,8 @@ let _tauriCallbackId = 0;
   },
   convertFileSrc: (src: string) => src,
 };
+
+// Event plugin internals used by @tauri-apps/api/event for listener management
+(window as any).__TAURI_EVENT_PLUGIN_INTERNALS__ = {
+  unregisterListener: () => {},
+};
