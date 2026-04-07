@@ -131,7 +131,6 @@ describe('SidebarComponent', () => {
 
       // Then
       expect(component.isCollapsed).toBe(true);
-      // Previous width should be at least collapseThreshold + 1.25
       component.toggleTab('steps');
       expect(component.sidebarWidth).toBeGreaterThan(0);
     });
@@ -269,7 +268,6 @@ describe('SidebarComponent', () => {
       component.handleKeyboardEvent(event);
 
       // Then
-      // tabsConfig[0] is 'steps'
       expect(event.preventDefault).toHaveBeenCalled();
     });
 

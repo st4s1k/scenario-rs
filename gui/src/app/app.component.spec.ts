@@ -388,7 +388,6 @@ describe('AppComponent', () => {
     it('should return cached value while validator is pending', () => {
       // Given
       component.scenarioConfigPath.markAsDirty();
-      // Access once to cache
       const firstValue = component.isInvalidScenarioConfigPath;
 
       // When & Then

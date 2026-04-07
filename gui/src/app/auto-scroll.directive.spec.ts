@@ -10,7 +10,6 @@ describe('AutoScrollDirective', () => {
 
   beforeEach(() => {
     mockTextArea = document.createElement('textarea');
-    // Provide basic dimensions for scroll calculations
     Object.defineProperty(mockTextArea, 'scrollHeight', { value: 500, writable: true, configurable: true });
     Object.defineProperty(mockTextArea, 'clientHeight', { value: 200, writable: true, configurable: true });
     Object.defineProperty(mockTextArea, 'isConnected', { value: true, writable: true, configurable: true });
@@ -26,7 +25,7 @@ describe('AutoScrollDirective', () => {
       // Given
       Object.defineProperty(mockTextArea, 'scrollHeight', { value: 500, configurable: true });
       Object.defineProperty(mockTextArea, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(mockTextArea, 'scrollTop', { value: 290, configurable: true }); // distance = 10, < 32
+      Object.defineProperty(mockTextArea, 'scrollTop', { value: 290, configurable: true });
 
       // When
       (directive as any).onScroll();
@@ -39,7 +38,7 @@ describe('AutoScrollDirective', () => {
       // Given
       Object.defineProperty(mockTextArea, 'scrollHeight', { value: 500, configurable: true });
       Object.defineProperty(mockTextArea, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(mockTextArea, 'scrollTop', { value: 200, configurable: true }); // distance = 100, > 32
+      Object.defineProperty(mockTextArea, 'scrollTop', { value: 200, configurable: true });
 
       // When
       (directive as any).onScroll();
@@ -52,7 +51,7 @@ describe('AutoScrollDirective', () => {
       // Given
       Object.defineProperty(mockTextArea, 'scrollHeight', { value: 500, configurable: true });
       Object.defineProperty(mockTextArea, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(mockTextArea, 'scrollTop', { value: 269, configurable: true }); // distance = 31, < 32
+      Object.defineProperty(mockTextArea, 'scrollTop', { value: 269, configurable: true });
 
       // When
       (directive as any).onScroll();
@@ -99,7 +98,6 @@ describe('AutoScrollDirective', () => {
       // Then
       expect((directive as any).pending).toBe(true);
 
-      // Allow RAF to fire
       requestAnimationFrame(() => {
         expect((directive as any).pending).toBe(false);
         done();
