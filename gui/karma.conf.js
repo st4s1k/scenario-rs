@@ -24,7 +24,7 @@ module.exports = function (config) {
       subdir: '.',
       reporters: [{ type: 'html' }, { type: 'text-summary' }],
     },
-    reporters: ['progress', 'kjhtml'],
+    reporters: ['progress', 'kjhtml', 'coverage'],
     browsers: ['ChromeHeadless'],
     singleRun: true,
     restartOnFileChange: true,

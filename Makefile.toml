@@ -19,17 +19,19 @@ command = "cargo"
 args = ["build", "--release"]
 
 [tasks.test]
-description = "Run all Rust tests"
-command = "cargo"
-args = ["test"]
+clear = true
+workspace = false
+description = "Run Rust tests with coverage (requires cargo-tarpaulin)"
+script_runner = "@shell"
+script = ["cargo tarpaulin --workspace --out html --skip-clean"]
 
 [tasks.ng-test]
 workspace = false
-description = "Run Angular unit tests"
+description = "Run Angular unit tests with coverage"
 dependencies = ["npm-install"]
 cwd = "${GUI_DIR}"
 script_runner = "@shell"
-script = ["npx ng test --watch=false"]
+script = ["npx ng test --watch=false --code-coverage"]
 
 [tasks.test-all]
 workspace = false
@@ -98,14 +100,9 @@ dependencies = ["check", "test-all", "ng-build"]
 
 # --- Coverage ---
 
-[tasks.coverage]
-workspace = false
-description = "Generate HTML coverage report (requires cargo-tarpaulin)"
-command = "cargo"
-args = ["tarpaulin", "--workspace", "--out", "html", "--skip-clean"]
-
 [tasks.coverage-lcov]
+clear = true
 workspace = false
 description = "Generate LCOV coverage report for CI (requires cargo-tarpaulin)"
-command = "cargo"
-args = ["tarpaulin", "--workspace", "--out", "lcov", "--output-dir", "coverage", "--skip-clean"]
+script_runner = "@shell"
+script = ["cargo tarpaulin --workspace --out lcov --output-dir coverage --skip-clean"]
