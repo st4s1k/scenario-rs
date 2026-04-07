@@ -771,7 +771,10 @@ mod tests {
         match &events[0] {
             AppEvent::LogMessage(msg) => {
                 assert!(msg.contains("global failure"), "expected error in: {msg}");
-                assert!(!msg.contains("["), "should not contain step context: {msg}");
+                assert!(
+                    !msg.contains("/"),
+                    "should not contain step index context: {msg}"
+                );
             }
             other => panic!("Expected LogMessage, got {other:?}"),
         }
