@@ -100,13 +100,7 @@ pub fn get_execution_state(
 
 #[cfg(test)]
 mod tests {
-    use std::ffi::OsStr;
-    use std::path::Path;
-
-    fn is_valid_config_path_inner(path: &str) -> bool {
-        let path = Path::new(path);
-        path.exists() && path.is_file() && path.extension() == Some(OsStr::new("toml"))
-    }
+    use super::is_valid_config_path;
 
     #[test]
     fn test_valid_toml_file() {
@@ -114,7 +108,7 @@ mod tests {
         let path = "Cargo.toml";
 
         // When
-        let result = is_valid_config_path_inner(path);
+        let result = is_valid_config_path(path);
 
         // Then
         assert!(result);
@@ -126,7 +120,7 @@ mod tests {
         let path = "/nonexistent/path/config.toml";
 
         // When
-        let result = is_valid_config_path_inner(path);
+        let result = is_valid_config_path(path);
 
         // Then
         assert!(!result);
@@ -138,7 +132,7 @@ mod tests {
         let path = "Cargo.lock";
 
         // When
-        let result = is_valid_config_path_inner(path);
+        let result = is_valid_config_path(path);
 
         // Then
         assert!(!result);
@@ -150,7 +144,7 @@ mod tests {
         let path = "src";
 
         // When
-        let result = is_valid_config_path_inner(path);
+        let result = is_valid_config_path(path);
 
         // Then
         assert!(!result);

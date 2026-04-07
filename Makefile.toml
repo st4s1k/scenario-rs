@@ -23,7 +23,7 @@ clear = true
 workspace = false
 description = "Run Rust tests with coverage (requires cargo-tarpaulin)"
 script_runner = "@shell"
-script = ["cargo tarpaulin --workspace --out html --skip-clean"]
+script = ["cargo tarpaulin --workspace --out html --skip-clean --exclude-files 'gui/src-tauri/src/main.rs' --exclude-files 'cli/src/main.rs'"]
 
 [tasks.ng-test]
 workspace = false

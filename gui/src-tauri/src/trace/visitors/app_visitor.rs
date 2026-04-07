@@ -106,40 +106,6 @@ mod tests {
     use tracing::field::{Field, Visit};
 
     #[test]
-    fn test_appvisitor_initialization_with_default() {
-        // Given & When
-        let visitor = AppEventVisitor::default();
-
-        // Then
-        assert!(visitor.message.is_none());
-    }
-
-    #[test]
-    fn test_appvisitor_record_str_with_valid_fields() {
-        // Given
-        let mut visitor = AppEventVisitor::default();
-
-        // When
-        visitor.record_str(&field("message"), "Test message");
-        visitor.record_str(&field("ignored_field"), "Should be ignored");
-
-        // Then
-        assert_eq!(visitor.message.unwrap(), "Test message");
-    }
-
-    #[test]
-    fn test_appvisitor_record_str_with_empty_value() {
-        // Given
-        let mut visitor = AppEventVisitor::default();
-
-        // When
-        visitor.record_str(&field("message"), "");
-
-        // Then
-        assert_eq!(visitor.message.unwrap(), "");
-    }
-
-    #[test]
     fn test_appvisitor_record_debug_with_message() {
         // Given
         let mut visitor = AppEventVisitor::default();

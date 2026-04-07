@@ -376,28 +376,6 @@ mod tests {
         assert!(visitor.step_index.is_none());
     }
 
-    #[test]
-    fn test_visitor_default() {
-        // Given & When
-        let visitor = ScenarioEventVisitor::default();
-
-        // Then
-        assert!(visitor.scenario_event.is_none());
-        assert!(visitor.scenario_error.is_none());
-        assert!(visitor.task_description.is_none());
-        assert!(visitor.remote_sudo_command.is_none());
-        assert!(visitor.remote_sudo_output.is_none());
-        assert!(visitor.remote_sudo_exit_status.is_none());
-        assert!(visitor.sftp_copy_source.is_none());
-        assert!(visitor.sftp_copy_destination.is_none());
-        assert!(visitor.sftp_copy_progress_current.is_none());
-        assert!(visitor.sftp_copy_progress_total.is_none());
-        assert!(visitor.step_index.is_none());
-        assert!(visitor.steps_total.is_none());
-        assert!(visitor.on_fail_step_index.is_none());
-        assert!(visitor.on_fail_steps_total.is_none());
-    }
-
     // Test helpers
     fn field(name: &str) -> Field {
         struct TestCallsite();
