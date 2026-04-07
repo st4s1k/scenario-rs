@@ -411,4 +411,177 @@ mod tests {
             }
         ));
     }
+
+    #[test]
+    fn test_update_step_progress() {
+        // Given
+        let (tx, rx) = mpsc::channel();
+        let manager = ExecutionStateManager::new(create_test_state(), tx);
+        let progress = TaskProgress::RemoteSudo {
+            command: "apt-get update".to_string(),
+            output: "Reading package lists...".to_string(),
+        };
+
+        // When
+        manager.update_step_progress(0, progress.clone());
+
+        // Then
+        let snapshot = manager.snapshot();
+        assert!(matches!(
+            snapshot.steps[0].progress.as_ref().unwrap(),
+            TaskProgress::RemoteSudo { .. }
+        ));
+        let diff = rx.try_recv().unwrap();
+        assert!(matches!(diff, StateDiff::StepProgressUpdated { step_index: 0, .. }));
+    }
+
+    #[test]
+    fn test_update_on_fail_step_progress() {
+        // Given
+        let (tx, rx) = mpsc::channel();
+        let manager = ExecutionStateManager::new(create_test_state(), tx);
+        let progress = TaskProgress::SftpCopy {
+            source: "/local/file".to_string(),
+            destination: "/remote/file".to_string(),
+            bytes_transferred: 512,
+            bytes_total: 1024,
+        };
+
+        // When
+        manager.update_on_fail_step_progress(0, 0, progress.clone());
+
+        // Then
+        let snapshot = manager.snapshot();
+        assert!(matches!(
+            snapshot.steps[0].on_fail_steps[0].progress.as_ref().unwrap(),
+            TaskProgress::SftpCopy { .. }
+        ));
+        let diff = rx.try_recv().unwrap();
+        assert!(matches!(
+            diff,
+            StateDiff::OnFailStepProgressUpdated {
+                step_index: 0,
+                on_fail_step_index: 0,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn test_append_on_fail_step_output() {
+        // Given
+        let (tx, rx) = mpsc::channel();
+        let manager = ExecutionStateManager::new(create_test_state(), tx);
+
+        // When
+        manager.append_on_fail_step_output(0, 0, "line 1".to_string());
+        manager.append_on_fail_step_output(0, 0, "line 2".to_string());
+
+        // Then
+        let snapshot = manager.snapshot();
+        assert_eq!(snapshot.steps[0].on_fail_steps[0].output, "line 1\nline 2");
+        let diff1 = rx.try_recv().unwrap();
+        assert!(matches!(diff1, StateDiff::OnFailStepOutputAppended { step_index: 0, on_fail_step_index: 0, .. }));
+        let diff2 = rx.try_recv().unwrap();
+        assert!(matches!(diff2, StateDiff::OnFailStepOutputAppended { step_index: 0, on_fail_step_index: 0, .. }));
+    }
+
+    #[test]
+    fn test_add_on_fail_step_error() {
+        // Given
+        let (tx, rx) = mpsc::channel();
+        let manager = ExecutionStateManager::new(create_test_state(), tx);
+
+        // When
+        manager.add_on_fail_step_error(0, 0, "recovery failed".to_string());
+
+        // Then
+        let snapshot = manager.snapshot();
+        assert_eq!(snapshot.steps[0].on_fail_steps[0].errors, vec!["recovery failed"]);
+        let diff = rx.try_recv().unwrap();
+        assert!(matches!(
+            diff,
+            StateDiff::OnFailStepErrorAdded {
+                step_index: 0,
+                on_fail_step_index: 0,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn test_task_tracker_update_progress_for_step() {
+        // Given
+        let (tx, rx) = mpsc::channel();
+        let manager = ExecutionStateManager::new(create_test_state(), tx);
+        let tracker = TaskTracker::for_step(&manager, 0);
+        let progress = TaskProgress::RemoteSudo {
+            command: "ls".to_string(),
+            output: "file.txt".to_string(),
+        };
+
+        // When
+        tracker.update_progress(progress);
+
+        // Then
+        let snapshot = manager.snapshot();
+        assert!(snapshot.steps[0].progress.is_some());
+        let diff = rx.try_recv().unwrap();
+        assert!(matches!(diff, StateDiff::StepProgressUpdated { step_index: 0, .. }));
+    }
+
+    #[test]
+    fn test_task_tracker_update_progress_for_on_fail_step() {
+        // Given
+        let (tx, rx) = mpsc::channel();
+        let manager = ExecutionStateManager::new(create_test_state(), tx);
+        let tracker = TaskTracker::for_on_fail_step(&manager, 0, 0);
+        let progress = TaskProgress::RemoteSudo {
+            command: "recovery".to_string(),
+            output: "done".to_string(),
+        };
+
+        // When
+        tracker.update_progress(progress);
+
+        // Then
+        let snapshot = manager.snapshot();
+        assert!(snapshot.steps[0].on_fail_steps[0].progress.is_some());
+        let diff = rx.try_recv().unwrap();
+        assert!(matches!(diff, StateDiff::OnFailStepProgressUpdated { step_index: 0, on_fail_step_index: 0, .. }));
+    }
+
+    #[test]
+    fn test_task_tracker_add_error_for_step() {
+        // Given
+        let (tx, rx) = mpsc::channel();
+        let manager = ExecutionStateManager::new(create_test_state(), tx);
+        let tracker = TaskTracker::for_step(&manager, 0);
+
+        // When
+        tracker.add_error("step failed".to_string());
+
+        // Then
+        let snapshot = manager.snapshot();
+        assert_eq!(snapshot.steps[0].errors, vec!["step failed"]);
+        let diff = rx.try_recv().unwrap();
+        assert!(matches!(diff, StateDiff::StepErrorAdded { step_index: 0, .. }));
+    }
+
+    #[test]
+    fn test_task_tracker_add_error_for_on_fail_step() {
+        // Given
+        let (tx, rx) = mpsc::channel();
+        let manager = ExecutionStateManager::new(create_test_state(), tx);
+        let tracker = TaskTracker::for_on_fail_step(&manager, 0, 0);
+
+        // When
+        tracker.add_error("on-fail failed".to_string());
+
+        // Then
+        let snapshot = manager.snapshot();
+        assert_eq!(snapshot.steps[0].on_fail_steps[0].errors, vec!["on-fail failed"]);
+        let diff = rx.try_recv().unwrap();
+        assert!(matches!(diff, StateDiff::OnFailStepErrorAdded { step_index: 0, on_fail_step_index: 0, .. }));
+    }
 }
