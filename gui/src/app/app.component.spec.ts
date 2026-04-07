@@ -532,6 +532,22 @@ describe('AppComponent', () => {
       // Then
       expect(result).toBe(true);
     });
+
+    it('should return cached value while validator is pending', () => {
+      // Given
+      component.scenarioConfigPath.setValue('');
+      component.scenarioConfigPath.markAsDirty();
+      component.scenarioConfigPath.setErrors({ invalidPath: true });
+      Object.defineProperty(component.scenarioConfigPath, 'pending', { value: false, configurable: true });
+      component.isInvalidScenarioConfigPath;
+      Object.defineProperty(component.scenarioConfigPath, 'pending', { value: true, configurable: true });
+
+      // When
+      const result = component.isInvalidScenarioConfigPath;
+
+      // Then
+      expect(result).toBe(true);
+    });
   });
 
   describe('selectRequiredFile', () => {
