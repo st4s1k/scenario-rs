@@ -357,7 +357,6 @@ mod tests {
             _ => panic!("Expected Timestamp variable type"),
         }
 
-        // Verify the timestamp value matches the format (rough check)
         let value = timestamp_var.value();
         assert!(!value.is_empty());
         assert_eq!(value.len(), 16); // "%Y-%m-%d %H:%M" format has 16 characters

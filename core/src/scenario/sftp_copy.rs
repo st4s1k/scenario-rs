@@ -259,7 +259,6 @@ mod tests {
         let sftp_mutex_clone = sftp_mutex.clone();
         let _ = std::thread::spawn(move || {
             panic::set_hook(Box::new(|_info| {
-                // do nothing
             }));
             let _ = panic::catch_unwind(|| {
                 let _guard = sftp_mutex_clone.lock().unwrap();

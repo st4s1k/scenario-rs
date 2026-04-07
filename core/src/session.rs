@@ -474,7 +474,6 @@ mod tests {
                 Ok(())
             }
             fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error> {
-                // Simulate the situation where we read data but it's not valid UTF-8
                 let data = vec![0xFF, 0xFF, 0xFF]; // Invalid UTF-8 bytes
                 match String::from_utf8(data) {
                     Ok(s) => {

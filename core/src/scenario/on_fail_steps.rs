@@ -249,13 +249,11 @@ mod tests {
         // Then
         assert!(result.is_err(), "Execute should fail with sftp copy error");
         if let Err(OnFailError::CannotOnFailSftpCopy(_)) = result {
-            // Expected error type
         } else {
             panic!("Expected CannotOnFailSftpCopy error");
         }
     }
 
-    // Test helpers
     fn create_test_tasks() -> Tasks {
         let mut task_map = HashMap::new();
         task_map.insert("task1".to_string(), create_remote_sudo_task());

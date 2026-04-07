@@ -147,7 +147,6 @@ mod tests {
         // Then
         assert!(result.is_err());
         if let Err(StepsError::CannotCreateStepFromConfig(_)) = result {
-            // Expected error type
         } else {
             panic!("Expected CannotCreateStepFromConfig error");
         }

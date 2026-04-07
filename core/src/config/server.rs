@@ -170,7 +170,6 @@ mod tests {
         }
     }
 
-    // Test helpers
     fn create_test_toml() -> String {
         r#"
             host = "test.example.com"

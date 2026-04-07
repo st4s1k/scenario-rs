@@ -119,7 +119,6 @@ mod tests {
         assert!(debug_str.contains("StepsConfig"));
     }
 
-    // Helper functions
     fn create_test_step_config() -> StepConfig {
         StepConfig::default()
     }

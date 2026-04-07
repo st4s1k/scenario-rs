@@ -128,15 +128,12 @@ mod tests {
         // Then
         assert_eq!(merged.len(), 3);
 
-        // Check that username was overridden
         let username_var = merged.get("username").unwrap();
         assert_eq!(username_var.label, Some("Admin Name".to_string()));
         assert_eq!(username_var.read_only, true);
 
-        // Check that config_path was preserved
         assert!(merged.contains_key("config_path"));
 
-        // Check that timestamp was added
         assert!(merged.contains_key("timestamp"));
     }
 
@@ -178,7 +175,7 @@ mod tests {
             _ => panic!("Expected Timestamp variable type"),
         }
         assert_eq!(variable.label, Some("Release Date".to_string()));
-        assert_eq!(variable.read_only, false); // Default value
+        assert_eq!(variable.read_only, false);
     }
 
     #[test]
@@ -223,7 +220,6 @@ mod tests {
         }
     }
 
-    // Test helpers
     fn create_test_string_variable() -> RequiredVariableConfig {
         RequiredVariableConfig {
             var_type: VariableTypeConfig::String,

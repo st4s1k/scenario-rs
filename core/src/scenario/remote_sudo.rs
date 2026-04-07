@@ -363,7 +363,6 @@ mod tests {
         let channel_mutex_clone = channel_mutex.clone();
         let _ = std::thread::spawn(move || {
             panic::set_hook(Box::new(|_info| {
-                // do nothing
             }));
             let _ = panic::catch_unwind(|| {
                 let _guard = channel_mutex_clone.lock().unwrap();
@@ -391,7 +390,6 @@ mod tests {
         ));
     }
 
-    // Test helpers
     struct TestWrite;
     impl crate::session::Write for TestWrite {
         fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {

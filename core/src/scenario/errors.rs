@@ -160,7 +160,6 @@ mod tests {
     };
     use std::io;
 
-    // Test helpers
     fn create_io_error() -> std::io::Error {
         io::Error::new(io::ErrorKind::NotFound, "File not found")
     }

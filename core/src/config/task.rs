@@ -142,7 +142,6 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // Test helpers
     fn create_remote_sudo_toml() -> String {
         r#"
             description = "Update system packages"

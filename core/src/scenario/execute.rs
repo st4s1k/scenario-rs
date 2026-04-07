@@ -173,7 +173,6 @@ mod tests {
         }
     }
 
-    // Test helpers
     fn create_test_tasks() -> Tasks {
         let mut task_map = HashMap::new();
         task_map.insert("task1".to_string(), create_remote_sudo_task());

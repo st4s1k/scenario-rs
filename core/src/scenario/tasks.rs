@@ -136,7 +136,6 @@ mod tests {
         assert!(task.is_none());
     }
 
-    // Test helpers
     fn create_remote_sudo_config() -> TaskConfig {
         TaskConfig {
             description: "Remote command task".to_string(),

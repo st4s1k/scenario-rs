@@ -193,7 +193,6 @@ mod tests {
 
     #[test]
     fn test_partial_scenario_config_default() {
-        // PartialScenarioConfig doesn't implement Default, so we create an empty one
         let partial = PartialScenarioConfig {
             parent: None,
             credentials: None,
@@ -234,23 +233,18 @@ mod tests {
         // Then
         assert_eq!(merged.parent, Some("parent2.toml".to_string()));
 
-        // Check that credentials were merged
         let merged_creds = merged.credentials.unwrap();
         assert_eq!(merged_creds.username, Some("user2".to_string()));
-        assert_eq!(merged_creds.password, Some("pass1".to_string())); // From base, not overridden
+        assert_eq!(merged_creds.password, Some("pass1".to_string()));
 
-        // Check that server was merged
         let merged_server = merged.server.unwrap();
         assert_eq!(merged_server.host, Some("host2".to_string()));
         assert_eq!(merged_server.port, Some(2222));
 
-        // Check that execute was overridden (not merged)
         assert_eq!(merged.execute, override_config.execute);
 
-        // Check that variables were merged
         assert!(merged.variables.is_some());
 
-        // Check that tasks were overridden (not merged)
         assert_eq!(merged.tasks, override_config.tasks);
     }
 
@@ -266,15 +260,12 @@ mod tests {
         assert!(result.is_ok());
         let complete = result.unwrap();
 
-        // Verify credentials conversion
         assert_eq!(complete.credentials.username, "user".to_string());
         assert_eq!(complete.credentials.password, Some("pass".to_string()));
 
-        // Verify server conversion
         assert_eq!(complete.server.host, "host".to_string());
         assert_eq!(complete.server.port, Some(22));
 
-        // Verify execute and tasks were copied as-is
         assert_eq!(complete.execute, partial.execute.unwrap());
         assert_eq!(complete.tasks, partial.tasks.unwrap());
     }
@@ -446,7 +437,6 @@ mod tests {
         );
         assert_eq!(config.server.as_ref().unwrap().port, Some(2222));
 
-        // Verify task was parsed correctly
         let tasks = config.tasks.unwrap();
         assert!(tasks.contains_key("task1"));
         let task = &tasks["task1"];
@@ -460,7 +450,6 @@ mod tests {
         }
     }
 
-    // Test helpers
     fn create_partial_base_config() -> PartialScenarioConfig {
         PartialScenarioConfig {
             parent: Some("parent1.toml".to_string()),
