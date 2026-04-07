@@ -19,9 +19,22 @@ command = "cargo"
 args = ["build", "--release"]
 
 [tasks.test]
-description = "Run all tests"
+description = "Run all Rust tests"
 command = "cargo"
 args = ["test"]
+
+[tasks.ng-test]
+workspace = false
+description = "Run Angular unit tests"
+dependencies = ["npm-install"]
+cwd = "${GUI_DIR}"
+script_runner = "@shell"
+script = ["npx ng test --watch=false"]
+
+[tasks.test-all]
+workspace = false
+description = "Run all tests (Rust + Angular)"
+dependencies = ["test", "ng-test"]
 
 # --- Frontend ---
 
@@ -80,8 +93,8 @@ dependencies = ["build-release", "tauri-build"]
 
 [tasks.verify]
 workspace = false
-description = "Full verification: check + test + Angular build"
-dependencies = ["check", "test", "ng-build"]
+description = "Full verification: check + all tests + Angular build"
+dependencies = ["check", "test-all", "ng-build"]
 
 # --- Coverage ---
 
