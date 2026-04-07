@@ -459,4 +459,18 @@ describe('ExecutionStateService', () => {
       await expectAsync(service.destroy()).toBeResolved();
     });
   });
+
+  describe('hydrateAndFlush', () => {
+    it('should skip if already hydrating', async () => {
+      // Given
+      const tauri = setupTauriMock({ 'get_execution_state': null });
+      (service as any).hydrating = true;
+
+      // When
+      await (service as any).hydrateAndFlush();
+
+      // Then
+      tauri.expectNotInvoked('get_execution_state');
+    });
+  });
 });

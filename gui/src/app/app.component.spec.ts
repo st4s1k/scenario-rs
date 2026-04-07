@@ -410,4 +410,111 @@ describe('AppComponent', () => {
       });
     });
   });
+
+  describe('ngOnInit', () => {
+    it('should fetch config path and initialize services', async () => {
+      // Given
+      tauri.setResponse('get_config_path', '/init/path.toml');
+
+      // When
+      component.ngOnInit();
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // Then
+      tauri.expectInvoked('get_config_path');
+      expect(executionStateService.init).toHaveBeenCalled();
+    });
+  });
+
+  describe('setupLogUpdatesListener', () => {
+    it('should register log-message event listener', async () => {
+      // Given & When
+      await (component as any).setupLogUpdatesListener();
+
+      // Then
+      tauri.expectInvoked('plugin:event|listen');
+      const calls = tauri.invokeSpy.calls.allArgs();
+      const listenCall = calls.find((a: any[]) => a[0] === 'plugin:event|listen');
+      expect(listenCall![1].event).toBe('log-message');
+    });
+
+    it('should buffer log messages and flush after timeout', async () => {
+      // Given
+      await (component as any).setupLogUpdatesListener();
+
+      // When
+      tauri.emitEvent('log-message', 'first log line');
+      tauri.emitEvent('log-message', 'second log line');
+
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // Then
+      expect(component.executionLog()).toContain('first log line');
+      expect(component.executionLog()).toContain('second log line');
+    });
+  });
+
+  describe('setupFormValueChangeListener', () => {
+    it('should subscribe to form value changes', async () => {
+      // Given
+      component.requiredFields = { 'version': makeRequiredField({ value: '1.0' }) };
+      component.requiredFieldsFormGroup.addControl('version', new FormControl('1.0'));
+
+      // When
+      await (component as any).setupFormValueChangeListener();
+      component.requiredFieldsFormGroup.controls['version'].setValue('2.0');
+
+      await new Promise(resolve => setTimeout(resolve, 350));
+
+      // Then
+      expect(component.requiredFields['version'].value).toBe('2.0');
+      tauri.expectInvoked('update_required_variables');
+    });
+  });
+
+  describe('ngOnDestroy', () => {
+    it('should cleanup subscriptions and call service destroy', async () => {
+      // Given
+      await (component as any).setupLogUpdatesListener();
+      await (component as any).setupFormValueChangeListener();
+
+      // When
+      component.ngOnDestroy();
+
+      // Then
+      expect(executionStateService.destroy).toHaveBeenCalled();
+    });
+  });
+
+  describe('isInvalidScenarioConfigPath (pending)', () => {
+    it('should return last cached value when control is pending', () => {
+      // Given
+      component.scenarioConfigPath.markAsDirty();
+      (component as any)._lastInvalidScenarioConfigPathValue = true;
+
+      // When
+      Object.defineProperty(component.scenarioConfigPath, 'pending', { value: true, configurable: true });
+      const result = component.isInvalidScenarioConfigPath;
+
+      // Then
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('getRequiredVariables', () => {
+    it('should create form controls for non-read-only fields', async () => {
+      // Given
+      tauri.setResponse('get_required_variables', {
+        'editable': makeRequiredField({ label: 'Editable', value: 'val1', read_only: false }),
+        'readonly': makeRequiredField({ label: 'ReadOnly', value: 'val2', read_only: true }),
+      });
+
+      // When
+      await (component as any).getRequiredVariables();
+
+      // Then
+      expect(component.requiredFieldsFormGroup.controls['editable']).toBeDefined();
+      expect(component.requiredFieldsFormGroup.controls['readonly']).toBeUndefined();
+    });
+  });
 });

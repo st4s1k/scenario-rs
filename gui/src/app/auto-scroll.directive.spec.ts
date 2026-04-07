@@ -103,5 +103,72 @@ describe('AutoScrollDirective', () => {
         done();
       });
     });
+
+    it('should set scrollTop when element is connected', (done) => {
+      // Given
+      (directive as any).autoScrollEnabled = true;
+      (directive as any).pending = false;
+      Object.defineProperty(mockTextArea, 'scrollHeight', { value: 1000, configurable: true });
+      Object.defineProperty(mockTextArea, 'isConnected', { value: true, configurable: true });
+
+      // When
+      (directive as any).scheduleScroll();
+
+      // Then
+      requestAnimationFrame(() => {
+        expect(mockTextArea.scrollTop).toBe(1000);
+        done();
+      });
+    });
+
+    it('should not set scrollTop when element is disconnected', (done) => {
+      // Given
+      (directive as any).autoScrollEnabled = true;
+      (directive as any).pending = false;
+      mockTextArea.scrollTop = 0;
+      Object.defineProperty(mockTextArea, 'isConnected', { value: false, configurable: true });
+
+      // When
+      (directive as any).scheduleScroll();
+
+      // Then
+      requestAnimationFrame(() => {
+        expect(mockTextArea.scrollTop).toBe(0);
+        done();
+      });
+    });
+  });
+
+  describe('valueChangedSignal effect', () => {
+    it('should trigger scheduleScroll when signal value changes', () => {
+      // Given
+      const testSignal = signal('initial');
+      (directive as any).valueChangedSignal = testSignal;
+      (directive as any).autoScrollEnabled = true;
+      (directive as any).pending = false;
+
+      // When
+      TestBed.flushEffects();
+      testSignal.set('updated');
+      TestBed.flushEffects();
+
+      // Then
+      expect((directive as any).pending).toBe(true);
+    });
+  });
+
+  describe('scroll listener', () => {
+    it('should update autoScrollEnabled when scroll event fires', () => {
+      // Given
+      Object.defineProperty(mockTextArea, 'scrollHeight', { value: 500, configurable: true });
+      Object.defineProperty(mockTextArea, 'clientHeight', { value: 200, configurable: true });
+      Object.defineProperty(mockTextArea, 'scrollTop', { value: 100, configurable: true });
+
+      // When
+      mockTextArea.dispatchEvent(new Event('scroll'));
+
+      // Then
+      expect((directive as any).autoScrollEnabled).toBe(false);
+    });
   });
 });

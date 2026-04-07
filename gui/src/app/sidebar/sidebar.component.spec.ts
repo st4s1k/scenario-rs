@@ -295,5 +295,76 @@ describe('SidebarComponent', () => {
       // Then
       expect(component.isCollapsed).toBe(originalCollapsed);
     });
+
+    it('should ignore Alt+non-number key', () => {
+      // Given
+      component.isCollapsed = false;
+      component.activeTab = 'variables';
+      const event = new KeyboardEvent('keydown', { altKey: true, key: 'a' });
+      spyOn(event, 'preventDefault');
+
+      // When
+      component.handleKeyboardEvent(event);
+
+      // Then
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(component.activeTab).toBe('variables');
+    });
+  });
+
+  describe('onMouseMove', () => {
+    it('should collapse sidebar when dragged past threshold', () => {
+      // Given
+      component.isCollapsed = false;
+      component.isResizing = true;
+      component.sidebarWidth = 15;
+      (component as any).startWidth = 15;
+      (component as any).startX = 500 / (component as any).htmlFontSize;
+      const collapseThreshold = (component as any).collapseThreshold;
+      const clientX = (500 + 15 * (component as any).htmlFontSize - collapseThreshold * (component as any).htmlFontSize + (component as any).htmlFontSize) ;
+      const event = new MouseEvent('mousemove', { clientX });
+      spyOn(event, 'preventDefault');
+
+      // When
+      component.onMouseMove(event);
+
+      // Then
+      expect(component.isCollapsed).toBe(true);
+      expect(component.isResizing).toBe(false);
+      expect(mockRenderer.removeClass).toHaveBeenCalledWith(mockDocument.body, 'resizing-sidebar');
+    });
+
+    it('should clamp width within bounds when not collapsing', () => {
+      // Given
+      component.isCollapsed = false;
+      component.isResizing = true;
+      (component as any).startWidth = 20;
+      (component as any).startX = 500 / (component as any).htmlFontSize;
+      const clientX = 490;
+      const event = new MouseEvent('mousemove', { clientX });
+      spyOn(event, 'preventDefault');
+
+      // When
+      component.onMouseMove(event);
+
+      // Then
+      const minWidth = (component as any).minSidebarWidth;
+      expect(component.sidebarWidth).toBeGreaterThanOrEqual(minWidth);
+      expect(component.sidebarWidth).toBeLessThanOrEqual(window.innerWidth - 1.25);
+      expect(event.preventDefault).toHaveBeenCalled();
+    });
+
+    it('should do nothing when not resizing', () => {
+      // Given
+      component.isResizing = false;
+      const originalWidth = component.sidebarWidth;
+      const event = new MouseEvent('mousemove', { clientX: 100 });
+
+      // When
+      component.onMouseMove(event);
+
+      // Then
+      expect(component.sidebarWidth).toBe(originalWidth);
+    });
   });
 });
