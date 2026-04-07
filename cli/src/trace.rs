@@ -402,4 +402,165 @@ mod tests {
         let progress_bars_after = progress_bars.lock().unwrap().len();
         assert_eq!(progress_bars_before, progress_bars_after);
     }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_scenario_started() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When & Then (no panic)
+        info!(scenario.event = ScenarioEvent::ScenarioStarted.as_str());
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_scenario_completed() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When & Then (no panic)
+        info!(scenario.event = ScenarioEvent::ScenarioCompleted.as_str());
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_step_started() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When & Then (no panic)
+        info!(
+            scenario.event = ScenarioEvent::StepStarted.as_str(),
+            step.index = 0u64,
+            steps.total = 3u64,
+            task.description = "Deploy service"
+        );
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_remote_sudo_started() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When & Then (no panic)
+        info!(
+            scenario.event = ScenarioEvent::RemoteSudoStarted.as_str(),
+            remote_sudo.command = "systemctl restart app"
+        );
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_remote_sudo_output() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When & Then (no panic)
+        info!(
+            scenario.event = ScenarioEvent::RemoteSudoOutput.as_str(),
+            remote_sudo.output = "command output here"
+        );
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_remote_sudo_output_truncated() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+        let long_output = "x".repeat(1500);
+
+        // When & Then (no panic, output truncated to 1000 chars)
+        info!(
+            scenario.event = ScenarioEvent::RemoteSudoOutput.as_str(),
+            remote_sudo.output = long_output.as_str()
+        );
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_on_fail_steps_started() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When & Then (no panic)
+        info!(scenario.event = ScenarioEvent::OnFailStepsStarted.as_str());
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_on_fail_steps_completed() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When & Then (no panic)
+        info!(scenario.event = ScenarioEvent::OnFailStepsCompleted.as_str());
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_on_fail_step_started() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When & Then (no panic)
+        info!(
+            scenario.event = ScenarioEvent::OnFailStepStarted.as_str(),
+            on_fail_step.index = 0u64,
+            on_fail_steps.total = 2u64,
+            task.description = "Rollback deployment"
+        );
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_error_without_error_message() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When & Then (no panic, uses generic error message)
+        error!(scenario.event = ScenarioEvent::Error.as_str());
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_noop_events() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When & Then (no panic, these are intentionally no-ops)
+        info!(scenario.event = ScenarioEvent::CreateSessionStarted.as_str());
+        info!(scenario.event = ScenarioEvent::CreateSessionCompleted.as_str());
+        info!(scenario.event = ScenarioEvent::CreatedMockSession.as_str());
+        info!(scenario.event = ScenarioEvent::SessionCreated.as_str());
+        info!(scenario.event = ScenarioEvent::StepsStarted.as_str());
+        info!(scenario.event = ScenarioEvent::StepCompleted.as_str());
+        info!(scenario.event = ScenarioEvent::RemoteSudoCompleted.as_str());
+        info!(scenario.event = ScenarioEvent::StepsCompleted.as_str());
+        info!(scenario.event = ScenarioEvent::OnFailStepCompleted.as_str());
+        info!(scenario.event = ScenarioEvent::ScenarioFailed.as_str());
+    }
+
+    #[test]
+    fn test_scenarioeventlayer_on_event_unrecognized_event() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When & Then (no panic, just logs error)
+        error!(scenario.event = "totally_unknown_event_xyz");
+    }
 }
