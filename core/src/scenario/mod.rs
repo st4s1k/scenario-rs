@@ -175,6 +175,7 @@ mod tests {
         scenario::Scenario,
     };
     use std::collections::HashMap;
+    use std::path::PathBuf;
 
     #[test]
     fn test_scenario_try_from_config() {
@@ -298,5 +299,56 @@ mod tests {
             tasks: TasksConfig::default(),
             variables: VariablesConfig::default(),
         }
+    }
+
+    #[test]
+    fn test_scenario_try_from_pathbuf_with_valid_config() {
+        // Given
+        let path = PathBuf::from("../example_configs/example-scenario.toml");
+
+        // When
+        let result = Scenario::try_from(path);
+
+        // Then
+        assert!(result.is_ok());
+        let scenario = result.unwrap();
+        assert_eq!(scenario.server.host, "localhost");
+        assert_eq!(scenario.server.port, 22);
+    }
+
+    #[test]
+    fn test_scenario_try_from_pathbuf_with_nonexistent_file() {
+        // Given
+        let path = PathBuf::from("nonexistent/config.toml");
+
+        // When
+        let result = Scenario::try_from(path);
+
+        // Then
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_scenario_try_from_str_with_valid_config() {
+        // Given
+        let path = "../example_configs/example-scenario.toml";
+
+        // When
+        let result = Scenario::try_from(path);
+
+        // Then
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_scenario_try_from_str_with_nonexistent_file() {
+        // Given
+        let path = "nonexistent/config.toml";
+
+        // When
+        let result = Scenario::try_from(path);
+
+        // Then
+        assert!(result.is_err());
     }
 }
