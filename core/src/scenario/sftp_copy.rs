@@ -117,7 +117,7 @@ impl SftpCopy {
             .len();
 
         let mut current_bytes = 0u64;
-        let mut buffer = [0u8; 8192];
+        let mut buffer = [0u8; 64 * 1024];
         let mut last_progress_emit = Instant::now();
         let throttle_interval = std::time::Duration::from_millis(50);
         loop {
