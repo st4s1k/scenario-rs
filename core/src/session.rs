@@ -43,16 +43,17 @@ pub enum SessionType {
 }
 
 impl Session {
-    /// Returns a mock session in debug builds, a real SSH connection in release.
-    #[cfg(debug_assertions)]
-    pub fn new(server: &Server, credentials: &Credentials) -> Result<Self, ssh2::Error> {
-        Self::create_mock_session(server, credentials)
-    }
-
-    /// Returns a mock session in debug builds, a real SSH connection in release.
-    #[cfg(not(debug_assertions))]
-    pub fn new(server: &Server, credentials: &Credentials) -> Result<Self, ssh2::Error> {
-        Self::create_session(server, credentials)
+    /// Returns a mock session when `debug_mode` is true, a real SSH connection otherwise.
+    pub fn new(
+        server: &Server,
+        credentials: &Credentials,
+        debug_mode: bool,
+    ) -> Result<Self, ssh2::Error> {
+        if debug_mode {
+            Self::create_mock_session(server, credentials)
+        } else {
+            Self::create_session(server, credentials)
+        }
     }
 
     pub fn channel_session(&self) -> Result<ArcMutex<dyn Channel + Send + Sync>, ssh2::Error> {
@@ -88,7 +89,6 @@ impl Session {
     }
 
     #[cfg(not(tarpaulin_include))]
-    #[allow(dead_code)]
     #[instrument(
         name = "create_session",
         skip_all,
@@ -331,19 +331,17 @@ mod tests {
         let credentials = test_credentials(true);
 
         // When
-        let result = Session::new(&server, &credentials);
+        let result = Session::new(&server, &credentials, true);
 
         // Then
         assert!(result.is_ok());
-        if cfg!(debug_assertions) {
-            match result.unwrap().inner {
-                SessionType::Mock => {}
-                SessionType::Real(_) => panic!("Expected a mock session in debug mode"),
-                SessionType::Test { .. } => {
-                    panic!("Expected a mock session in debug mode, not a test session")
-                }
-                _ => panic!("Unexpected session type"),
+        match result.unwrap().inner {
+            SessionType::Mock => {}
+            SessionType::Real(_) => panic!("Expected a mock session in debug mode"),
+            SessionType::Test { .. } => {
+                panic!("Expected a mock session in debug mode, not a test session")
             }
+            _ => panic!("Unexpected session type"),
         }
     }
 

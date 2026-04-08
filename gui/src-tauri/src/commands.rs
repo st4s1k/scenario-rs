@@ -94,3 +94,15 @@ pub fn get_execution_state(
 pub fn is_valid_config_path(path: &str) -> bool {
     crate::app::is_valid_config_path(path)
 }
+
+#[tauri::command(async)]
+pub fn get_debug_mode(state: State<'_, Mutex<ScenarioAppState>>) -> bool {
+    let state = state.safe_lock();
+    state.debug_mode
+}
+
+#[tauri::command(async)]
+pub fn set_debug_mode(debug_mode: bool, state: State<'_, Mutex<ScenarioAppState>>) {
+    let mut state = state.safe_lock();
+    state.debug_mode = debug_mode;
+}

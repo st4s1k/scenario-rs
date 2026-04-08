@@ -135,11 +135,12 @@ impl Scenario {
     ///
     /// Pass an `ExecutionStateManager` to enable structured progress tracking.
     /// Pass `None` for tracing-only output (e.g. CLI usage).
+    /// When `debug_mode` is true, uses a mock session instead of real SSH.
     #[instrument(skip_all, name = "scenario")]
     #[cfg(not(tarpaulin_include))]
-    pub fn execute(&self, state_manager: Option<&ExecutionStateManager>) {
+    pub fn execute(&self, state_manager: Option<&ExecutionStateManager>, debug_mode: bool) {
         log_scenario_event(ScenarioEvent::ScenarioStarted);
-        let session_result = Session::new(&self.server, &self.credentials);
+        let session_result = Session::new(&self.server, &self.credentials, debug_mode);
         match self.execute_with_session(session_result, state_manager) {
             ExecutionOutcome::Completed => {
                 log_scenario_event(ScenarioEvent::SessionCreated);
@@ -436,7 +437,7 @@ mod tests {
             Scenario::try_from("../example_configs/example-scenario.toml").unwrap();
 
         // When
-        scenario.execute(None);
+        scenario.execute(None, true);
 
         // Then
     }
@@ -475,7 +476,7 @@ mod tests {
         let sm = ExecutionStateManager::new(initial_state, tx);
 
         // When
-        scenario.execute(Some(&sm));
+        scenario.execute(Some(&sm), true);
 
         // Then
         let snapshot = sm.snapshot();
