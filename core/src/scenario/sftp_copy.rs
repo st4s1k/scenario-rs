@@ -177,7 +177,7 @@ mod tests {
             sftp_copy::{SftpCopy, SftpCopyError},
             variables::Variables,
         },
-        session::{Channel, Session, SessionType, Sftp, Write},
+        session::{Channel, Session, SessionType, Sftp, SshError, Write},
         utils::{ArcMutex, Wrap},
     };
     use std::{io::Read, panic};
@@ -253,7 +253,7 @@ mod tests {
         // Given
         struct FailLockSftp;
         impl Sftp for FailLockSftp {
-            fn create(&self, _path: &std::path::Path) -> Result<Box<dyn Write>, ssh2::Error> {
+            fn create(&self, _path: &std::path::Path) -> Result<Box<dyn Write>, SshError> {
                 panic!("Should not be called - lock should fail first")
             }
         }
@@ -299,8 +299,8 @@ mod tests {
         // Given
         struct FailCreateSftp;
         impl Sftp for FailCreateSftp {
-            fn create(&self, _path: &std::path::Path) -> Result<Box<dyn Write>, ssh2::Error> {
-                Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+            fn create(&self, _path: &std::path::Path) -> Result<Box<dyn Write>, SshError> {
+                Err(SshError::new("sftp create failed"))
             }
         }
 
@@ -331,14 +331,14 @@ mod tests {
         // Given
         struct FailWrite;
         impl Write for FailWrite {
-            fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {
-                Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+            fn write_all(&mut self, _buf: &[u8]) -> Result<(), SshError> {
+                Err(SshError::new("write failed"))
             }
         }
 
         struct WriteFailSftp;
         impl Sftp for WriteFailSftp {
-            fn create(&self, _path: &std::path::Path) -> Result<Box<dyn Write>, ssh2::Error> {
+            fn create(&self, _path: &std::path::Path) -> Result<Box<dyn Write>, SshError> {
                 Ok(Box::new(FailWrite))
             }
         }
@@ -518,13 +518,13 @@ mod tests {
 
     struct MockSuccessfulChannel;
     impl Channel for MockSuccessfulChannel {
-        fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+        fn exec(&mut self, _command: &str) -> Result<(), SshError> {
             Ok(())
         }
-        fn read_to_string(&mut self, _output: &mut String) -> Result<usize, ssh2::Error> {
+        fn read_to_string(&mut self, _output: &mut String) -> Result<usize, SshError> {
             Ok(0)
         }
-        fn exit_status(&self) -> Result<i32, ssh2::Error> {
+        fn exit_status(&self) -> Result<i32, SshError> {
             Ok(0)
         }
     }
@@ -532,14 +532,14 @@ mod tests {
     fn create_successful_test_session() -> Session {
         struct MockSuccessfulWrite;
         impl Write for MockSuccessfulWrite {
-            fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {
+            fn write_all(&mut self, _buf: &[u8]) -> Result<(), SshError> {
                 Ok(())
             }
         }
 
         struct MockSuccessfulSftp;
         impl Sftp for MockSuccessfulSftp {
-            fn create(&self, _path: &std::path::Path) -> Result<Box<dyn Write>, ssh2::Error> {
+            fn create(&self, _path: &std::path::Path) -> Result<Box<dyn Write>, SshError> {
                 Ok(Box::new(MockSuccessfulWrite))
             }
         }
@@ -602,7 +602,7 @@ mod tests {
             destination_path: "dest.txt".into(),
         };
         let session = Session {
-            inner: SessionType::FailSession(ssh2::ErrorCode::Session(libc::EIO)),
+            inner: SessionType::FailSession("sftp session failed".to_string()),
         };
         let variables = Variables::default();
 

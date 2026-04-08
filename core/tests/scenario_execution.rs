@@ -9,7 +9,7 @@ use scenario_rs_core::{
         task::Task,
         variables::Variables,
     },
-    session::{Channel, Session, SessionType, Sftp},
+    session::{Channel, Session, SessionType, Sftp, SshError},
     state::{
         types::{
             ExecutionState, ExecutionStatus, OnFailStepExecState, StateDiff, StepExecState,
@@ -23,34 +23,34 @@ use std::sync::mpsc;
 
 struct SuccessChannel;
 impl Channel for SuccessChannel {
-    fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+    fn exec(&mut self, _command: &str) -> Result<(), SshError> {
         Ok(())
     }
-    fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error> {
+    fn read_to_string(&mut self, output: &mut String) -> Result<usize, SshError> {
         output.push_str("command output");
         Ok(14)
     }
-    fn exit_status(&self) -> Result<i32, ssh2::Error> {
+    fn exit_status(&self) -> Result<i32, SshError> {
         Ok(0)
     }
 }
 
 struct FailChannel;
 impl Channel for FailChannel {
-    fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
-        Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+    fn exec(&mut self, _command: &str) -> Result<(), SshError> {
+        Err(SshError::new("exec failed"))
     }
-    fn read_to_string(&mut self, _: &mut String) -> Result<usize, ssh2::Error> {
+    fn read_to_string(&mut self, _: &mut String) -> Result<usize, SshError> {
         Ok(0)
     }
-    fn exit_status(&self) -> Result<i32, ssh2::Error> {
+    fn exit_status(&self) -> Result<i32, SshError> {
         Ok(0)
     }
 }
 
 struct TestWrite;
 impl scenario_rs_core::session::Write for TestWrite {
-    fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {
+    fn write_all(&mut self, _buf: &[u8]) -> Result<(), SshError> {
         Ok(())
     }
 }
@@ -60,7 +60,7 @@ impl Sftp for TestSftp {
     fn create(
         &self,
         _path: &std::path::Path,
-    ) -> Result<Box<dyn scenario_rs_core::session::Write>, ssh2::Error> {
+    ) -> Result<Box<dyn scenario_rs_core::session::Write>, SshError> {
         Ok(Box::new(TestWrite))
     }
 }
@@ -298,8 +298,8 @@ fn on_fail_steps_succeed_with_success_session_and_main_step_sftp_fail() {
         fn create(
             &self,
             _path: &std::path::Path,
-        ) -> Result<Box<dyn scenario_rs_core::session::Write>, ssh2::Error> {
-            Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+        ) -> Result<Box<dyn scenario_rs_core::session::Write>, SshError> {
+            Err(SshError::new("sftp create failed"))
         }
     }
 

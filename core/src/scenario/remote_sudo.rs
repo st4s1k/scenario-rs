@@ -126,7 +126,7 @@ mod tests {
             remote_sudo::{RemoteSudo, RemoteSudoError},
             variables::Variables,
         },
-        session::{Channel, Session, SessionType, Sftp},
+        session::{Channel, Session, SessionType, Sftp, SshError},
         utils::{ArcMutex, Wrap},
     };
     use std::panic;
@@ -144,14 +144,14 @@ mod tests {
         // Given
         struct SuccessChannel;
         impl Channel for SuccessChannel {
-            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+            fn exec(&mut self, _command: &str) -> Result<(), SshError> {
                 Ok(())
             }
-            fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error> {
+            fn read_to_string(&mut self, output: &mut String) -> Result<usize, SshError> {
                 output.push_str("Success output");
                 Ok(14)
             }
-            fn exit_status(&self) -> Result<i32, ssh2::Error> {
+            fn exit_status(&self) -> Result<i32, SshError> {
                 Ok(0)
             }
         }
@@ -203,13 +203,13 @@ mod tests {
         // Given
         struct ExecFailChannel;
         impl Channel for ExecFailChannel {
-            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
-                Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+            fn exec(&mut self, _command: &str) -> Result<(), SshError> {
+                Err(SshError::new("exec failed"))
             }
-            fn read_to_string(&mut self, _output: &mut String) -> Result<usize, ssh2::Error> {
+            fn read_to_string(&mut self, _output: &mut String) -> Result<usize, SshError> {
                 Ok(0)
             }
-            fn exit_status(&self) -> Result<i32, ssh2::Error> {
+            fn exit_status(&self) -> Result<i32, SshError> {
                 Ok(0)
             }
         }
@@ -240,14 +240,14 @@ mod tests {
         // Given
         struct NonZeroExitChannel;
         impl Channel for NonZeroExitChannel {
-            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+            fn exec(&mut self, _command: &str) -> Result<(), SshError> {
                 Ok(())
             }
-            fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error> {
+            fn read_to_string(&mut self, output: &mut String) -> Result<usize, SshError> {
                 output.push_str("error output");
                 Ok(12)
             }
-            fn exit_status(&self) -> Result<i32, ssh2::Error> {
+            fn exit_status(&self) -> Result<i32, SshError> {
                 Ok(1)
             }
         }
@@ -278,13 +278,13 @@ mod tests {
         // Given
         struct ReadFailChannel;
         impl Channel for ReadFailChannel {
-            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+            fn exec(&mut self, _command: &str) -> Result<(), SshError> {
                 Ok(())
             }
-            fn read_to_string(&mut self, _output: &mut String) -> Result<usize, ssh2::Error> {
-                Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+            fn read_to_string(&mut self, _output: &mut String) -> Result<usize, SshError> {
+                Err(SshError::new("read failed"))
             }
-            fn exit_status(&self) -> Result<i32, ssh2::Error> {
+            fn exit_status(&self) -> Result<i32, SshError> {
                 Ok(0)
             }
         }
@@ -315,14 +315,14 @@ mod tests {
         // Given
         struct ExitStatusFailChannel;
         impl Channel for ExitStatusFailChannel {
-            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+            fn exec(&mut self, _command: &str) -> Result<(), SshError> {
                 Ok(())
             }
-            fn read_to_string(&mut self, _output: &mut String) -> Result<usize, ssh2::Error> {
+            fn read_to_string(&mut self, _output: &mut String) -> Result<usize, SshError> {
                 Ok(0)
             }
-            fn exit_status(&self) -> Result<i32, ssh2::Error> {
-                Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+            fn exit_status(&self) -> Result<i32, SshError> {
+                Err(SshError::new("exit status failed"))
             }
         }
 
@@ -387,7 +387,7 @@ mod tests {
 
     struct TestWrite;
     impl crate::session::Write for TestWrite {
-        fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {
+        fn write_all(&mut self, _buf: &[u8]) -> Result<(), SshError> {
             Ok(())
         }
     }
@@ -397,20 +397,20 @@ mod tests {
         fn create(
             &self,
             _path: &std::path::Path,
-        ) -> Result<Box<dyn crate::session::Write>, ssh2::Error> {
+        ) -> Result<Box<dyn crate::session::Write>, SshError> {
             Ok(Box::new(TestWrite))
         }
     }
 
     struct TestChannel;
     impl Channel for TestChannel {
-        fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+        fn exec(&mut self, _command: &str) -> Result<(), SshError> {
             Ok(())
         }
-        fn read_to_string(&mut self, _output: &mut String) -> Result<usize, ssh2::Error> {
+        fn read_to_string(&mut self, _output: &mut String) -> Result<usize, SshError> {
             Ok(0)
         }
-        fn exit_status(&self) -> Result<i32, ssh2::Error> {
+        fn exit_status(&self) -> Result<i32, SshError> {
             Ok(0)
         }
     }
@@ -426,12 +426,12 @@ mod tests {
 
         struct TrackerChannel;
         impl Channel for TrackerChannel {
-            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> { Ok(()) }
-            fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error> {
+            fn exec(&mut self, _command: &str) -> Result<(), SshError> { Ok(()) }
+            fn read_to_string(&mut self, output: &mut String) -> Result<usize, SshError> {
                 output.push_str("tracked output");
                 Ok(14)
             }
-            fn exit_status(&self) -> Result<i32, ssh2::Error> { Ok(0) }
+            fn exit_status(&self) -> Result<i32, SshError> { Ok(0) }
         }
 
         let remote_sudo = RemoteSudo { command: "echo ok".into() };
@@ -476,7 +476,7 @@ mod tests {
             command: "echo test".into(),
         };
         let session = Session {
-            inner: SessionType::FailSession(ssh2::ErrorCode::Session(libc::EIO)),
+            inner: SessionType::FailSession("session channel failed".to_string()),
         };
         let variables = Variables::default();
 

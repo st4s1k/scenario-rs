@@ -100,7 +100,7 @@ mod tests {
             remote_sudo::RemoteSudo,
             sftp_copy::SftpCopy,
         },
-        session::{Channel, Session, SessionType, Sftp},
+        session::{Channel, Session, SessionType, Sftp, SshError},
         state::types::{
             ExecutionState, ExecutionStatus, OnFailStepExecState, StepExecState, StepStatus,
         },
@@ -110,39 +110,39 @@ mod tests {
 
     struct SuccessChannel;
     impl Channel for SuccessChannel {
-        fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> { Ok(()) }
-        fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error> {
+        fn exec(&mut self, _command: &str) -> Result<(), SshError> { Ok(()) }
+        fn read_to_string(&mut self, output: &mut String) -> Result<usize, SshError> {
             output.push_str("ok");
             Ok(2)
         }
-        fn exit_status(&self) -> Result<i32, ssh2::Error> { Ok(0) }
+        fn exit_status(&self) -> Result<i32, SshError> { Ok(0) }
     }
 
     struct FailChannel;
     impl Channel for FailChannel {
-        fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
-            Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+        fn exec(&mut self, _command: &str) -> Result<(), SshError> {
+            Err(SshError::new("exec failed"))
         }
-        fn read_to_string(&mut self, _: &mut String) -> Result<usize, ssh2::Error> { Ok(0) }
-        fn exit_status(&self) -> Result<i32, ssh2::Error> { Ok(0) }
+        fn read_to_string(&mut self, _: &mut String) -> Result<usize, SshError> { Ok(0) }
+        fn exit_status(&self) -> Result<i32, SshError> { Ok(0) }
     }
 
     struct TestWrite;
     impl crate::session::Write for TestWrite {
-        fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> { Ok(()) }
+        fn write_all(&mut self, _buf: &[u8]) -> Result<(), SshError> { Ok(()) }
     }
 
     struct TestSftp;
     impl Sftp for TestSftp {
-        fn create(&self, _path: &std::path::Path) -> Result<Box<dyn crate::session::Write>, ssh2::Error> {
+        fn create(&self, _path: &std::path::Path) -> Result<Box<dyn crate::session::Write>, SshError> {
             Ok(Box::new(TestWrite))
         }
     }
 
     struct FailSftp;
     impl Sftp for FailSftp {
-        fn create(&self, _path: &std::path::Path) -> Result<Box<dyn crate::session::Write>, ssh2::Error> {
-            Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+        fn create(&self, _path: &std::path::Path) -> Result<Box<dyn crate::session::Write>, SshError> {
+            Err(SshError::new("sftp create failed"))
         }
     }
 

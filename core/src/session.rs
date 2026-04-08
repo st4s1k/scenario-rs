@@ -4,26 +4,61 @@ use crate::{
     trace::ScenarioEvent,
     utils::{ArcMutex, Wrap},
 };
-use std::{net::TcpStream, path::Path};
+use std::{fmt, path::Path, sync::Arc};
 use tracing::{debug, instrument, trace};
+
+#[derive(Debug)]
+pub struct SshError {
+    msg: String,
+}
+
+impl SshError {
+    pub fn new(msg: impl Into<String>) -> Self {
+        SshError { msg: msg.into() }
+    }
+}
+
+impl fmt::Display for SshError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.msg)
+    }
+}
+
+impl std::error::Error for SshError {}
 
 /// Operations for executing commands on a remote server via SSH.
 pub trait Channel {
-    fn exec(&mut self, command: &str) -> Result<(), ssh2::Error>;
+    fn exec(&mut self, command: &str) -> Result<(), SshError>;
 
-    fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error>;
+    fn read_to_string(&mut self, output: &mut String) -> Result<usize, SshError>;
 
-    fn exit_status(&self) -> Result<i32, ssh2::Error>;
+    fn exit_status(&self) -> Result<i32, SshError>;
 }
 
 /// SFTP file transfer operations.
 pub trait Sftp {
-    fn create(&self, path: &Path) -> Result<Box<dyn Write>, ssh2::Error>;
+    fn create(&self, path: &Path) -> Result<Box<dyn Write>, SshError>;
 }
 
 /// Write operations for remote files, returned by `Sftp::create`.
 pub trait Write {
-    fn write_all(&mut self, buf: &[u8]) -> Result<(), ssh2::Error>;
+    fn write_all(&mut self, buf: &[u8]) -> Result<(), SshError>;
+}
+
+/// Russh client handler — accepts all host keys.
+#[cfg(not(tarpaulin_include))]
+pub(crate) struct ClientHandler;
+
+#[cfg(not(tarpaulin_include))]
+impl russh::client::Handler for ClientHandler {
+    type Error = russh::Error;
+
+    async fn check_server_key(
+        &mut self,
+        _server_public_key: &russh::keys::PublicKey,
+    ) -> Result<bool, Self::Error> {
+        Ok(true)
+    }
 }
 
 /// SSH session to a remote server. Supports real connections and mock mode for testing.
@@ -31,15 +66,20 @@ pub struct Session {
     pub inner: SessionType,
 }
 
+#[allow(private_interfaces)]
 pub enum SessionType {
-    Real(ssh2::Session),
+    #[cfg(not(tarpaulin_include))]
+    Real {
+        runtime: Arc<tokio::runtime::Runtime>,
+        handle: russh::client::Handle<ClientHandler>,
+    },
     Mock,
     Test {
         channel: ArcMutex<dyn Channel + Send + Sync>,
         sftp: ArcMutex<dyn Sftp + Send + Sync>,
     },
     #[cfg(test)]
-    FailSession(ssh2::ErrorCode),
+    FailSession(String),
 }
 
 impl Session {
@@ -48,7 +88,7 @@ impl Session {
         server: &Server,
         credentials: &Credentials,
         debug_mode: bool,
-    ) -> Result<Self, ssh2::Error> {
+    ) -> Result<Self, SshError> {
         if debug_mode {
             Self::create_mock_session(server, credentials)
         } else {
@@ -56,35 +96,59 @@ impl Session {
         }
     }
 
-    pub fn channel_session(&self) -> Result<ArcMutex<dyn Channel + Send + Sync>, ssh2::Error> {
+    pub fn channel_session(&self) -> Result<ArcMutex<dyn Channel + Send + Sync>, SshError> {
         match &self.inner {
             #[cfg(not(tarpaulin_include))]
-            SessionType::Real(real_session) => real_session
-                .channel_session()
-                .map(|ch| ArcMutex::wrap(ch) as ArcMutex<dyn Channel + Send + Sync>),
+            SessionType::Real { runtime, handle } => {
+                let channel = runtime
+                    .block_on(handle.channel_open_session())
+                    .map_err(|e| SshError::new(e.to_string()))?;
+                Ok(ArcMutex::wrap(RusshChannel {
+                    runtime: runtime.clone(),
+                    channel,
+                    output: Vec::new(),
+                    exit_code: None,
+                }) as ArcMutex<dyn Channel + Send + Sync>)
+            }
             SessionType::Mock => {
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 Ok(ArcMutex::wrap(MockChannel))
             }
             SessionType::Test { channel, .. } => Ok(ArcMutex::clone(channel)),
             #[cfg(test)]
-            SessionType::FailSession(code) => Err(ssh2::Error::from_errno(*code)),
+            SessionType::FailSession(msg) => Err(SshError::new(msg.clone())),
         }
     }
 
-    pub fn sftp(&self) -> Result<ArcMutex<dyn Sftp + Send + Sync>, ssh2::Error> {
+    pub fn sftp(&self) -> Result<ArcMutex<dyn Sftp + Send + Sync>, SshError> {
         match &self.inner {
             #[cfg(not(tarpaulin_include))]
-            SessionType::Real(real_session) => real_session
-                .sftp()
-                .map(|sftp| ArcMutex::wrap(sftp) as ArcMutex<dyn Sftp + Send + Sync>),
+            SessionType::Real { runtime, handle } => {
+                let sftp = runtime.block_on(async {
+                    let channel = handle
+                        .channel_open_session()
+                        .await
+                        .map_err(|e| SshError::new(e.to_string()))?;
+                    channel
+                        .request_subsystem(true, "sftp")
+                        .await
+                        .map_err(|e| SshError::new(e.to_string()))?;
+                    russh_sftp::client::SftpSession::new(channel.into_stream())
+                        .await
+                        .map_err(|e| SshError::new(e.to_string()))
+                })?;
+                Ok(ArcMutex::wrap(RusshSftp {
+                    runtime: runtime.clone(),
+                    sftp,
+                }) as ArcMutex<dyn Sftp + Send + Sync>)
+            }
             SessionType::Mock => {
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 Ok(ArcMutex::wrap(MockSftp))
             }
             SessionType::Test { sftp, .. } => Ok(ArcMutex::clone(sftp)),
             #[cfg(test)]
-            SessionType::FailSession(code) => Err(ssh2::Error::from_errno(*code)),
+            SessionType::FailSession(msg) => Err(SshError::new(msg.clone())),
         }
     }
 
@@ -98,7 +162,7 @@ impl Session {
             session.username = credentials.username
         )
     )]
-    fn create_session(server: &Server, credentials: &Credentials) -> Result<Session, ssh2::Error> {
+    fn create_session(server: &Server, credentials: &Credentials) -> Result<Session, SshError> {
         trace!(
             scenario.event = ScenarioEvent::CreateSessionStarted.as_str(),
             session.auth = match (&credentials.password, &credentials.private_key) {
@@ -108,50 +172,85 @@ impl Session {
             }
         );
 
+        let runtime = Arc::new(
+            tokio::runtime::Builder::new_multi_thread()
+                .worker_threads(1)
+                .enable_all()
+                .build()
+                .map_err(|e| SshError::new(e.to_string()))?,
+        );
+
         let host = &server.host;
-        let port = &server.port;
-        let tcp = TcpStream::connect(&format!("{host}:{port}")).map_err(|error| {
-            debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-            ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO))
-        })?;
-
-        let mut real_session = ssh2::Session::new().map_err(|error| {
-            debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-            error
-        })?;
-        real_session.set_tcp_stream(tcp);
-        real_session.handshake().map_err(|error| {
-            debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-            error
-        })?;
-
+        let port = server.port;
         let username = &credentials.username;
-        let password = &credentials.password.as_deref();
-        let private_key = &credentials.private_key.as_deref();
+        let password = credentials.password.as_deref();
+        let private_key = credentials.private_key.as_deref();
 
-        match (password, private_key) {
-            (Some(pwd), _) => real_session
-                .userauth_password(username, pwd)
-                .map_err(|error| {
-                    debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-                    error
-                })?,
-            (None, Some(key_path)) => real_session
-                .userauth_pubkey_file(username, None, Path::new(key_path), None)
-                .map_err(|error| {
-                    debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-                    error
-                })?,
-            (None, None) => real_session.userauth_agent(username).map_err(|error| {
-                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-                error
-            })?,
-        }
+        let handle = runtime.block_on(async {
+            let config = Arc::new(russh::client::Config::default());
+            let mut session = russh::client::connect(config, (host.as_str(), port), ClientHandler)
+                .await
+                .map_err(|e| {
+                    debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %e);
+                    SshError::new(e.to_string())
+                })?;
 
-        debug!(scenario.event = ScenarioEvent::CreateSessionCompleted.as_str());
+            match (password, private_key) {
+                (Some(pwd), _) => {
+                    let auth = session
+                        .authenticate_password(username, pwd)
+                        .await
+                        .map_err(|e| {
+                            debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %e);
+                            SshError::new(e.to_string())
+                        })?;
+                    if !auth.success() {
+                        let err = "Password authentication failed";
+                        debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = err);
+                        return Err(SshError::new(err));
+                    }
+                }
+                (None, Some(key_path)) => {
+                    let key_data = std::fs::read(key_path).map_err(|e| {
+                        debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %e);
+                        SshError::new(format!("Cannot read private key file: {e}"))
+                    })?;
+                    let key = russh::keys::PrivateKey::from_openssh(&key_data).map_err(|e| {
+                        debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %e);
+                        SshError::new(format!("Cannot parse private key: {e}"))
+                    })?;
+                    let key_with_hash = russh::keys::key::PrivateKeyWithHashAlg::new(
+                        Arc::new(key),
+                        None,
+                    );
+                    let auth = session
+                        .authenticate_publickey(username, key_with_hash)
+                        .await
+                        .map_err(|e| {
+                            debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %e);
+                            SshError::new(e.to_string())
+                        })?;
+                    if !auth.success() {
+                        let err = "Private key authentication failed";
+                        debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = err);
+                        return Err(SshError::new(err));
+                    }
+                }
+                (None, None) => {
+                    let err = "SSH agent authentication is not yet supported with russh. \
+                               Provide a password or private_key in the configuration.";
+                    debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = err);
+                    return Err(SshError::new(err));
+                }
+            }
+
+            debug!(scenario.event = ScenarioEvent::CreateSessionCompleted.as_str());
+
+            Ok(session)
+        })?;
 
         Ok(Session {
-            inner: SessionType::Real(real_session),
+            inner: SessionType::Real { runtime, handle },
         })
     }
 
@@ -167,7 +266,7 @@ impl Session {
     fn create_mock_session(
         server: &Server,
         credentials: &Credentials,
-    ) -> Result<Session, ssh2::Error> {
+    ) -> Result<Session, SshError> {
         trace!(
             scenario.event = ScenarioEvent::CreatedMockSession.as_str(),
             session.password = credentials.password.as_deref().unwrap_or("<ssh-agent>")
@@ -189,69 +288,115 @@ impl Default for Session {
     }
 }
 
+// === Russh adapter types ===
+
 #[cfg(not(tarpaulin_include))]
-impl Channel for ssh2::Channel {
-    fn exec(&mut self, command: &str) -> Result<(), ssh2::Error> {
-        self.exec(command)
+struct RusshChannel {
+    runtime: Arc<tokio::runtime::Runtime>,
+    channel: russh::Channel<russh::client::Msg>,
+    output: Vec<u8>,
+    exit_code: Option<u32>,
+}
+
+#[cfg(not(tarpaulin_include))]
+impl Channel for RusshChannel {
+    fn exec(&mut self, command: &str) -> Result<(), SshError> {
+        let rt = self.runtime.clone();
+        rt.block_on(self.channel.exec(true, command.as_bytes()))
+            .map_err(|e| SshError::new(e.to_string()))
     }
 
-    fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error> {
-        use std::io::Read;
-        let mut buf = Vec::new();
-        match self.read_to_end(&mut buf) {
-            Ok(size) => {
-                if let Ok(s) = String::from_utf8(buf) {
-                    output.push_str(&s);
-                    Ok(size)
-                } else {
-                    Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+    fn read_to_string(&mut self, output: &mut String) -> Result<usize, SshError> {
+        let rt = self.runtime.clone();
+        rt.block_on(async {
+            loop {
+                match self.channel.wait().await {
+                    Some(russh::ChannelMsg::Data { data }) => {
+                        self.output.extend_from_slice(&data);
+                    }
+                    Some(russh::ChannelMsg::ExtendedData { data, .. }) => {
+                        self.output.extend_from_slice(&data);
+                    }
+                    Some(russh::ChannelMsg::ExitStatus { exit_status }) => {
+                        self.exit_code = Some(exit_status);
+                    }
+                    None => break,
+                    _ => {}
                 }
             }
-            Err(_) => Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO))),
-        }
+        });
+
+        let bytes = std::mem::take(&mut self.output);
+        let text = String::from_utf8(bytes)
+            .map_err(|_| SshError::new("Invalid UTF-8 in channel output"))?;
+        let len = text.len();
+        output.push_str(&text);
+        Ok(len)
     }
 
-    fn exit_status(&self) -> Result<i32, ssh2::Error> {
-        self.exit_status()
+    fn exit_status(&self) -> Result<i32, SshError> {
+        self.exit_code
+            .map(|c| c as i32)
+            .ok_or_else(|| SshError::new("No exit status received"))
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-impl Sftp for ssh2::Sftp {
-    fn create(&self, path: &Path) -> Result<Box<dyn Write>, ssh2::Error> {
-        self.create(path)
-            .map(|file| Box::new(file) as Box<dyn Write>)
+struct RusshSftp {
+    runtime: Arc<tokio::runtime::Runtime>,
+    sftp: russh_sftp::client::SftpSession,
+}
+
+#[cfg(not(tarpaulin_include))]
+impl Sftp for RusshSftp {
+    fn create(&self, path: &Path) -> Result<Box<dyn Write>, SshError> {
+        let path_str = path.to_string_lossy().to_string();
+        let rt = self.runtime.clone();
+        let file = rt
+            .block_on(self.sftp.create(path_str))
+            .map_err(|e| SshError::new(e.to_string()))?;
+        Ok(Box::new(RusshFile {
+            runtime: self.runtime.clone(),
+            file,
+        }))
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-impl Write for ssh2::File {
-    fn write_all(&mut self, buf: &[u8]) -> Result<(), ssh2::Error> {
-        std::io::Write::write_all(self, buf)
-            .map_err(|_| ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+struct RusshFile {
+    runtime: Arc<tokio::runtime::Runtime>,
+    file: russh_sftp::client::fs::File,
+}
+
+#[cfg(not(tarpaulin_include))]
+impl Write for RusshFile {
+    fn write_all(&mut self, buf: &[u8]) -> Result<(), SshError> {
+        let rt = self.runtime.clone();
+        rt.block_on(tokio::io::AsyncWriteExt::write_all(&mut self.file, buf))
+            .map_err(|e| SshError::new(e.to_string()))
     }
 }
 
 pub mod mock {
-    use crate::session::{Channel, Sftp, Write};
+    use crate::session::{Channel, Sftp, SshError, Write};
     use std::path::Path;
 
     pub struct MockChannel;
 
     impl Channel for MockChannel {
-        fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+        fn exec(&mut self, _command: &str) -> Result<(), SshError> {
             std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(())
         }
 
-        fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error> {
+        fn read_to_string(&mut self, output: &mut String) -> Result<usize, SshError> {
             let mock_output = "Mock command output\nLine 1\nLine 2\nLine 3\n";
             output.push_str(mock_output);
             std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(mock_output.len())
         }
 
-        fn exit_status(&self) -> Result<i32, ssh2::Error> {
+        fn exit_status(&self) -> Result<i32, SshError> {
             std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(0)
         }
@@ -260,7 +405,7 @@ pub mod mock {
     pub struct MockSftp;
 
     impl Sftp for MockSftp {
-        fn create(&self, _path: &Path) -> Result<Box<dyn Write>, ssh2::Error> {
+        fn create(&self, _path: &Path) -> Result<Box<dyn Write>, SshError> {
             std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(Box::new(MockFile))
         }
@@ -269,7 +414,7 @@ pub mod mock {
     pub struct MockFile;
 
     impl Write for MockFile {
-        fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {
+        fn write_all(&mut self, _buf: &[u8]) -> Result<(), SshError> {
             std::thread::sleep(std::time::Duration::from_millis(100));
             Ok(())
         }
@@ -280,10 +425,82 @@ pub mod mock {
 mod tests {
     use crate::{
         scenario::{credentials::Credentials, server::Server},
-        session::{mock, Channel, Session, SessionType, Sftp, Write},
+        session::{mock, Channel, Session, SessionType, Sftp, SshError, Write},
         utils::HasText,
     };
-    use std::path::Path;
+    use russh::server::Server as _;
+    use std::{path::Path, sync::Arc};
+
+    #[derive(Clone)]
+    struct TestSshServer;
+
+    impl russh::server::Server for TestSshServer {
+        type Handler = TestSshHandler;
+        fn new_client(&mut self, _: Option<std::net::SocketAddr>) -> TestSshHandler {
+            TestSshHandler
+        }
+    }
+
+    struct TestSshHandler;
+
+    impl russh::server::Handler for TestSshHandler {
+        type Error = russh::Error;
+
+        async fn auth_password(
+            &mut self,
+            user: &str,
+            password: &str,
+        ) -> Result<russh::server::Auth, Self::Error> {
+            if user == "testuser" && password == "testpass" {
+                Ok(russh::server::Auth::Accept)
+            } else {
+                Ok(russh::server::Auth::Reject {
+                    proceed_with_methods: None,
+                    partial_success: false,
+                })
+            }
+        }
+
+        async fn channel_open_session(
+            &mut self,
+            _channel: russh::Channel<russh::server::Msg>,
+            _session: &mut russh::server::Session,
+        ) -> Result<bool, Self::Error> {
+            Ok(true)
+        }
+    }
+
+    fn start_test_ssh_server() -> (u16, tokio::runtime::Runtime) {
+        let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
+        let port = {
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            listener.local_addr().unwrap().port()
+        };
+
+        let config = russh::server::Config {
+            auth_rejection_time: std::time::Duration::from_secs(0),
+            auth_rejection_time_initial: Some(std::time::Duration::from_secs(0)),
+            keys: vec![russh::keys::PrivateKey::random(
+                &mut rand::rng(),
+                russh::keys::Algorithm::Ed25519,
+            )
+            .unwrap()],
+            ..Default::default()
+        };
+        let config = Arc::new(config);
+
+        rt.spawn(async move {
+            let socket = tokio::net::TcpListener::bind(("127.0.0.1", port))
+                .await
+                .unwrap();
+            let mut server = TestSshServer;
+            let _ = server.run_on_socket(config, &socket).await;
+        });
+
+        std::thread::sleep(std::time::Duration::from_millis(100));
+
+        (port, rt)
+    }
 
     #[test]
     fn test_session_default() {
@@ -293,7 +510,7 @@ mod tests {
         // Then
         match default_session.inner {
             SessionType::Mock => {}
-            SessionType::Real(_) => panic!("Expected a mock session for default"),
+            SessionType::Real { .. } => panic!("Expected a mock session for default"),
             SessionType::Test { .. } => {
                 panic!("Expected a mock session for default, not a test session")
             }
@@ -314,7 +531,7 @@ mod tests {
         assert!(result.is_ok());
         match result.unwrap().inner {
             SessionType::Mock => {}
-            SessionType::Real(_) => panic!("Expected a mock session"),
+            SessionType::Real { .. } => panic!("Expected a mock session"),
             SessionType::Test { .. } => {
                 panic!("Expected a mock session, not a test session")
             }
@@ -348,11 +565,36 @@ mod tests {
         assert!(result.is_ok());
         match result.unwrap().inner {
             SessionType::Mock => {}
-            SessionType::Real(_) => panic!("Expected a mock session in debug mode"),
+            SessionType::Real { .. } => panic!("Expected a mock session in debug mode"),
             SessionType::Test { .. } => {
                 panic!("Expected a mock session in debug mode, not a test session")
             }
             _ => panic!("Unexpected session type"),
+        }
+    }
+
+    #[test]
+    fn test_session_new_without_debug_mode_connects_to_server() {
+        // Given
+        let (port, _rt) = start_test_ssh_server();
+        let server = Server {
+            host: "127.0.0.1".to_string(),
+            port,
+        };
+        let credentials = Credentials {
+            username: "testuser".to_string(),
+            password: Some("testpass".to_string()),
+            private_key: None,
+        };
+
+        // When
+        let result = Session::new(&server, &credentials, false);
+
+        // Then
+        assert!(result.is_ok(), "Expected successful connection: {:?}", result.err());
+        match result.unwrap().inner {
+            SessionType::Real { .. } => {}
+            _ => panic!("Expected a Real session type"),
         }
     }
 
@@ -397,13 +639,13 @@ mod tests {
         // Given
         struct ErrorExecChannel;
         impl Channel for ErrorExecChannel {
-            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
-                Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+            fn exec(&mut self, _command: &str) -> Result<(), SshError> {
+                Err(SshError::new("exec error"))
             }
-            fn read_to_string(&mut self, _output: &mut String) -> Result<usize, ssh2::Error> {
+            fn read_to_string(&mut self, _output: &mut String) -> Result<usize, SshError> {
                 Ok(0)
             }
-            fn exit_status(&self) -> Result<i32, ssh2::Error> {
+            fn exit_status(&self) -> Result<i32, SshError> {
                 Ok(0)
             }
         }
@@ -449,13 +691,13 @@ mod tests {
         // Given
         struct ErrorChannel;
         impl Channel for ErrorChannel {
-            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+            fn exec(&mut self, _command: &str) -> Result<(), SshError> {
                 Ok(())
             }
-            fn read_to_string(&mut self, _output: &mut String) -> Result<usize, ssh2::Error> {
-                Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+            fn read_to_string(&mut self, _output: &mut String) -> Result<usize, SshError> {
+                Err(SshError::new("read error"))
             }
-            fn exit_status(&self) -> Result<i32, ssh2::Error> {
+            fn exit_status(&self) -> Result<i32, SshError> {
                 Ok(0)
             }
         }
@@ -474,14 +716,14 @@ mod tests {
         // Given
         struct ExitStatusErrorChannel;
         impl Channel for ExitStatusErrorChannel {
-            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+            fn exec(&mut self, _command: &str) -> Result<(), SshError> {
                 Ok(())
             }
-            fn read_to_string(&mut self, _output: &mut String) -> Result<usize, ssh2::Error> {
+            fn read_to_string(&mut self, _output: &mut String) -> Result<usize, SshError> {
                 Ok(0)
             }
-            fn exit_status(&self) -> Result<i32, ssh2::Error> {
-                Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+            fn exit_status(&self) -> Result<i32, SshError> {
+                Err(SshError::new("exit status error"))
             }
         }
         let channel = ExitStatusErrorChannel;
@@ -498,20 +740,20 @@ mod tests {
         // Given
         struct Utf8ErrorChannel;
         impl Channel for Utf8ErrorChannel {
-            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+            fn exec(&mut self, _command: &str) -> Result<(), SshError> {
                 Ok(())
             }
-            fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error> {
+            fn read_to_string(&mut self, output: &mut String) -> Result<usize, SshError> {
                 let data = vec![0xFF, 0xFF, 0xFF];
                 match String::from_utf8(data) {
                     Ok(s) => {
                         output.push_str(&s);
                         Ok(3)
                     }
-                    Err(_) => Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO))),
+                    Err(_) => Err(SshError::new("Invalid UTF-8")),
                 }
             }
-            fn exit_status(&self) -> Result<i32, ssh2::Error> {
+            fn exit_status(&self) -> Result<i32, SshError> {
                 Ok(0)
             }
         }
@@ -544,8 +786,8 @@ mod tests {
         // Given
         struct ErrorSftp;
         impl Sftp for ErrorSftp {
-            fn create(&self, _path: &Path) -> Result<Box<dyn Write>, ssh2::Error> {
-                Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+            fn create(&self, _path: &Path) -> Result<Box<dyn Write>, SshError> {
+                Err(SshError::new("sftp create error"))
             }
         }
         let sftp = ErrorSftp;

@@ -3,6 +3,7 @@
 //! This module defines all the error types that can occur during scenario
 //! configuration loading, validation, and execution.
 
+use crate::session::SshError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -95,16 +96,16 @@ pub enum OnFailError {
 #[derive(Error, Debug)]
 pub enum RemoteSudoError {
     #[error("Cannot establish a session channel:\n{0}")]
-    CannotEstablishSessionChannel(#[source] ssh2::Error),
+    CannotEstablishSessionChannel(#[source] SshError),
 
     #[error("Cannot execute remote command:\n{0}")]
-    CannotExecuteRemoteCommand(#[source] ssh2::Error),
+    CannotExecuteRemoteCommand(#[source] SshError),
 
     #[error("Cannot read channel output:\n{0}")]
-    CannotReadChannelOutput(#[source] ssh2::Error),
+    CannotReadChannelOutput(#[source] SshError),
 
     #[error("Cannot obtain exit status of remote command:\n{0}")]
-    CannotObtainRemoteCommandExitStatus(#[source] ssh2::Error),
+    CannotObtainRemoteCommandExitStatus(#[source] SshError),
 
     #[error("Remote command failed with status code:\n{0}")]
     RemoteCommandFailedWithStatusCode(i32),
@@ -119,19 +120,19 @@ pub enum RemoteSudoError {
 #[derive(Error, Debug)]
 pub enum SftpCopyError {
     #[error("Cannot open a channel and initialize the SFTP subsystem:\n{0}")]
-    CannotOpenChannelAndInitializeSftp(#[source] ssh2::Error),
+    CannotOpenChannelAndInitializeSftp(#[source] SshError),
 
     #[error("Cannot open source file:\n{0}")]
     CannotOpenSourceFile(#[source] std::io::Error),
 
     #[error("Cannot create a destination file:\n{0}")]
-    CannotCreateDestinationFile(#[source] ssh2::Error),
+    CannotCreateDestinationFile(#[source] SshError),
 
     #[error("Cannot read from source file:\n{0}")]
     CannotReadSourceFile(#[source] std::io::Error),
 
     #[error("Cannot write to destination file:\n{0}")]
-    CannotWriteDestinationFile(#[source] ssh2::Error),
+    CannotWriteDestinationFile(#[source] SshError),
 
     #[error("Cannot resolve placeholders in source file:\n{0}")]
     CannotResolveSourcePathPlaceholders(#[source] PlaceholderResolutionError),

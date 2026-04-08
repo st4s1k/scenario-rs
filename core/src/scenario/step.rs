@@ -148,7 +148,7 @@ mod tests {
             task::{TaskConfig, TaskType},
         },
         scenario::{errors::StepError, step::Step, task::Task, tasks::Tasks, variables::Variables},
-        session::{Channel, Session, SessionType, Sftp},
+        session::{Channel, Session, SessionType, Sftp, SshError},
         utils::{ArcMutex, Wrap},
     };
     use std::collections::HashMap;
@@ -167,17 +167,17 @@ mod tests {
         // Given
         struct TestChannel;
         impl Channel for TestChannel {
-            fn exec(&mut self, _: &str) -> Result<(), ssh2::Error> { Ok(()) }
-            fn read_to_string(&mut self, _: &mut String) -> Result<usize, ssh2::Error> { Ok(0) }
-            fn exit_status(&self) -> Result<i32, ssh2::Error> { Ok(0) }
+            fn exec(&mut self, _: &str) -> Result<(), SshError> { Ok(()) }
+            fn read_to_string(&mut self, _: &mut String) -> Result<usize, SshError> { Ok(0) }
+            fn exit_status(&self) -> Result<i32, SshError> { Ok(0) }
         }
         struct TestWrite;
         impl crate::session::Write for TestWrite {
-            fn write_all(&mut self, _: &[u8]) -> Result<(), ssh2::Error> { Ok(()) }
+            fn write_all(&mut self, _: &[u8]) -> Result<(), SshError> { Ok(()) }
         }
         struct TestSftp;
         impl Sftp for TestSftp {
-            fn create(&self, _: &std::path::Path) -> Result<Box<dyn crate::session::Write>, ssh2::Error> {
+            fn create(&self, _: &std::path::Path) -> Result<Box<dyn crate::session::Write>, SshError> {
                 Ok(Box::new(TestWrite))
             }
         }

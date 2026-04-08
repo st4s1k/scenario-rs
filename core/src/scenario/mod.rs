@@ -4,7 +4,7 @@ use crate::{
         credentials::Credentials, errors::ScenarioError, execute::Execute, server::Server,
         tasks::Tasks, variables::Variables,
     },
-    session::Session,
+    session::{Session, SshError},
     state::ExecutionStateManager,
     state::types::ExecutionStatus,
     trace::ScenarioEvent,
@@ -156,7 +156,7 @@ impl Scenario {
 
     fn execute_with_session(
         &self,
-        session_result: Result<Session, ssh2::Error>,
+        session_result: Result<Session, SshError>,
         state_manager: Option<&ExecutionStateManager>,
     ) -> ExecutionOutcome {
         if let Some(sm) = state_manager {
@@ -210,7 +210,7 @@ mod tests {
             server::ServerConfig, step::StepConfig, tasks::TasksConfig, variables::VariablesConfig,
         },
         scenario::Scenario,
-        session::Session,
+        session::{Session, SshError},
     };
     use std::collections::HashMap;
     use std::path::PathBuf;
@@ -507,7 +507,7 @@ mod tests {
         let (tx, _rx) = mpsc::channel();
         let sm = ExecutionStateManager::new(initial_state, tx);
 
-        let session_error = ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO));
+        let session_error = SshError::new("test session error");
 
         // When
         let outcome = scenario.execute_with_session(Err(session_error), Some(&sm));
@@ -525,7 +525,7 @@ mod tests {
         let scenario =
             Scenario::try_from("../example_configs/example-scenario.toml").unwrap();
 
-        let session_error = ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO));
+        let session_error = SshError::new("test session error");
 
         // When
         let outcome = scenario.execute_with_session(Err(session_error), None);
@@ -550,13 +550,13 @@ mod tests {
 
         struct FailChannel;
         impl crate::session::Channel for FailChannel {
-            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
-                Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+            fn exec(&mut self, _command: &str) -> Result<(), SshError> {
+                Err(SshError::new("exec error"))
             }
-            fn read_to_string(&mut self, _: &mut String) -> Result<usize, ssh2::Error> {
+            fn read_to_string(&mut self, _: &mut String) -> Result<usize, SshError> {
                 Ok(0)
             }
-            fn exit_status(&self) -> Result<i32, ssh2::Error> {
+            fn exit_status(&self) -> Result<i32, SshError> {
                 Ok(0)
             }
         }
@@ -566,10 +566,10 @@ mod tests {
             fn create(
                 &self,
                 _path: &std::path::Path,
-            ) -> Result<Box<dyn crate::session::Write>, ssh2::Error> {
+            ) -> Result<Box<dyn crate::session::Write>, SshError> {
                 struct TestWrite;
                 impl crate::session::Write for TestWrite {
-                    fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {
+                    fn write_all(&mut self, _buf: &[u8]) -> Result<(), SshError> {
                         Ok(())
                     }
                 }
@@ -630,13 +630,13 @@ mod tests {
 
         struct OkChannel;
         impl crate::session::Channel for OkChannel {
-            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+            fn exec(&mut self, _command: &str) -> Result<(), SshError> {
                 Ok(())
             }
-            fn read_to_string(&mut self, _: &mut String) -> Result<usize, ssh2::Error> {
+            fn read_to_string(&mut self, _: &mut String) -> Result<usize, SshError> {
                 Ok(0)
             }
-            fn exit_status(&self) -> Result<i32, ssh2::Error> {
+            fn exit_status(&self) -> Result<i32, SshError> {
                 Ok(0)
             }
         }
@@ -646,10 +646,10 @@ mod tests {
             fn create(
                 &self,
                 _path: &std::path::Path,
-            ) -> Result<Box<dyn crate::session::Write>, ssh2::Error> {
+            ) -> Result<Box<dyn crate::session::Write>, SshError> {
                 struct TestWrite;
                 impl crate::session::Write for TestWrite {
-                    fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {
+                    fn write_all(&mut self, _buf: &[u8]) -> Result<(), SshError> {
                         Ok(())
                     }
                 }
