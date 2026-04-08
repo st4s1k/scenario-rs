@@ -184,6 +184,7 @@ impl Visit for ScenarioEventVisitor {
             "session.host" => {}
             "session.username" => {}
             "session.password" => {}
+            "session.auth" => {}
             "scenario.event" => self.scenario_event = Some(value.to_string()),
             "scenario.error" => self.scenario_error = Some(value.to_string()),
             "task.description" => self.task_description = Some(value.to_string()),
@@ -204,6 +205,7 @@ impl Visit for ScenarioEventVisitor {
             "session.host" => {}
             "session.username" => {}
             "session.password" => {}
+            "session.auth" => {}
             "scenario.event" => self.scenario_event = Some(value_str),
             "scenario.error" => self.scenario_error = Some(value_str),
             "task.description" => self.task_description = Some(value_str),

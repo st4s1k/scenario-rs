@@ -143,14 +143,12 @@ impl Scenario {
         let session_result = Session::new(&self.server, &self.credentials, debug_mode);
         match self.execute_with_session(session_result, state_manager) {
             ExecutionOutcome::Completed => {
-                log_scenario_event(ScenarioEvent::SessionCreated);
                 log_scenario_event(ScenarioEvent::ScenarioCompleted);
             }
             ExecutionOutcome::SessionFailed(error) => {
                 log_scenario_error(&error);
             }
             ExecutionOutcome::StepsFailed(error) => {
-                log_scenario_event(ScenarioEvent::SessionCreated);
                 log_scenario_error(&error);
             }
         }
@@ -177,6 +175,8 @@ impl Scenario {
                 return ExecutionOutcome::SessionFailed(msg);
             }
         };
+
+        log_scenario_event(ScenarioEvent::SessionCreated);
 
         match self
             .execute
