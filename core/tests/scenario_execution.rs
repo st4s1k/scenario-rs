@@ -206,7 +206,7 @@ fn multi_step_success_all_complete() {
             _ => None,
         })
         .collect();
-    assert_eq!(status_diffs.len(), 6); // 3 steps × 2 transitions
+    assert_eq!(status_diffs.len(), 6);
     assert_eq!(status_diffs[0], (0, StepStatus::Running));
     assert_eq!(status_diffs[1], (0, StepStatus::Completed));
     assert_eq!(status_diffs[2], (1, StepStatus::Running));
