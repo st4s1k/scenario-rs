@@ -117,7 +117,6 @@ mod tests {
             *value += 1;
         });
 
-        // Wait for the thread to finish
         handle.join().unwrap();
 
         // Then

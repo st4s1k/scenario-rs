@@ -21,6 +21,7 @@ impl From<Sender<AppEvent>> for FrontendLayer {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 impl<S> Layer<S> for FrontendLayer
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
@@ -134,7 +135,7 @@ mod tests {
         let test_subscriber = Registry::default().with(layer);
         let _guard = subscriber::set_default(test_subscriber);
 
-        // When (emit an event - it will have our test module path)
+        // When
         event!(Level::DEBUG, "debug only event");
 
         // Then

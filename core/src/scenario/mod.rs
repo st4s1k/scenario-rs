@@ -438,7 +438,7 @@ mod tests {
         // When
         scenario.execute(None);
 
-        // Then (no panic — mock session runs in debug mode)
+        // Then
     }
 
     #[test]
@@ -654,7 +654,7 @@ mod tests {
             }
         }
 
-        // Scenario with no steps — steps.execute() returns Ok
+        // Given
         let config = create_test_config();
         let scenario = Scenario::try_from(config).unwrap();
 

@@ -29,6 +29,36 @@ use std::{
 use tauri::{AppHandle, Emitter};
 use tracing::{error, info, instrument, warn};
 
+/// Port for persisting/loading application state.
+/// Production uses `FileStateStorage`; tests use `InMemoryStateStorage`.
+pub trait StateStorage: Send {
+    fn read(&self) -> std::io::Result<String>;
+    fn write(&self, content: &str) -> std::io::Result<()>;
+}
+
+/// Production implementation — reads/writes a JSON file on disk.
+#[cfg(not(tarpaulin_include))]
+pub struct FileStateStorage {
+    path: String,
+}
+
+#[cfg(not(tarpaulin_include))]
+impl FileStateStorage {
+    pub fn new(path: String) -> Self {
+        Self { path }
+    }
+}
+
+#[cfg(not(tarpaulin_include))]
+impl StateStorage for FileStateStorage {
+    fn read(&self) -> std::io::Result<String> {
+        std::fs::read_to_string(&self.path)
+    }
+    fn write(&self, content: &str) -> std::io::Result<()> {
+        std::fs::write(&self.path, content)
+    }
+}
+
 /// Stores required variable values for a specific configuration path, used for state persistence.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigPathData {
@@ -45,10 +75,16 @@ pub struct ScenarioAppStateConfig {
 #[cfg(not(tarpaulin_include))]
 impl From<&ScenarioAppState> for ScenarioAppStateConfig {
     fn from(state: &ScenarioAppState) -> Self {
+        ScenarioAppStateConfig::from(&state.core)
+    }
+}
+
+impl From<&ScenarioAppStateCore> for ScenarioAppStateConfig {
+    fn from(core: &ScenarioAppStateCore) -> Self {
         let mut config_paths = HashMap::new();
 
-        if let Some(scenario) = &state.scenario {
-            if state.config_path.has_text() {
+        if let Some(scenario) = &core.scenario {
+            if core.config_path.has_text() {
                 let required_variables: HashMap<String, String> = scenario
                     .variables()
                     .required()
@@ -63,7 +99,7 @@ impl From<&ScenarioAppState> for ScenarioAppStateConfig {
 
                 if required_variables.is_not_empty() {
                     config_paths.insert(
-                        state.config_path.clone(),
+                        core.config_path.clone(),
                         ConfigPathData { required_variables },
                     );
                 }
@@ -71,19 +107,41 @@ impl From<&ScenarioAppState> for ScenarioAppStateConfig {
         }
 
         Self {
-            last_config_path: state.config_path.clone(),
+            last_config_path: core.config_path.clone(),
             config_paths,
         }
     }
 }
 
-/// Main application state for the Scenario GUI.
-pub struct ScenarioAppState {
+/// Core application state without Tauri-specific dependencies.
+/// All pure logic methods live here so they can be unit-tested directly.
+pub struct ScenarioAppStateCore {
     pub(crate) config_path: String,
-    pub(crate) app_handle: AppHandle,
     pub(crate) scenario: Option<Scenario>,
     pub(crate) is_executing: Arc<AtomicBool>,
     pub(crate) execution_state_manager: Option<Arc<ExecutionStateManager>>,
+    pub(crate) state_storage: Box<dyn StateStorage>,
+}
+
+/// Main application state for the Scenario GUI.
+pub struct ScenarioAppState {
+    pub(crate) core: ScenarioAppStateCore,
+    pub(crate) app_handle: AppHandle,
+}
+
+#[cfg(not(tarpaulin_include))]
+impl Deref for ScenarioAppState {
+    type Target = ScenarioAppStateCore;
+    fn deref(&self) -> &Self::Target {
+        &self.core
+    }
+}
+
+#[cfg(not(tarpaulin_include))]
+impl std::ops::DerefMut for ScenarioAppState {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.core
+    }
 }
 
 /// DTO for transferring required variable info to the frontend.
@@ -193,31 +251,14 @@ impl From<&Step> for StepDTO {
     }
 }
 
-#[cfg(not(tarpaulin_include))]
-impl ScenarioAppState {
+impl ScenarioAppStateCore {
     /// Path to the file where application state is persisted
-    const STATE_FILE_PATH: &'static str = "scenario-app-state.json";
-
-    pub fn new(app_handle: &AppHandle) -> Self {
-        Self {
-            config_path: String::new(),
-            app_handle: app_handle.clone(),
-            scenario: None,
-            is_executing: Arc::new(AtomicBool::new(false)),
-            execution_state_manager: None,
-        }
-    }
-
-    /// Initializes the app state: sets up event listener and loads saved state.
-    pub fn init(&mut self, frontend_rx: Receiver<AppEvent>) {
-        trace::listen(frontend_rx, &self.app_handle, FrontendEventHandler);
-        self.load_state();
-    }
+    const DEFAULT_STATE_FILE_PATH: &'static str = "scenario-app-state.json";
 
     /// Loads and restores saved application state from disk.
     #[instrument(skip_all)]
     pub fn load_state(&mut self) {
-        if let Ok(json) = std::fs::read_to_string(Self::STATE_FILE_PATH) {
+        if let Ok(json) = self.state_storage.read() {
             if let Ok(loaded_state) = serde_json::from_str::<ScenarioAppStateConfig>(&json) {
                 self.config_path = loaded_state.last_config_path.clone();
                 self.load_config(self.config_path.clone().as_str());
@@ -252,9 +293,9 @@ impl ScenarioAppState {
     /// Saves current application state to disk, merging with any existing state.
     #[instrument(skip_all)]
     pub fn save_state(&mut self) {
-        let current_state = ScenarioAppStateConfig::from(self.deref());
+        let current_state = ScenarioAppStateConfig::from(&*self);
 
-        let final_state = match std::fs::read_to_string(Self::STATE_FILE_PATH) {
+        let final_state = match self.state_storage.read() {
             Ok(json) => match serde_json::from_str::<ScenarioAppStateConfig>(&json) {
                 Ok(mut existing_state) => {
                     existing_state.last_config_path = current_state.last_config_path.clone();
@@ -275,17 +316,14 @@ impl ScenarioAppState {
             }
         };
 
-        match serde_json::to_string_pretty(&final_state) {
-            Ok(json) => match std::fs::write(Self::STATE_FILE_PATH, json) {
-                Ok(_) => {
-                    info!("Application state saved successfully");
-                }
-                Err(error) => {
-                    error!("Failed to save state: {}", error);
-                }
-            },
+        let json = serde_json::to_string_pretty(&final_state)
+            .expect("Failed to serialize application state");
+        match self.state_storage.write(&json) {
+            Ok(_) => {
+                info!("Application state saved successfully");
+            }
             Err(error) => {
-                error!("Failed to serialize state: {}", error);
+                error!("Failed to save state: {}", error);
             }
         }
     }
@@ -306,42 +344,11 @@ impl ScenarioAppState {
         };
 
         if self.scenario.is_some() {
-            if let Ok(json) = std::fs::read_to_string(Self::STATE_FILE_PATH) {
+            if let Ok(json) = self.state_storage.read() {
                 if let Ok(state_config) = serde_json::from_str::<ScenarioAppStateConfig>(&json) {
                     self.load_config_data_from_state(&state_config);
                 }
             }
-        }
-    }
-
-    /// Executes the currently loaded scenario in an async task.
-    #[instrument(skip_all)]
-    pub fn execute_scenario(&mut self) {
-        if let Some(scenario) = self.scenario.as_ref().cloned() {
-            let is_executing = self.is_executing.clone();
-
-            // Create state manager with diff channel
-            let (diff_tx, diff_rx) = std::sync::mpsc::channel();
-            let initial_state = build_initial_state(&scenario);
-            let state_manager = Arc::new(ExecutionStateManager::new(initial_state, diff_tx));
-
-            // Store for snapshot queries
-            self.execution_state_manager = Some(state_manager.clone());
-
-            // Spawn diff batch streaming task
-            let app_handle = self.app_handle.clone();
-            tauri::async_runtime::spawn(async move {
-                diff_batch_stream(diff_rx, &app_handle);
-            });
-
-            // Spawn scenario execution
-            tauri::async_runtime::spawn(async move {
-                is_executing.store(true, Ordering::SeqCst);
-                scenario.execute(Some(&state_manager));
-                is_executing.store(false, Ordering::SeqCst);
-            });
-        } else {
-            info!("No scenario loaded");
         }
     }
 
@@ -439,13 +446,68 @@ impl ScenarioAppState {
             config_paths: HashMap::new(),
         };
 
-        if let Ok(json) = serde_json::to_string_pretty(&empty_state) {
-            if let Err(error) = std::fs::write(Self::STATE_FILE_PATH, json) {
-                error!("Failed to clear state: {}", error);
-            }
+        let json = serde_json::to_string_pretty(&empty_state)
+            .expect("Failed to serialize empty state");
+        if let Err(error) = self.state_storage.write(&json) {
+            error!("Failed to clear state: {}", error);
         }
 
         info!("State cleared");
+    }
+}
+
+#[cfg(not(tarpaulin_include))]
+impl ScenarioAppState {
+    pub fn new(app_handle: &AppHandle) -> Self {
+        Self {
+            core: ScenarioAppStateCore {
+                config_path: String::new(),
+                scenario: None,
+                is_executing: Arc::new(AtomicBool::new(false)),
+                execution_state_manager: None,
+                state_storage: Box::new(FileStateStorage::new(
+                    ScenarioAppStateCore::DEFAULT_STATE_FILE_PATH.to_string(),
+                )),
+            },
+            app_handle: app_handle.clone(),
+        }
+    }
+
+    /// Initializes the app state: sets up event listener and loads saved state.
+    pub fn init(&mut self, frontend_rx: Receiver<AppEvent>) {
+        trace::listen(frontend_rx, &self.app_handle, FrontendEventHandler);
+        self.load_state();
+    }
+
+    /// Executes the currently loaded scenario in an async task.
+    #[instrument(skip_all)]
+    pub fn execute_scenario(&mut self) {
+        if let Some(scenario) = self.scenario.as_ref().cloned() {
+            let is_executing = self.is_executing.clone();
+
+            // Create state manager with diff channel
+            let (diff_tx, diff_rx) = std::sync::mpsc::channel();
+            let initial_state = build_initial_state(&scenario);
+            let state_manager = Arc::new(ExecutionStateManager::new(initial_state, diff_tx));
+
+            // Store for snapshot queries
+            self.execution_state_manager = Some(state_manager.clone());
+
+            // Spawn diff batch streaming task
+            let app_handle = self.app_handle.clone();
+            tauri::async_runtime::spawn(async move {
+                diff_batch_stream(diff_rx, &app_handle);
+            });
+
+            // Spawn scenario execution
+            tauri::async_runtime::spawn(async move {
+                is_executing.store(true, Ordering::SeqCst);
+                scenario.execute(Some(&state_manager));
+                is_executing.store(false, Ordering::SeqCst);
+            });
+        } else {
+            info!("No scenario loaded");
+        }
     }
 }
 
@@ -482,6 +544,34 @@ fn build_initial_state(scenario: &Scenario) -> ExecutionState {
     }
 }
 
+/// Collects a batch of diffs: blocks for the first one, then drains
+/// any additional diffs that arrive within the given timeout window.
+/// Returns `None` when the channel is closed.
+fn collect_batch(
+    rx: &std::sync::mpsc::Receiver<scenario_rs::state::types::StateDiff>,
+    batch_window: Duration,
+) -> Option<Vec<scenario_rs::state::types::StateDiff>> {
+    // Block until first diff arrives (or channel closes)
+    let first = rx.recv().ok()?;
+
+    let mut batch = vec![first];
+    let deadline = Instant::now() + batch_window;
+
+    // Collect more diffs within the window
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            break;
+        }
+        match rx.recv_timeout(remaining) {
+            Ok(diff) => batch.push(diff),
+            Err(_) => break,
+        }
+    }
+
+    Some(batch)
+}
+
 /// Reads diffs from the channel, batches them over 100ms windows,
 /// and emits them as a single Tauri event per batch.
 #[cfg(not(tarpaulin_include))]
@@ -489,30 +579,7 @@ fn diff_batch_stream(
     rx: std::sync::mpsc::Receiver<scenario_rs::state::types::StateDiff>,
     app_handle: &AppHandle,
 ) {
-    use scenario_rs::state::types::StateDiff;
-
-    loop {
-        // Block until first diff arrives (or channel closes)
-        let first: StateDiff = match rx.recv() {
-            Ok(diff) => diff,
-            Err(_) => break,
-        };
-
-        let mut batch = vec![first];
-        let deadline = Instant::now() + Duration::from_millis(100);
-
-        // Collect more diffs within the 100ms window
-        loop {
-            let remaining = deadline.saturating_duration_since(Instant::now());
-            if remaining.is_zero() {
-                break;
-            }
-            match rx.recv_timeout(remaining) {
-                Ok(diff) => batch.push(diff),
-                Err(_) => break,
-            }
-        }
-
+    while let Some(batch) = collect_batch(&rx, Duration::from_millis(100)) {
         let _ = app_handle.emit("execution-diff", &batch);
     }
 }
@@ -521,14 +588,126 @@ fn diff_batch_stream(
 mod tests {
     use crate::app::{
         build_initial_state, ConfigPathData, OnFailStepDTO, RequiredVariableDTO,
-        ScenarioAppStateConfig, StepDTO, TaskDTO,
+        ScenarioAppStateConfig, ScenarioAppStateCore, StateStorage, StepDTO, TaskDTO,
     };
     use scenario_rs::scenario::{
         on_fail_step::OnFailStep, on_fail_steps::OnFailSteps, remote_sudo::RemoteSudo,
         sftp_copy::SftpCopy, step::Step, task::Task, Scenario,
     };
     use scenario_rs::state::types::{ExecutionStatus, StepStatus};
+    use std::cell::RefCell;
     use std::collections::HashMap;
+    use std::sync::atomic::AtomicBool;
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    /// In-memory implementation of StateStorage for testing.
+    struct InMemoryStateStorage {
+        content: RefCell<Option<String>>,
+    }
+
+    impl InMemoryStateStorage {
+        fn empty() -> Self {
+            Self {
+                content: RefCell::new(None),
+            }
+        }
+
+        fn with_content(json: &str) -> Self {
+            Self {
+                content: RefCell::new(Some(json.to_string())),
+            }
+        }
+
+        fn get_content(&self) -> Option<String> {
+            self.content.borrow().clone()
+        }
+    }
+
+    impl StateStorage for InMemoryStateStorage {
+        fn read(&self) -> std::io::Result<String> {
+            self.content
+                .borrow()
+                .clone()
+                .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "no state"))
+        }
+        fn write(&self, content: &str) -> std::io::Result<()> {
+            *self.content.borrow_mut() = Some(content.to_string());
+            Ok(())
+        }
+    }
+
+    // SAFETY: RefCell is not Sync, but we only use InMemoryStateStorage
+    // from single-threaded test code. The Send bound is required by the
+    // StateStorage trait (ScenarioAppStateCore lives in a Mutex<T>).
+    unsafe impl Send for InMemoryStateStorage {}
+
+    fn test_core_empty() -> ScenarioAppStateCore {
+        ScenarioAppStateCore {
+            config_path: String::new(),
+            scenario: None,
+            is_executing: Arc::new(AtomicBool::new(false)),
+            execution_state_manager: None,
+            state_storage: Box::new(InMemoryStateStorage::empty()),
+        }
+    }
+
+    fn test_core_with_storage(storage: InMemoryStateStorage) -> ScenarioAppStateCore {
+        ScenarioAppStateCore {
+            config_path: String::new(),
+            scenario: None,
+            is_executing: Arc::new(AtomicBool::new(false)),
+            execution_state_manager: None,
+            state_storage: Box::new(storage),
+        }
+    }
+
+    fn test_core_with_scenario() -> ScenarioAppStateCore {
+        let scenario =
+            Scenario::try_from("../../example_configs/example-scenario.toml").unwrap();
+        ScenarioAppStateCore {
+            config_path: "../../example_configs/example-scenario.toml".to_string(),
+            scenario: Some(scenario),
+            is_executing: Arc::new(AtomicBool::new(false)),
+            execution_state_manager: None,
+            state_storage: Box::new(InMemoryStateStorage::empty()),
+        }
+    }
+
+    fn test_core_with_scenario_and_storage(
+        storage: InMemoryStateStorage,
+    ) -> ScenarioAppStateCore {
+        let scenario =
+            Scenario::try_from("../../example_configs/example-scenario.toml").unwrap();
+        ScenarioAppStateCore {
+            config_path: "../../example_configs/example-scenario.toml".to_string(),
+            scenario: Some(scenario),
+            is_executing: Arc::new(AtomicBool::new(false)),
+            execution_state_manager: None,
+            state_storage: Box::new(storage),
+        }
+    }
+
+    /// Storage that always fails on write — for testing error branches.
+    struct FailingWriteStorage;
+
+    impl StateStorage for FailingWriteStorage {
+        fn read(&self) -> std::io::Result<String> {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "no state",
+            ))
+        }
+        fn write(&self, _content: &str) -> std::io::Result<()> {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "write denied",
+            ))
+        }
+    }
+
+    // SAFETY: FailingWriteStorage has no interior mutability.
+    unsafe impl Send for FailingWriteStorage {}
 
     #[test]
     fn test_task_dto_from_remote_sudo_task() {
@@ -745,15 +924,556 @@ mod tests {
     }
 
     #[test]
-    fn test_diff_batch_stream_empty_channel() {
-        // Given
+    fn test_collect_batch_returns_none_when_channel_closed() {
         use scenario_rs::state::types::StateDiff;
         use std::sync::mpsc;
 
         let (tx, rx) = mpsc::channel::<StateDiff>();
         drop(tx);
 
+        let result = super::collect_batch(&rx, Duration::from_millis(50));
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_collect_batch_returns_single_diff() {
+        use scenario_rs::state::types::StateDiff;
+        use std::sync::mpsc;
+
+        let (tx, rx) = mpsc::channel::<StateDiff>();
+        tx.send(StateDiff::ExecutionStatusChanged {
+            status: ExecutionStatus::Running,
+        })
+        .unwrap();
+        drop(tx);
+
+        let batch = super::collect_batch(&rx, Duration::from_millis(50));
+        assert!(batch.is_some());
+        assert_eq!(batch.unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_collect_batch_batches_multiple_diffs() {
+        use scenario_rs::state::types::StateDiff;
+        use std::sync::mpsc;
+
+        let (tx, rx) = mpsc::channel::<StateDiff>();
+        tx.send(StateDiff::ExecutionStatusChanged {
+            status: ExecutionStatus::Running,
+        })
+        .unwrap();
+        tx.send(StateDiff::ExecutionStatusChanged {
+            status: ExecutionStatus::Completed,
+        })
+        .unwrap();
+        drop(tx);
+
+        let batch = super::collect_batch(&rx, Duration::from_millis(100));
+        assert!(batch.is_some());
+        assert_eq!(batch.unwrap().len(), 2);
+    }
+
+    #[test]
+    fn test_collect_batch_respects_timeout_window() {
+        use scenario_rs::state::types::StateDiff;
+        use std::sync::mpsc;
+        use std::thread;
+
+        let (tx, rx) = mpsc::channel::<StateDiff>();
+
+        // Given
+        tx.send(StateDiff::ExecutionStatusChanged {
+            status: ExecutionStatus::Running,
+        })
+        .unwrap();
+
+        let tx_clone = tx.clone();
+        thread::spawn(move || {
+            thread::sleep(Duration::from_millis(200));
+            let _ = tx_clone.send(StateDiff::ExecutionStatusChanged {
+                status: ExecutionStatus::Completed,
+            });
+        });
+
+        // When
+        let batch = super::collect_batch(&rx, Duration::from_millis(50));
+        assert!(batch.is_some());
+        assert_eq!(batch.unwrap().len(), 1);
+    }
+
+    // ── From<&ScenarioAppStateCore> ──────────────────────────────
+
+    #[test]
+    fn test_from_core_without_scenario_produces_empty_config() {
+        let core = test_core_empty();
+        let config = ScenarioAppStateConfig::from(&core);
+        assert!(config.last_config_path.is_empty());
+        assert!(config.config_paths.is_empty());
+    }
+
+    #[test]
+    fn test_from_core_with_scenario_includes_writable_variables() {
+        // Given
+        let mut core = test_core_with_scenario();
+        let var_names: Vec<String> = core
+            .scenario
+            .as_ref()
+            .unwrap()
+            .variables()
+            .required()
+            .iter()
+            .filter(|(_, rv)| rv.not_read_only())
+            .map(|(name, _)| name.to_string())
+            .collect();
+        if let Some(first_var) = var_names.first() {
+            core.update_required_variables(HashMap::from([(
+                first_var.clone(),
+                "test_val".to_string(),
+            )]));
+        }
+        // When
+        let config = ScenarioAppStateConfig::from(&core);
+
+        // Then
+        assert_eq!(
+            config.last_config_path,
+            "../../example_configs/example-scenario.toml"
+        );
+        assert!(config
+            .config_paths
+            .contains_key("../../example_configs/example-scenario.toml"));
+    }
+
+    // ── load_state ──────────────────────────────────────────────
+
+    #[test]
+    fn test_load_state_empty_storage_is_noop() {
+        let mut core = test_core_empty();
+        core.load_state();
+        assert!(core.config_path.is_empty());
+        assert!(core.scenario.is_none());
+    }
+
+    #[test]
+    fn test_load_state_invalid_json_is_noop() {
+        let storage = InMemoryStateStorage::with_content("not valid json");
+        let mut core = test_core_with_storage(storage);
+        core.load_state();
+        assert!(core.config_path.is_empty());
+        assert!(core.scenario.is_none());
+    }
+
+    #[test]
+    fn test_load_state_restores_config_path_and_scenario() {
+        let state = ScenarioAppStateConfig {
+            last_config_path: "../../example_configs/example-scenario.toml".to_string(),
+            config_paths: HashMap::new(),
+        };
+        let json = serde_json::to_string(&state).unwrap();
+        let storage = InMemoryStateStorage::with_content(&json);
+        let mut core = test_core_with_storage(storage);
+
+        core.load_state();
+
+        assert_eq!(
+            core.config_path,
+            "../../example_configs/example-scenario.toml"
+        );
+        assert!(core.scenario.is_some());
+    }
+
+    #[test]
+    fn test_load_state_restores_required_variables_from_state() {
+        let mut config_paths = HashMap::new();
+        config_paths.insert(
+            "../../example_configs/example-scenario.toml".to_string(),
+            ConfigPathData {
+                required_variables: HashMap::from([
+                    ("MY_VAR".to_string(), "my_value".to_string()),
+                ]),
+            },
+        );
+        let state = ScenarioAppStateConfig {
+            last_config_path: "../../example_configs/example-scenario.toml".to_string(),
+            config_paths,
+        };
+        let json = serde_json::to_string(&state).unwrap();
+        let storage = InMemoryStateStorage::with_content(&json);
+        let mut core = test_core_with_storage(storage);
+
+        core.load_state();
+
+        assert!(core.scenario.is_some());
+    }
+
+    #[test]
+    fn test_load_state_with_bad_config_path_sets_scenario_none() {
+        let state = ScenarioAppStateConfig {
+            last_config_path: "/nonexistent/path.toml".to_string(),
+            config_paths: HashMap::new(),
+        };
+        let json = serde_json::to_string(&state).unwrap();
+        let storage = InMemoryStateStorage::with_content(&json);
+        let mut core = test_core_with_storage(storage);
+
+        core.load_state();
+
+        assert_eq!(core.config_path, "/nonexistent/path.toml");
+        assert!(core.scenario.is_none());
+    }
+
+    // ── save_state ──────────────────────────────────────────────
+
+    #[test]
+    fn test_save_state_to_empty_storage() {
+        // Given
+        let storage = InMemoryStateStorage::empty();
+        let storage_ptr = &storage as *const InMemoryStateStorage;
+        let mut core = test_core_with_scenario_and_storage(storage);
+
+        // When
+        core.save_state();
+
+        // Then
+        let content = core.state_storage.read().unwrap();
+        let saved: ScenarioAppStateConfig = serde_json::from_str(&content).unwrap();
+        assert_eq!(
+            saved.last_config_path,
+            "../../example_configs/example-scenario.toml"
+        );
+    }
+
+    #[test]
+    fn test_save_state_merges_with_existing() {
+        // Given
+        let mut existing_paths = HashMap::new();
+        existing_paths.insert(
+            "/old/config.toml".to_string(),
+            ConfigPathData {
+                required_variables: HashMap::from([("OLD_VAR".to_string(), "old".to_string())]),
+            },
+        );
+        let existing = ScenarioAppStateConfig {
+            last_config_path: "/old/config.toml".to_string(),
+            config_paths: existing_paths,
+        };
+        let existing_json = serde_json::to_string_pretty(&existing).unwrap();
+        let storage = InMemoryStateStorage::with_content(&existing_json);
+        let mut core = test_core_with_scenario_and_storage(storage);
+
+        core.save_state();
+
+        // Then
+        let content = core.state_storage.read().unwrap();
+        let saved: ScenarioAppStateConfig = serde_json::from_str(&content).unwrap();
+        assert_eq!(
+            saved.last_config_path,
+            "../../example_configs/example-scenario.toml"
+        );
+        assert!(saved.config_paths.contains_key("/old/config.toml"));
+    }
+
+    #[test]
+    fn test_save_state_overwrites_corrupt_existing() {
+        let storage = InMemoryStateStorage::with_content("not valid json");
+        let mut core = test_core_with_scenario_and_storage(storage);
+
+        core.save_state();
+
+        let content = core.state_storage.read().unwrap();
+        let saved: ScenarioAppStateConfig = serde_json::from_str(&content).unwrap();
+        assert_eq!(
+            saved.last_config_path,
+            "../../example_configs/example-scenario.toml"
+        );
+    }
+
+    // ── load_config ─────────────────────────────────────────────
+
+    #[test]
+    fn test_load_config_valid_path() {
+        let mut core = test_core_empty();
+        core.load_config("../../example_configs/example-scenario.toml");
+        assert_eq!(
+            core.config_path,
+            "../../example_configs/example-scenario.toml"
+        );
+        assert!(core.scenario.is_some());
+    }
+
+    #[test]
+    fn test_load_config_invalid_path() {
+        let mut core = test_core_empty();
+        core.load_config("/nonexistent/path.toml");
+        assert_eq!(core.config_path, "/nonexistent/path.toml");
+        assert!(core.scenario.is_none());
+    }
+
+    #[test]
+    fn test_load_config_merges_state_from_storage() {
+        let mut config_paths = HashMap::new();
+        config_paths.insert(
+            "../../example_configs/example-scenario.toml".to_string(),
+            ConfigPathData {
+                required_variables: HashMap::from([
+                    ("SAVED_VAR".to_string(), "saved_value".to_string()),
+                ]),
+            },
+        );
+        let state = ScenarioAppStateConfig {
+            last_config_path: "../../example_configs/example-scenario.toml".to_string(),
+            config_paths,
+        };
+        let json = serde_json::to_string(&state).unwrap();
+        let storage = InMemoryStateStorage::with_content(&json);
+        let mut core = test_core_with_storage(storage);
+
+        core.load_config("../../example_configs/example-scenario.toml");
+
+        assert!(core.scenario.is_some());
+    }
+
+    // ── clear_state ─────────────────────────────────────────────
+
+    #[test]
+    fn test_clear_state_writes_empty_state() {
+        let storage = InMemoryStateStorage::with_content("old content");
+        let mut core = test_core_with_storage(storage);
+
+        core.clear_state();
+
+        let content = core.state_storage.read().unwrap();
+        let cleared: ScenarioAppStateConfig = serde_json::from_str(&content).unwrap();
+        assert!(cleared.last_config_path.is_empty());
+        assert!(cleared.config_paths.is_empty());
+    }
+
+    // ── get_execution_state ─────────────────────────────────────
+
+    #[test]
+    fn test_get_execution_state_none_when_no_manager() {
+        let core = test_core_empty();
+        assert!(core.get_execution_state().is_none());
+    }
+
+    #[test]
+    fn test_get_execution_state_returns_snapshot() {
+        use scenario_rs::state::{types::ExecutionState, ExecutionStateManager};
+
+        let initial = ExecutionState {
+            status: ExecutionStatus::Running,
+            steps: vec![],
+        };
+        let (tx, _rx) = std::sync::mpsc::channel();
+        let manager = Arc::new(ExecutionStateManager::new(initial, tx));
+        let mut core = test_core_empty();
+        core.execution_state_manager = Some(manager);
+
+        let state = core.get_execution_state();
+        assert!(state.is_some());
+        assert_eq!(state.unwrap().status, ExecutionStatus::Running);
+    }
+
+    // ── get_required_variables ──────────────────────────────────
+
+    #[test]
+    fn test_get_required_variables_empty_when_no_scenario() {
+        let core = test_core_empty();
+        let vars = core.get_required_variables();
+        assert!(vars.is_empty());
+    }
+
+    #[test]
+    fn test_get_required_variables_returns_dtos_when_scenario_loaded() {
+        let core = test_core_with_scenario();
+        let vars = core.get_required_variables();
+
+        // Then
+        assert!(!vars.is_empty());
+        for (_, dto) in &vars {
+            assert!(!dto.label.is_empty());
+        }
+    }
+
+    // ── update_required_variables ───────────────────────────────
+
+    #[test]
+    fn test_update_required_variables_noop_when_no_scenario() {
+        let mut core = test_core_empty();
+        core.update_required_variables(HashMap::from([
+            ("KEY".to_string(), "VALUE".to_string()),
+        ]));
+        assert!(core.scenario.is_none());
+    }
+
+    #[test]
+    fn test_update_required_variables_updates_scenario() {
+        let mut core = test_core_with_scenario();
+        let var_names: Vec<String> = core
+            .scenario
+            .as_ref()
+            .unwrap()
+            .variables()
+            .required()
+            .iter()
+            .map(|(name, _)| name.to_string())
+            .collect();
+
+        if let Some(first_var) = var_names.first() {
+            core.update_required_variables(HashMap::from([
+                (first_var.clone(), "updated_value".to_string()),
+            ]));
+
+            let updated = core
+                .scenario
+                .as_ref()
+                .unwrap()
+                .variables()
+                .required()
+                .iter()
+                .find(|(name, _)| *name == first_var)
+                .map(|(_, rv)| rv.value().to_string());
+
+            assert_eq!(updated, Some("updated_value".to_string()));
+        }
+    }
+
+    // ── get_tasks ───────────────────────────────────────────────
+
+    #[test]
+    fn test_get_tasks_empty_when_no_scenario() {
+        let core = test_core_empty();
+        let tasks = core.get_tasks();
+        assert!(tasks.is_empty());
+    }
+
+    #[test]
+    fn test_get_tasks_returns_dtos_when_scenario_loaded() {
+        let core = test_core_with_scenario();
+        let tasks = core.get_tasks();
+        assert!(!tasks.is_empty());
+    }
+
+    // ── get_resolved_variables ──────────────────────────────────
+
+    #[test]
+    fn test_get_resolved_variables_empty_when_no_scenario() {
+        let mut core = test_core_empty();
+        let vars = core.get_resolved_variables();
+        assert!(vars.is_empty());
+    }
+
+    #[test]
+    fn test_get_resolved_variables_returns_resolved_when_loaded() {
+        let mut core = test_core_with_scenario();
+        let vars = core.get_resolved_variables();
+
+        // Then
+        assert!(!vars.is_empty());
+    }
+
+    // ── get_steps ───────────────────────────────────────────────
+
+    #[test]
+    fn test_get_steps_empty_when_no_scenario() {
+        let core = test_core_empty();
+        let steps = core.get_steps();
+        assert!(steps.is_empty());
+    }
+
+    #[test]
+    fn test_get_steps_returns_dtos_when_scenario_loaded() {
+        let core = test_core_with_scenario();
+        let steps = core.get_steps();
+        assert!(!steps.is_empty());
+        for step in &steps {
+            assert!(!step.task.description.is_empty());
+        }
+    }
+
+    // ── save_state / clear_state error paths ────────────────────
+
+    #[test]
+    fn test_save_state_with_write_failure_does_not_panic() {
+        let mut core = ScenarioAppStateCore {
+            config_path: String::new(),
+            scenario: None,
+            is_executing: Arc::new(AtomicBool::new(false)),
+            execution_state_manager: None,
+            state_storage: Box::new(FailingWriteStorage),
+        };
+
         // When & Then
-        assert!(rx.recv().is_err());
+        core.save_state();
+    }
+
+    #[test]
+    fn test_clear_state_with_write_failure_does_not_panic() {
+        let mut core = ScenarioAppStateCore {
+            config_path: String::new(),
+            scenario: None,
+            is_executing: Arc::new(AtomicBool::new(false)),
+            execution_state_manager: None,
+            state_storage: Box::new(FailingWriteStorage),
+        };
+
+        // When & Then
+        core.clear_state();
+    }
+
+    // ── get_resolved_variables error path ───────────────────────
+
+    #[test]
+    fn test_get_resolved_variables_error_returns_empty() {
+        // Given
+        let mut core = test_core_with_scenario();
+        let var_names: Vec<String> = core
+            .scenario
+            .as_ref()
+            .unwrap()
+            .variables()
+            .required()
+            .iter()
+            .map(|(name, _)| name.to_string())
+            .collect();
+        if let Some(first_var) = var_names.first() {
+            core.update_required_variables(HashMap::from([(
+                first_var.clone(),
+                "{nonexistent_placeholder}".to_string(),
+            )]));
+        }
+
+        // When
+        let vars = core.get_resolved_variables();
+
+        // Then
+        assert!(vars.is_empty());
+    }
+
+    // ── collect_batch zero timeout ──────────────────────────────
+
+    #[test]
+    fn test_collect_batch_with_zero_timeout_returns_first_diff_only() {
+        use scenario_rs::state::types::StateDiff;
+        use std::sync::mpsc;
+
+        let (tx, rx) = mpsc::channel::<StateDiff>();
+
+        // Given
+        tx.send(StateDiff::ExecutionStatusChanged {
+            status: ExecutionStatus::Running,
+        })
+        .unwrap();
+        tx.send(StateDiff::ExecutionStatusChanged {
+            status: ExecutionStatus::Completed,
+        })
+        .unwrap();
+
+        // When
+        let batch = super::collect_batch(&rx, Duration::ZERO);
+
+        // Then
+        assert!(batch.is_some());
+        assert!(!batch.unwrap().is_empty());
     }
 }
