@@ -15,7 +15,7 @@ use std::sync::Mutex;
 use tauri::Manager;
 use tracing::Level;
 use tracing_subscriber::{
-    filter::LevelFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt, Layer,
+    filter::EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt, Layer,
 };
 
 mod app;
@@ -26,18 +26,32 @@ mod utils;
 fn main() {
     let (frontend_tx, frontend_rx) = std::sync::mpsc::channel::<AppEvent>();
 
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(
+            if cfg!(debug_assertions) {
+                "trace"
+            } else {
+                "info"
+            }
+            .parse()
+            .unwrap(),
+        )
+        .from_env_lossy()
+        .add_directive("russh=info".parse().unwrap())
+        .add_directive("russh_sftp=info".parse().unwrap());
+
     tracing_subscriber::registry()
         .with(
             fmt::layer()
                 .compact()
                 .with_target(false)
-                .with_filter(LevelFilter::from_level(if cfg!(debug_assertions) {
-                    Level::TRACE
-                } else {
-                    Level::INFO
-                })),
+                .with_filter(env_filter),
         )
-        .with(FrontendLayer::from(frontend_tx).with_filter(LevelFilter::from_level(Level::TRACE)))
+        .with(FrontendLayer::from(frontend_tx).with_filter(
+            EnvFilter::new("trace")
+                .add_directive("russh=info".parse().unwrap())
+                .add_directive("russh_sftp=info".parse().unwrap()),
+        ))
         .init();
 
     tauri::Builder::default()

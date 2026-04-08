@@ -5,16 +5,21 @@ use crate::{
     utils::{ArcMutex, Wrap},
 };
 use std::{fmt, path::Path, sync::Arc};
-use tokio::runtime::Handle;
-/// Helper to safely call block_on, panicking with a clear message if already inside a runtime.
+
+/// Run an async future on the given runtime from any context.
+/// If already inside a Tokio runtime (e.g. Tauri), spawns a thread so the
+/// dedicated runtime's `block_on` does not conflict with the outer runtime.
 fn try_block_on<F, R>(runtime: &tokio::runtime::Runtime, fut: F) -> R
 where
-    F: std::future::Future<Output = R>,
+    F: std::future::Future<Output = R> + Send,
+    R: Send,
 {
-    if Handle::try_current().is_ok() {
-        panic!("Cannot call block_on from within a Tokio runtime. Use the async API instead.");
-    } else {
-        runtime.block_on(fut)
+    match tokio::runtime::Handle::try_current() {
+        Ok(_) => {
+            let handle = runtime.handle().clone();
+            std::thread::scope(|s| s.spawn(|| handle.block_on(fut)).join().unwrap())
+        }
+        Err(_) => runtime.block_on(fut),
     }
 }
 use tracing::{debug, instrument, trace};
@@ -295,6 +300,21 @@ impl Default for Session {
     fn default() -> Self {
         Session {
             inner: SessionType::Mock,
+        }
+    }
+}
+
+impl Drop for Session {
+    fn drop(&mut self) {
+        debug!("drop session");
+        let inner = std::mem::replace(&mut self.inner, SessionType::Mock);
+        #[cfg(not(tarpaulin_include))]
+        if let SessionType::Real { runtime, handle } = inner {
+            debug!("drop handle");
+            drop(handle);
+            if tokio::runtime::Handle::try_current().is_ok() {
+                std::thread::spawn(move || drop(runtime));
+            }
         }
     }
 }
