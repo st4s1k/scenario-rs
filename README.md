@@ -227,14 +227,18 @@ cargo install cargo-make
 
 ### Available Tasks
 
+Run `cargo make help` to list all available tasks.
+
 | Command | Description |
 |---|---|
+| `cargo make help` | List all available tasks |
 | `cargo make check` | Run `cargo check` on the workspace |
 | `cargo make build` | Build the workspace (debug) |
 | `cargo make build-release` | Build the workspace (release) |
 | `cargo make test` | Run Rust tests with coverage (requires [cargo-tarpaulin](https://github.com/xd009642/tarpaulin)) |
 | `cargo make ng-test` | Run Angular unit tests with coverage |
 | `cargo make test-all` | Run all tests with coverage (Rust + Angular) |
+| `cargo make npm-install` | Install frontend dependencies |
 | `cargo make ng-build` | Build Angular frontend |
 | `cargo make tauri-dev` | Run GUI in development mode |
 | `cargo make tauri-build` | Build GUI (release) |

@@ -1,6 +1,34 @@
 [env]
 GUI_DIR = "gui"
 
+# --- Help ---
+
+[tasks.help]
+workspace = false
+description = "List all available tasks"
+script_runner = "@shell"
+script = [
+    "printf '\\n'",
+    "echo Usage: cargo make [task]",
+    "printf '\\n'",
+    "echo Tasks:",
+    "echo   check              Run cargo check on the workspace",
+    "echo   build              Build the workspace [debug]",
+    "echo   build-release      Build the workspace [release]",
+    "echo   test               Run Rust tests with coverage [requires cargo-tarpaulin]",
+    "echo   ng-test            Run Angular unit tests with coverage",
+    "echo   test-all           Run all tests [Rust + Angular]",
+    "echo   npm-install        Install frontend dependencies",
+    "echo   ng-build           Build Angular frontend",
+    "echo   tauri-dev          Run GUI in development mode",
+    "echo   tauri-build        Build GUI [release]",
+    "echo   tauri-build-debug  Build GUI [debug]",
+    "echo   build-all          Build everything [Rust workspace + GUI debug]",
+    "echo   build-all-release  Build everything [Rust workspace + GUI release]",
+    "echo   verify             Full verification: check + all tests + Angular build",
+    "printf '\\n'",
+]
+
 # --- Rust workspace ---
 
 [tasks.check]
