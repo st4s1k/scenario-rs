@@ -6,8 +6,51 @@ describe('TitlebarComponent', () => {
   let tauri: TauriTestHarness;
 
   beforeEach(() => {
-    tauri = setupTauriMock();
+    tauri = setupTauriMock({
+      'get_debug_mode': false,
+      'set_debug_mode': undefined,
+    });
     component = new TitlebarComponent();
+  });
+
+  describe('ngOnInit', () => {
+    it('should fetch debug mode on init', async () => {
+      // Given
+      tauri.setResponse('get_debug_mode', true);
+
+      // When
+      await component.ngOnInit();
+
+      // Then
+      tauri.expectInvoked('get_debug_mode');
+      expect(component.debugMode()).toBe(true);
+    });
+  });
+
+  describe('toggleDebugMode', () => {
+    it('should toggle debug mode from false to true', () => {
+      // Given
+      component.debugMode.set(false);
+
+      // When
+      component.toggleDebugMode();
+
+      // Then
+      expect(component.debugMode()).toBe(true);
+      tauri.expectInvoked('set_debug_mode', { debugMode: true });
+    });
+
+    it('should toggle debug mode from true to false', () => {
+      // Given
+      component.debugMode.set(true);
+
+      // When
+      component.toggleDebugMode();
+
+      // Then
+      expect(component.debugMode()).toBe(false);
+      tauri.expectInvoked('set_debug_mode', { debugMode: false });
+    });
   });
 
   describe('save', () => {

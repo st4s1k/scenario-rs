@@ -473,4 +473,42 @@ describe('ExecutionStateService', () => {
       tauri.expectNotInvoked('get_execution_state');
     });
   });
+
+  describe('reset', () => {
+    it('should set executionState to null', () => {
+      // Given
+      service.executionState.set(makeState({ status: { kind: 'Running' } }));
+
+      // When
+      service.reset();
+
+      // Then
+      expect(service.executionState()).toBeNull();
+    });
+  });
+
+  describe('Running transition diff', () => {
+    it('should reset state and rehydrate when diff contains Running transition', async () => {
+      // Given
+      const existingState = makeState({ steps: [makeStep()] });
+      let hydrateCallCount = 0;
+      const tauri = setupTauriMock({
+        'get_execution_state': () => {
+          hydrateCallCount++;
+          return existingState;
+        },
+      });
+      await service.init();
+
+      // When
+      tauri.emitEvent('execution-diff', [
+        { kind: 'ExecutionStatusChanged', status: { kind: 'Running' } },
+      ]);
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Then
+      expect(hydrateCallCount).toBeGreaterThanOrEqual(2);
+    });
+  });
 });

@@ -504,6 +504,44 @@ describe('AppComponent', () => {
     });
   });
 
+  describe('executionError', () => {
+    it('should return null when executionState is null', () => {
+      // Given & When
+      const result = component.executionError();
+
+      // Then
+      expect(result).toBeNull();
+    });
+
+    it('should return error when status is Failed', () => {
+      // Given
+      executionStateService.executionState.and.returnValue({
+        status: { kind: 'Failed', error: 'connection refused' },
+        steps: [],
+      });
+
+      // When
+      const result = component.executionError();
+
+      // Then
+      expect(result).toBe('connection refused');
+    });
+
+    it('should return null when status is not Failed', () => {
+      // Given
+      executionStateService.executionState.and.returnValue({
+        status: { kind: 'Completed' },
+        steps: [],
+      });
+
+      // When
+      const result = component.executionError();
+
+      // Then
+      expect(result).toBeNull();
+    });
+  });
+
   describe('isInvalidScenarioConfigPath', () => {
     it('should return true when invalid and dirty', () => {
       // Given
