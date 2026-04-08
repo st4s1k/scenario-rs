@@ -1,0 +1,13 @@
+services:
+  ssh-server:
+    image: lscr.io/linuxserver/openssh-server:latest
+    container_name: test-ssh
+    ports:
+      - "2222:2222"
+    environment:
+      - PASSWORD_ACCESS=true
+      - USER_PASSWORD=test_pass
+      - USER_NAME=test_user
+    volumes:
+      - ./init-dirs.sh:/custom-cont-init.d/init-dirs.sh:ro
+      - ./key-auth/test_key.pub:/test_key.pub:ro

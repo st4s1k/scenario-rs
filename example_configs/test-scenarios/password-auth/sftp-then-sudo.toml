@@ -1,12 +1,7 @@
 # Test: SftpCopy then RemoteSudo, both succeed
 # UI: Progress bar for upload, then command output block
 
-[credentials]
-username = "test_user"
-password = "test_pass"
-
-[server]
-host = "localhost"
+parent = "./server.toml"
 
 [execute]
 steps = [

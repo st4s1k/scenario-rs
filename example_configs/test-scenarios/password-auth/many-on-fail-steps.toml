@@ -1,12 +1,7 @@
 # Test: Step fails with many on-fail recovery steps
 # UI: Failed step (red) → deeply nested on-fail list with 4 steps
 
-[credentials]
-username = "test_user"
-password = "test_pass"
-
-[server]
-host = "localhost"
+parent = "./server.toml"
 
 [execute]
 steps = [

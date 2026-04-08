@@ -1,0 +1,29 @@
+# Test: SftpCopy + RemoteSudo with SSH agent auth
+# Verifies agent-based authentication works with file uploads
+
+parent = "./server.toml"
+
+[execute]
+steps = [
+    { task = "upload_file" },
+    { task = "run_command" },
+]
+
+[variables.required]
+local_file = { type = "Path", label = "Local File Path" }
+
+[variables.defined]
+remote_path = "/home/{username}/uploads"
+
+[tasks.upload_file]
+type = "SftpCopy"
+description = "Uploading file via agent auth"
+source_path = "{local_file}"
+destination_path = "{remote_path}/{basename:local_file}"
+error_message = "Failed to upload file"
+
+[tasks.run_command]
+type = "RemoteSudo"
+description = "Verifying upload"
+command = "ls -la /home/test_user/uploads/"
+error_message = "Verification failed"

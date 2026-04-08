@@ -1,12 +1,7 @@
 # Test: Single RemoteSudo step with unresolved variable → fails at execution
 # UI: Red indicator, error expandable with resolution error, no on-fail section
 
-[credentials]
-username = "test_user"
-password = "test_pass"
-
-[server]
-host = "localhost"
+parent = "./server.toml"
 
 [execute]
 steps = [

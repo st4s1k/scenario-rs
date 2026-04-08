@@ -2,12 +2,7 @@
 # UI: Step 1 green (pass), Step 2 red (fail) → nested on-fail section with green steps
 # The on-fail steps use resolved variables so they succeed
 
-[credentials]
-username = "test_user"
-password = "test_pass"
-
-[server]
-host = "localhost"
+parent = "./server.toml"
 
 [execute]
 steps = [

@@ -1,12 +1,7 @@
 # Test: Empty steps list
 # UI: "No steps to display" empty state
 
-[credentials]
-username = "test_user"
-password = "test_pass"
-
-[server]
-host = "localhost"
+parent = "./server.toml"
 
 [execute]
 steps = []

@@ -1,12 +1,7 @@
 # Test: Multiple steps, failure in the middle
 # UI: Steps 1-2 green (pass), Step 3 red (fail), Steps 4-5 stay pending (grey)
 
-[credentials]
-username = "test_user"
-password = "test_pass"
-
-[server]
-host = "localhost"
+parent = "./server.toml"
 
 [execute]
 steps = [

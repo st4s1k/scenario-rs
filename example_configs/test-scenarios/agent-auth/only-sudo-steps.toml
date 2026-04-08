@@ -1,12 +1,7 @@
-# Test: Only RemoteSudo steps
-# UI: Multiple command output textareas in sequence
+# Test: RemoteSudo steps with SSH agent auth
+# Verifies agent-based authentication works end-to-end
 
-[credentials]
-username = "test_user"
-password = "test_pass"
-
-[server]
-host = "localhost"
+parent = "./server.toml"
 
 [execute]
 steps = [

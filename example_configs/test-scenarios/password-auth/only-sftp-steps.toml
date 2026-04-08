@@ -1,12 +1,7 @@
 # Test: Only SftpCopy steps
 # UI: Multiple progress bars in sequence
 
-[credentials]
-username = "test_user"
-password = "test_pass"
-
-[server]
-host = "localhost"
+parent = "./server.toml"
 
 [execute]
 steps = [

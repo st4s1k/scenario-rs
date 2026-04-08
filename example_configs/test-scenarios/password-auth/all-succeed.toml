@@ -2,12 +2,7 @@
 # UI: All steps show green indicators and auto-collapse.
 # Flow: SftpCopy (progress bar) → RemoteSudo (command output) → RemoteSudo (command output)
 
-[credentials]
-username = "test_user"
-password = "test_pass"
-
-[server]
-host = "localhost"
+parent = "./server.toml"
 
 [execute]
 steps = [

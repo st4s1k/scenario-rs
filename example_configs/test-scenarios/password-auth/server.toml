@@ -1,0 +1,9 @@
+# Shared test server config — all test scenarios inherit from this.
+
+[credentials]
+username = "test_user"
+password = "test_pass"
+
+[server]
+host = "localhost"
+port = 2222

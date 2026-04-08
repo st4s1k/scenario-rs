@@ -1,12 +1,7 @@
 # Test: Step fails, on-fail steps ALSO fail
 # UI: Step red (fail) → nested on-fail section with red steps (both error expandables visible)
 
-[credentials]
-username = "test_user"
-password = "test_pass"
-
-[server]
-host = "localhost"
+parent = "./server.toml"
 
 [execute]
 steps = [

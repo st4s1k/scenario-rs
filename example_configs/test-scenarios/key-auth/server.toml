@@ -1,0 +1,9 @@
+# Shared test server config — key-based auth scenarios inherit from this.
+
+[credentials]
+username = "test_user"
+private_key = "./test_key"
+
+[server]
+host = "localhost"
+port = 2222
