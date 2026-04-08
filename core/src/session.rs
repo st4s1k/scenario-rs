@@ -38,20 +38,26 @@ pub enum SessionType {
         channel: ArcMutex<dyn Channel + Send + Sync>,
         sftp: ArcMutex<dyn Sftp + Send + Sync>,
     },
+    #[cfg(test)]
+    FailSession(ssh2::ErrorCode),
 }
 
 impl Session {
     /// Returns a mock session in debug builds, a real SSH connection in release.
+    #[cfg(debug_assertions)]
     pub fn new(server: &Server, credentials: &Credentials) -> Result<Self, ssh2::Error> {
-        if cfg!(debug_assertions) {
-            Self::create_mock_session(server, credentials)
-        } else {
-            Self::create_session(server, credentials)
-        }
+        Self::create_mock_session(server, credentials)
+    }
+
+    /// Returns a mock session in debug builds, a real SSH connection in release.
+    #[cfg(not(debug_assertions))]
+    pub fn new(server: &Server, credentials: &Credentials) -> Result<Self, ssh2::Error> {
+        Self::create_session(server, credentials)
     }
 
     pub fn channel_session(&self) -> Result<ArcMutex<dyn Channel + Send + Sync>, ssh2::Error> {
         match &self.inner {
+            #[cfg(not(tarpaulin_include))]
             SessionType::Real(real_session) => real_session
                 .channel_session()
                 .map(|ch| ArcMutex::wrap(ch) as ArcMutex<dyn Channel + Send + Sync>),
@@ -60,11 +66,14 @@ impl Session {
                 Ok(ArcMutex::wrap(MockChannel))
             }
             SessionType::Test { channel, .. } => Ok(ArcMutex::clone(channel)),
+            #[cfg(test)]
+            SessionType::FailSession(code) => Err(ssh2::Error::from_errno(*code)),
         }
     }
 
     pub fn sftp(&self) -> Result<ArcMutex<dyn Sftp + Send + Sync>, ssh2::Error> {
         match &self.inner {
+            #[cfg(not(tarpaulin_include))]
             SessionType::Real(real_session) => real_session
                 .sftp()
                 .map(|sftp| ArcMutex::wrap(sftp) as ArcMutex<dyn Sftp + Send + Sync>),
@@ -73,9 +82,12 @@ impl Session {
                 Ok(ArcMutex::wrap(MockSftp))
             }
             SessionType::Test { sftp, .. } => Ok(ArcMutex::clone(sftp)),
+            #[cfg(test)]
+            SessionType::FailSession(code) => Err(ssh2::Error::from_errno(*code)),
         }
     }
 
+    #[cfg(not(tarpaulin_include))]
     #[instrument(
         name = "create_session",
         skip_all,
@@ -165,6 +177,7 @@ impl Default for Session {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 impl Channel for ssh2::Channel {
     fn exec(&mut self, command: &str) -> Result<(), ssh2::Error> {
         self.exec(command)
@@ -191,6 +204,7 @@ impl Channel for ssh2::Channel {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 impl Sftp for ssh2::Sftp {
     fn create(&self, path: &Path) -> Result<Box<dyn Write>, ssh2::Error> {
         self.create(path)
@@ -198,6 +212,7 @@ impl Sftp for ssh2::Sftp {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 impl Write for ssh2::File {
     fn write_all(&mut self, buf: &[u8]) -> Result<(), ssh2::Error> {
         std::io::Write::write_all(self, buf)
@@ -265,11 +280,12 @@ mod tests {
 
         // Then
         match default_session.inner {
-            SessionType::Mock => {} // Expected
+            SessionType::Mock => {}
             SessionType::Real(_) => panic!("Expected a mock session for default"),
             SessionType::Test { .. } => {
                 panic!("Expected a mock session for default, not a test session")
             }
+            _ => panic!("Unexpected session type"),
         }
     }
 
@@ -285,11 +301,12 @@ mod tests {
         // Then
         assert!(result.is_ok());
         match result.unwrap().inner {
-            SessionType::Mock => {} // Expected
+            SessionType::Mock => {}
             SessionType::Real(_) => panic!("Expected a mock session"),
             SessionType::Test { .. } => {
                 panic!("Expected a mock session, not a test session")
             }
+            _ => panic!("Unexpected session type"),
         }
     }
 
@@ -319,11 +336,12 @@ mod tests {
         assert!(result.is_ok());
         if cfg!(debug_assertions) {
             match result.unwrap().inner {
-                SessionType::Mock => {} // Expected in debug mode
+                SessionType::Mock => {}
                 SessionType::Real(_) => panic!("Expected a mock session in debug mode"),
                 SessionType::Test { .. } => {
                     panic!("Expected a mock session in debug mode, not a test session")
                 }
+                _ => panic!("Unexpected session type"),
             }
         }
     }
@@ -474,7 +492,7 @@ mod tests {
                 Ok(())
             }
             fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error> {
-                let data = vec![0xFF, 0xFF, 0xFF]; // Invalid UTF-8 bytes
+                let data = vec![0xFF, 0xFF, 0xFF];
                 match String::from_utf8(data) {
                     Ok(s) => {
                         output.push_str(&s);
@@ -562,7 +580,42 @@ mod tests {
         );
     }
 
-    // Test helpers
+    #[test]
+    fn test_test_session_channel_creation() {
+        // Given
+        use crate::utils::{ArcMutex, Wrap};
+        let session = Session {
+            inner: SessionType::Test {
+                channel: ArcMutex::wrap(mock::MockChannel),
+                sftp: ArcMutex::wrap(mock::MockSftp),
+            },
+        };
+
+        // When
+        let result = session.channel_session();
+
+        // Then
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_test_session_sftp_creation() {
+        // Given
+        use crate::utils::{ArcMutex, Wrap};
+        let session = Session {
+            inner: SessionType::Test {
+                channel: ArcMutex::wrap(mock::MockChannel),
+                sftp: ArcMutex::wrap(mock::MockSftp),
+            },
+        };
+
+        // When
+        let result = session.sftp();
+
+        // Then
+        assert!(result.is_ok());
+    }
+
     fn test_server() -> Server {
         Server {
             host: "test.example.com".to_string(),

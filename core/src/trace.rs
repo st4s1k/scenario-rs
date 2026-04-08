@@ -376,7 +376,6 @@ mod tests {
         assert!(visitor.step_index.is_none());
     }
 
-    // Test helpers
     fn field(name: &str) -> Field {
         struct TestCallsite();
         impl tracing::callsite::Callsite for TestCallsite {
