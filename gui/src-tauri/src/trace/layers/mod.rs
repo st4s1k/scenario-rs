@@ -87,8 +87,7 @@ pub trait EventLayer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::mpsc;
-    use tracing::{event, span, subscriber, Level, Subscriber};
+    use tracing::{span, subscriber, Level, Subscriber};
     use tracing_subscriber::{
         layer::Context, prelude::*, registry::LookupSpan, Layer, Registry,
     };

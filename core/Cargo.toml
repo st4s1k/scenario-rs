@@ -15,7 +15,7 @@ regex = "1.12.3"
 ssh2 = "0.9.5"
 serde = { version = "1.0.228", features = ["derive"] }
 chrono = "0.4.44"
-toml = "1.1.2+spec-1.1.0"
+toml = "1.1.2"
 libc = "0.2"
 tracing = { version = "0.1.44", features = ["attributes"] }
 

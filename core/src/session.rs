@@ -88,6 +88,7 @@ impl Session {
     }
 
     #[cfg(not(tarpaulin_include))]
+    #[allow(dead_code)]
     #[instrument(
         name = "create_session",
         skip_all,

@@ -594,8 +594,8 @@ pub fn is_valid_config_path(path: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use crate::app::{
-        build_initial_state, ConfigPathData, OnFailStepDTO, RequiredVariableDTO,
-        ScenarioAppStateConfig, ScenarioAppStateCore, StateStorage, StepDTO, TaskDTO,
+        build_initial_state, ConfigPathData, OnFailStepDTO, ScenarioAppStateConfig,
+        ScenarioAppStateCore, StateStorage, StepDTO, TaskDTO,
     };
     use scenario_rs::scenario::{
         on_fail_step::OnFailStep, on_fail_steps::OnFailSteps, remote_sudo::RemoteSudo,
@@ -626,9 +626,6 @@ mod tests {
             }
         }
 
-        fn get_content(&self) -> Option<String> {
-            self.content.borrow().clone()
-        }
     }
 
     impl StateStorage for InMemoryStateStorage {
@@ -1135,7 +1132,6 @@ mod tests {
     fn test_save_state_to_empty_storage() {
         // Given
         let storage = InMemoryStateStorage::empty();
-        let storage_ptr = &storage as *const InMemoryStateStorage;
         let mut core = test_core_with_scenario_and_storage(storage);
 
         // When

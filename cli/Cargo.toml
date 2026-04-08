@@ -6,6 +6,9 @@ authors.workspace = true
 description.workspace = true
 license.workspace = true
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
+
 [[bin]]
 name = "scenario-rs-cli"
 path = "src/main.rs"
