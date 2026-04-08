@@ -7,3 +7,4 @@ Cargo.lock
 tarpaulin-report.*
 **/coverage
 **/*dump
+**/*profraw
