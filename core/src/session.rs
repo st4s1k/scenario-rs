@@ -5,6 +5,18 @@ use crate::{
     utils::{ArcMutex, Wrap},
 };
 use std::{fmt, path::Path, sync::Arc};
+use tokio::runtime::Handle;
+/// Helper to safely call block_on, panicking with a clear message if already inside a runtime.
+fn try_block_on<F, R>(runtime: &tokio::runtime::Runtime, fut: F) -> R
+where
+    F: std::future::Future<Output = R>,
+{
+    if Handle::try_current().is_ok() {
+        panic!("Cannot call block_on from within a Tokio runtime. Use the async API instead.");
+    } else {
+        runtime.block_on(fut)
+    }
+}
 use tracing::{debug, instrument, trace};
 
 #[derive(Debug)]
@@ -100,8 +112,7 @@ impl Session {
         match &self.inner {
             #[cfg(not(tarpaulin_include))]
             SessionType::Real { runtime, handle } => {
-                let channel = runtime
-                    .block_on(handle.channel_open_session())
+                let channel = try_block_on(runtime, handle.channel_open_session())
                     .map_err(|e| SshError::new(e.to_string()))?;
                 Ok(ArcMutex::wrap(RusshChannel {
                     runtime: runtime.clone(),
@@ -124,7 +135,7 @@ impl Session {
         match &self.inner {
             #[cfg(not(tarpaulin_include))]
             SessionType::Real { runtime, handle } => {
-                let sftp = runtime.block_on(async {
+                let sftp = try_block_on(runtime, async {
                     let channel = handle
                         .channel_open_session()
                         .await
@@ -186,7 +197,7 @@ impl Session {
         let password = credentials.password.as_deref();
         let private_key = credentials.private_key.as_deref();
 
-        let handle = runtime.block_on(async {
+        let handle = try_block_on(Arc::as_ref(&runtime), async {
             let config = Arc::new(russh::client::Config::default());
             let mut session = russh::client::connect(config, (host.as_str(), port), ClientHandler)
                 .await
@@ -302,13 +313,13 @@ struct RusshChannel {
 impl Channel for RusshChannel {
     fn exec(&mut self, command: &str) -> Result<(), SshError> {
         let rt = self.runtime.clone();
-        rt.block_on(self.channel.exec(true, command.as_bytes()))
+        try_block_on(&rt, self.channel.exec(true, command.as_bytes()))
             .map_err(|e| SshError::new(e.to_string()))
     }
 
     fn read_to_string(&mut self, output: &mut String) -> Result<usize, SshError> {
         let rt = self.runtime.clone();
-        rt.block_on(async {
+        try_block_on(&rt, async {
             loop {
                 match self.channel.wait().await {
                     Some(russh::ChannelMsg::Data { data }) => {
@@ -352,8 +363,7 @@ impl Sftp for RusshSftp {
     fn create(&self, path: &Path) -> Result<Box<dyn Write>, SshError> {
         let path_str = path.to_string_lossy().to_string();
         let rt = self.runtime.clone();
-        let file = rt
-            .block_on(self.sftp.create(path_str))
+        let file = try_block_on(&rt, self.sftp.create(path_str))
             .map_err(|e| SshError::new(e.to_string()))?;
         Ok(Box::new(RusshFile {
             runtime: self.runtime.clone(),
@@ -372,7 +382,7 @@ struct RusshFile {
 impl Write for RusshFile {
     fn write_all(&mut self, buf: &[u8]) -> Result<(), SshError> {
         let rt = self.runtime.clone();
-        rt.block_on(tokio::io::AsyncWriteExt::write_all(&mut self.file, buf))
+        try_block_on(&rt, tokio::io::AsyncWriteExt::write_all(&mut self.file, buf))
             .map_err(|e| SshError::new(e.to_string()))
     }
 }
