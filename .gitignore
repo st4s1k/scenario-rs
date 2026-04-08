@@ -6,3 +6,4 @@ Cargo.lock
 **/scenario-app-state.json
 tarpaulin-report.*
 **/coverage
+**/*dump
