@@ -427,7 +427,6 @@ mod tests {
         assert!(debug_string.contains("debug_value"));
     }
 
-    // Test helpers
     fn create_test_required_variables() -> RequiredVariables {
         let mut required = RequiredVariables::default();
         required.insert(
@@ -473,8 +472,16 @@ mod tests {
         assert_eq!(result.unwrap(), "Alice");
     }
 
+    fn init_tracing() {
+        let _ = tracing_subscriber::fmt()
+            .with_test_writer()
+            .with_max_level(tracing::Level::TRACE)
+            .try_init();
+    }
+
     #[test]
     fn test_variables_resolved_with_blank_values_logs_warning() {
+        init_tracing();
         // Given
         let mut variables = Variables::default();
         variables

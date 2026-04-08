@@ -5,7 +5,15 @@ use crate::{
     state::types::TaskProgress,
     trace::ScenarioEvent,
 };
+use std::fmt::Display;
 use tracing::{debug, instrument};
+
+fn log_scenario_error<E: Display>(error: E) -> E {
+    let event = ScenarioEvent::Error;
+    let err_display = error.to_string();
+    debug!(scenario.event = event.as_str(), scenario.error = err_display);
+    error
+}
 
 /// A remote command to be executed with sudo privileges.
 #[derive(Debug, Clone)]
@@ -54,39 +62,24 @@ impl RemoteSudo {
         let channel = session
             .channel_session()
             .map_err(RemoteSudoError::CannotEstablishSessionChannel)
-            .map_err(|error| {
-                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-                error
-            })?;
+            .map_err(log_scenario_error)?;
 
         channel
             .lock()
             .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)
-            .map_err(|error| {
-                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-                error
-            })?
+            .map_err(log_scenario_error)?
             .exec(&command)
             .map_err(RemoteSudoError::CannotExecuteRemoteCommand)
-            .map_err(|error| {
-                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-                error
-            })?;
+            .map_err(log_scenario_error)?;
 
         let mut output = String::new();
         channel
             .lock()
             .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)
-            .map_err(|error| {
-                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-                error
-            })?
+            .map_err(log_scenario_error)?
             .read_to_string(&mut output)
             .map_err(RemoteSudoError::CannotReadChannelOutput)
-            .map_err(|error| {
-                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-                error
-            })?;
+            .map_err(log_scenario_error)?;
 
         debug!(
             scenario.event = ScenarioEvent::RemoteSudoOutput.as_str(),
@@ -104,16 +97,10 @@ impl RemoteSudo {
         let exit_status = channel
             .lock()
             .map_err(|_| RemoteSudoError::CannotGetALockOnChannel)
-            .map_err(|error| {
-                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-                error
-            })?
+            .map_err(log_scenario_error)?
             .exit_status()
             .map_err(RemoteSudoError::CannotObtainRemoteCommandExitStatus)
-            .map_err(|error| {
-                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-                error
-            })?;
+            .map_err(log_scenario_error)?;
 
         if exit_status != 0 {
             debug!(
@@ -144,8 +131,16 @@ mod tests {
     };
     use std::panic;
 
+    fn init_tracing() {
+        let _ = tracing_subscriber::fmt()
+            .with_test_writer()
+            .with_max_level(tracing::Level::TRACE)
+            .try_init();
+    }
+
     #[test]
     fn test_execute_success() {
+        init_tracing();
         // Given
         struct SuccessChannel;
         impl Channel for SuccessChannel {
@@ -418,5 +413,80 @@ mod tests {
         fn exit_status(&self) -> Result<i32, ssh2::Error> {
             Ok(0)
         }
+    }
+
+    #[test]
+    fn test_execute_with_tracker() {
+        // Given
+        use crate::state::{
+            types::{ExecutionState, ExecutionStatus, StepExecState, StepStatus},
+            ExecutionStateManager, TaskTracker,
+        };
+        use std::sync::mpsc;
+
+        struct TrackerChannel;
+        impl Channel for TrackerChannel {
+            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> { Ok(()) }
+            fn read_to_string(&mut self, output: &mut String) -> Result<usize, ssh2::Error> {
+                output.push_str("tracked output");
+                Ok(14)
+            }
+            fn exit_status(&self) -> Result<i32, ssh2::Error> { Ok(0) }
+        }
+
+        let remote_sudo = RemoteSudo { command: "echo ok".into() };
+        let session = Session {
+            inner: SessionType::Test {
+                channel: ArcMutex::wrap(TrackerChannel),
+                sftp: ArcMutex::wrap(TestSftp),
+            },
+        };
+        let variables = Variables::default();
+
+        let (tx, _rx) = mpsc::channel();
+        let state = ExecutionState {
+            status: ExecutionStatus::Idle,
+            steps: vec![StepExecState {
+                index: 0,
+                task_description: "test".into(),
+                status: StepStatus::Pending,
+                progress: None,
+                output: String::new(),
+                errors: Vec::new(),
+                on_fail_steps: Vec::new(),
+            }],
+        };
+        let sm = ExecutionStateManager::new(state, tx);
+        let tracker = TaskTracker::for_step(&sm, 0);
+
+        // When
+        let result = remote_sudo.execute(&session, &variables, Some(&tracker));
+
+        // Then
+        assert!(result.is_ok());
+        let snapshot = sm.snapshot();
+        assert!(snapshot.steps[0].output.contains("tracked output"));
+    }
+
+    #[test]
+    fn test_execute_channel_session_failure() {
+        init_tracing();
+        // Given
+        let remote_sudo = RemoteSudo {
+            command: "echo test".into(),
+        };
+        let session = Session {
+            inner: SessionType::FailSession(ssh2::ErrorCode::Session(libc::EIO)),
+        };
+        let variables = Variables::default();
+
+        // When
+        let result = remote_sudo.execute(&session, &variables, None);
+
+        // Then
+        assert!(matches!(
+            result,
+            Err(RemoteSudoError::CannotEstablishSessionChannel(_))
+        ));
     }
 }

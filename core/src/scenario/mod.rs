@@ -13,6 +13,23 @@ use crate::{
 use std::path::PathBuf;
 use tracing::{debug, instrument};
 
+#[cfg(not(tarpaulin_include))]
+fn log_scenario_event(event: ScenarioEvent) {
+    debug!(scenario.event = event.as_str());
+}
+
+#[cfg(not(tarpaulin_include))]
+fn log_scenario_error(error: &str) {
+    debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = error);
+    debug!(scenario.event = ScenarioEvent::ScenarioFailed.as_str());
+}
+
+enum ExecutionOutcome {
+    Completed,
+    SessionFailed(String),
+    StepsFailed(String),
+}
+
 pub mod credentials;
 pub mod errors;
 pub mod execute;
@@ -119,27 +136,46 @@ impl Scenario {
     /// Pass an `ExecutionStateManager` to enable structured progress tracking.
     /// Pass `None` for tracing-only output (e.g. CLI usage).
     #[instrument(skip_all, name = "scenario")]
+    #[cfg(not(tarpaulin_include))]
     pub fn execute(&self, state_manager: Option<&ExecutionStateManager>) {
-        debug!(scenario.event = ScenarioEvent::ScenarioStarted.as_str());
+        log_scenario_event(ScenarioEvent::ScenarioStarted);
+        let session_result = Session::new(&self.server, &self.credentials);
+        match self.execute_with_session(session_result, state_manager) {
+            ExecutionOutcome::Completed => {
+                log_scenario_event(ScenarioEvent::SessionCreated);
+                log_scenario_event(ScenarioEvent::ScenarioCompleted);
+            }
+            ExecutionOutcome::SessionFailed(error) => {
+                log_scenario_error(&error);
+            }
+            ExecutionOutcome::StepsFailed(error) => {
+                log_scenario_event(ScenarioEvent::SessionCreated);
+                log_scenario_error(&error);
+            }
+        }
+    }
+
+    fn execute_with_session(
+        &self,
+        session_result: Result<Session, ssh2::Error>,
+        state_manager: Option<&ExecutionStateManager>,
+    ) -> ExecutionOutcome {
         if let Some(sm) = state_manager {
             sm.update_execution_status(ExecutionStatus::Running);
         }
 
-        let session = match Session::new(&self.server, &self.credentials) {
+        let session = match session_result {
             Ok(session) => session,
             Err(error) => {
-                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-                debug!(scenario.event = ScenarioEvent::ScenarioFailed.as_str());
+                let msg = error.to_string();
                 if let Some(sm) = state_manager {
                     sm.update_execution_status(ExecutionStatus::Failed {
-                        error: error.to_string(),
+                        error: msg.clone(),
                     });
                 }
-                return;
+                return ExecutionOutcome::SessionFailed(msg);
             }
         };
-
-        debug!(scenario.event = ScenarioEvent::SessionCreated.as_str());
 
         match self
             .execute
@@ -147,19 +183,19 @@ impl Scenario {
             .execute(&session, &self.variables, state_manager)
         {
             Ok(_) => {
-                debug!(scenario.event = ScenarioEvent::ScenarioCompleted.as_str());
                 if let Some(sm) = state_manager {
                     sm.update_execution_status(ExecutionStatus::Completed);
                 }
+                ExecutionOutcome::Completed
             }
             Err(error) => {
-                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
-                debug!(scenario.event = ScenarioEvent::ScenarioFailed.as_str());
+                let msg = error.to_string();
                 if let Some(sm) = state_manager {
                     sm.update_execution_status(ExecutionStatus::Failed {
-                        error: error.to_string(),
+                        error: msg.clone(),
                     });
                 }
+                ExecutionOutcome::StepsFailed(msg)
             }
         }
     }
@@ -170,12 +206,20 @@ mod tests {
     use crate::{
         config::{
             credentials::CredentialsConfig, execute::ExecuteConfig, scenario::ScenarioConfig,
-            server::ServerConfig, tasks::TasksConfig, variables::VariablesConfig,
+            server::ServerConfig, step::StepConfig, tasks::TasksConfig, variables::VariablesConfig,
         },
         scenario::Scenario,
+        session::Session,
     };
     use std::collections::HashMap;
     use std::path::PathBuf;
+
+    fn init_tracing() {
+        let _ = tracing_subscriber::fmt()
+            .with_test_writer()
+            .with_max_level(tracing::Level::TRACE)
+            .try_init();
+    }
 
     #[test]
     fn test_scenario_try_from_config() {
@@ -284,7 +328,6 @@ mod tests {
         assert!(debug_str.contains("testuser"));
     }
 
-    // Test helpers
     fn create_test_config() -> ScenarioConfig {
         ScenarioConfig {
             server: ServerConfig {
@@ -350,5 +393,291 @@ mod tests {
 
         // Then
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_scenario_try_from_config_with_invalid_execute() {
+        init_tracing();
+
+        // Given
+        let config = ScenarioConfig {
+            server: ServerConfig {
+                host: "test.example.com".to_string(),
+                port: Some(22),
+            },
+            credentials: CredentialsConfig {
+                username: "testuser".to_string(),
+                password: Some("testpass".to_string()),
+            },
+            execute: ExecuteConfig {
+                steps: vec![StepConfig {
+                    task: "nonexistent_task".to_string(),
+                    on_fail: None,
+                }]
+                .into(),
+            },
+            tasks: TasksConfig::default(),
+            variables: VariablesConfig::default(),
+        };
+
+        // When
+        let result = Scenario::try_from(config);
+
+        // Then
+        assert!(result.is_err());
+    }
+
+    #[test]
+    #[cfg(not(tarpaulin_include))]
+    fn test_scenario_execute_completes_successfully() {
+        init_tracing();
+        // Given
+        let scenario =
+            Scenario::try_from("../example_configs/example-scenario.toml").unwrap();
+
+        // When
+        scenario.execute(None);
+
+        // Then (no panic — mock session runs in debug mode)
+    }
+
+    #[test]
+    #[cfg(not(tarpaulin_include))]
+    fn test_scenario_execute_with_state_manager() {
+        // Given
+        use crate::state::{
+            types::{ExecutionState, ExecutionStatus, StepStatus},
+            ExecutionStateManager,
+        };
+        use std::sync::mpsc;
+
+        let scenario =
+            Scenario::try_from("../example_configs/example-scenario.toml").unwrap();
+
+        let initial_state = ExecutionState {
+            status: ExecutionStatus::Idle,
+            steps: scenario
+                .steps()
+                .iter()
+                .map(|step| crate::state::types::StepExecState {
+                    index: step.index(),
+                    task_description: step.task().description().to_string(),
+                    status: StepStatus::Pending,
+                    progress: None,
+                    output: String::new(),
+                    errors: Vec::new(),
+                    on_fail_steps: Vec::new(),
+                })
+                .collect(),
+        };
+
+        let (tx, _rx) = mpsc::channel();
+        let sm = ExecutionStateManager::new(initial_state, tx);
+
+        // When
+        scenario.execute(Some(&sm));
+
+        // Then
+        let snapshot = sm.snapshot();
+        assert!(
+            matches!(snapshot.status, ExecutionStatus::Completed | ExecutionStatus::Failed { .. }),
+        );
+    }
+
+    #[test]
+    fn test_scenario_execute_with_session_failure() {
+        init_tracing();
+        // Given
+        use crate::state::{
+            types::{ExecutionState, ExecutionStatus},
+            ExecutionStateManager,
+        };
+        use std::sync::mpsc;
+
+        let scenario =
+            Scenario::try_from("../example_configs/example-scenario.toml").unwrap();
+
+        let initial_state = ExecutionState {
+            status: ExecutionStatus::Idle,
+            steps: vec![],
+        };
+        let (tx, _rx) = mpsc::channel();
+        let sm = ExecutionStateManager::new(initial_state, tx);
+
+        let session_error = ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO));
+
+        // When
+        let outcome = scenario.execute_with_session(Err(session_error), Some(&sm));
+
+        // Then
+        assert!(matches!(outcome, super::ExecutionOutcome::SessionFailed(_)));
+        let snapshot = sm.snapshot();
+        assert!(matches!(snapshot.status, ExecutionStatus::Failed { .. }));
+    }
+
+    #[test]
+    fn test_scenario_execute_with_session_failure_no_state_manager() {
+        init_tracing();
+        // Given
+        let scenario =
+            Scenario::try_from("../example_configs/example-scenario.toml").unwrap();
+
+        let session_error = ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO));
+
+        // When
+        let outcome = scenario.execute_with_session(Err(session_error), None);
+
+        // Then
+        assert!(matches!(outcome, super::ExecutionOutcome::SessionFailed(_)));
+    }
+
+    #[test]
+    fn test_scenario_execute_with_steps_failure() {
+        init_tracing();
+        // Given
+        use crate::{
+            session::SessionType,
+            utils::{ArcMutex, Wrap},
+            state::{
+                types::{ExecutionState, ExecutionStatus, StepExecState, StepStatus},
+                ExecutionStateManager,
+            },
+        };
+        use std::sync::mpsc;
+
+        struct FailChannel;
+        impl crate::session::Channel for FailChannel {
+            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+                Err(ssh2::Error::from_errno(ssh2::ErrorCode::Session(libc::EIO)))
+            }
+            fn read_to_string(&mut self, _: &mut String) -> Result<usize, ssh2::Error> {
+                Ok(0)
+            }
+            fn exit_status(&self) -> Result<i32, ssh2::Error> {
+                Ok(0)
+            }
+        }
+
+        struct TestSftp;
+        impl crate::session::Sftp for TestSftp {
+            fn create(
+                &self,
+                _path: &std::path::Path,
+            ) -> Result<Box<dyn crate::session::Write>, ssh2::Error> {
+                struct TestWrite;
+                impl crate::session::Write for TestWrite {
+                    fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {
+                        Ok(())
+                    }
+                }
+                Ok(Box::new(TestWrite))
+            }
+        }
+
+        let scenario =
+            Scenario::try_from("../example_configs/example-scenario.toml").unwrap();
+
+        let fail_session = Session {
+            inner: SessionType::Test {
+                channel: ArcMutex::wrap(FailChannel),
+                sftp: ArcMutex::wrap(TestSftp),
+            },
+        };
+
+        let initial_state = ExecutionState {
+            status: ExecutionStatus::Idle,
+            steps: scenario
+                .steps()
+                .iter()
+                .map(|step| StepExecState {
+                    index: step.index(),
+                    task_description: step.task().description().to_string(),
+                    status: StepStatus::Pending,
+                    progress: None,
+                    output: String::new(),
+                    errors: Vec::new(),
+                    on_fail_steps: Vec::new(),
+                })
+                .collect(),
+        };
+        let (tx, _rx) = mpsc::channel();
+        let sm = ExecutionStateManager::new(initial_state, tx);
+
+        // When
+        let outcome = scenario.execute_with_session(Ok(fail_session), Some(&sm));
+
+        // Then
+        assert!(matches!(outcome, super::ExecutionOutcome::StepsFailed(_)));
+        let snapshot = sm.snapshot();
+        assert!(matches!(snapshot.status, ExecutionStatus::Failed { .. }));
+    }
+
+    #[test]
+    fn test_scenario_execute_with_session_success() {
+        init_tracing();
+        use crate::{
+            session::SessionType,
+            utils::{ArcMutex, Wrap},
+            state::{
+                types::{ExecutionState, ExecutionStatus},
+                ExecutionStateManager,
+            },
+        };
+        use std::sync::mpsc;
+
+        struct OkChannel;
+        impl crate::session::Channel for OkChannel {
+            fn exec(&mut self, _command: &str) -> Result<(), ssh2::Error> {
+                Ok(())
+            }
+            fn read_to_string(&mut self, _: &mut String) -> Result<usize, ssh2::Error> {
+                Ok(0)
+            }
+            fn exit_status(&self) -> Result<i32, ssh2::Error> {
+                Ok(0)
+            }
+        }
+
+        struct TestSftp;
+        impl crate::session::Sftp for TestSftp {
+            fn create(
+                &self,
+                _path: &std::path::Path,
+            ) -> Result<Box<dyn crate::session::Write>, ssh2::Error> {
+                struct TestWrite;
+                impl crate::session::Write for TestWrite {
+                    fn write_all(&mut self, _buf: &[u8]) -> Result<(), ssh2::Error> {
+                        Ok(())
+                    }
+                }
+                Ok(Box::new(TestWrite))
+            }
+        }
+
+        // Scenario with no steps — steps.execute() returns Ok
+        let config = create_test_config();
+        let scenario = Scenario::try_from(config).unwrap();
+
+        let session = Session {
+            inner: SessionType::Test {
+                channel: ArcMutex::wrap(OkChannel),
+                sftp: ArcMutex::wrap(TestSftp),
+            },
+        };
+
+        let initial_state = ExecutionState {
+            status: ExecutionStatus::Idle,
+            steps: vec![],
+        };
+        let (tx, _rx) = mpsc::channel();
+        let sm = ExecutionStateManager::new(initial_state, tx);
+
+        // When
+        let outcome = scenario.execute_with_session(Ok(session), Some(&sm));
+
+        // Then
+        assert!(matches!(outcome, super::ExecutionOutcome::Completed));
+        let snapshot = sm.snapshot();
+        assert!(matches!(snapshot.status, ExecutionStatus::Completed));
     }
 }

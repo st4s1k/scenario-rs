@@ -125,6 +125,20 @@ mod tests {
     }
 
     #[test]
+    fn test_execute_steps_getter() {
+        // Given
+        let tasks = create_test_tasks();
+        let config = create_valid_execute_config();
+        let execute = Execute::try_from((&tasks, &config)).unwrap();
+
+        // When
+        let steps = execute.steps();
+
+        // Then
+        assert_eq!(steps.len(), 2);
+    }
+
+    #[test]
     fn test_execute_try_from_with_duplicated_tasks() {
         // Given
         let tasks = create_test_tasks();

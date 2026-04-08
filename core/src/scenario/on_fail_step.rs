@@ -224,8 +224,17 @@ mod tests {
         (ExecutionStateManager::new(state, tx), rx)
     }
 
+    fn init_tracing() {
+        let _ = tracing_subscriber::fmt()
+            .with_test_writer()
+            .with_max_level(tracing::Level::TRACE)
+            .try_init();
+    }
+
     #[test]
     fn test_execute_remote_sudo_success() {
+        init_tracing();
+
         // Given
         let step = make_remote_sudo_step(0);
         let session = success_session();

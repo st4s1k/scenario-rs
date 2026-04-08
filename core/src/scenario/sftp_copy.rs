@@ -182,8 +182,17 @@ mod tests {
     };
     use std::{io::Read, panic};
 
+    fn init_tracing() {
+        let _ = tracing_subscriber::fmt()
+            .with_test_writer()
+            .with_max_level(tracing::Level::TRACE)
+            .try_init();
+    }
+
     #[test]
     fn test_execute_success() {
+        init_tracing();
+
         // Given
         let sftp_copy = SftpCopy {
             source_path: "source.txt".into(),
@@ -416,7 +425,6 @@ mod tests {
         ));
     }
 
-    // Test helpers
     enum ReadBehavior {
         Success,
         ReturnError,
@@ -542,5 +550,69 @@ mod tests {
                 sftp: ArcMutex::wrap(MockSuccessfulSftp),
             },
         }
+    }
+
+    #[test]
+    fn test_execute_with_tracker() {
+        // Given
+        use crate::state::{
+            types::{ExecutionState, ExecutionStatus, StepExecState, StepStatus},
+            ExecutionStateManager, TaskTracker,
+        };
+        use std::sync::mpsc;
+
+        let sftp_copy = SftpCopy {
+            source_path: "source.txt".into(),
+            destination_path: "dest.txt".into(),
+        };
+        let session = create_successful_test_session();
+        let variables = Variables::default();
+
+        let (tx, _rx) = mpsc::channel();
+        let state = ExecutionState {
+            status: ExecutionStatus::Idle,
+            steps: vec![StepExecState {
+                index: 0,
+                task_description: "test".into(),
+                status: StepStatus::Pending,
+                progress: None,
+                output: String::new(),
+                errors: Vec::new(),
+                on_fail_steps: Vec::new(),
+            }],
+        };
+        let sm = ExecutionStateManager::new(state, tx);
+        let tracker = TaskTracker::for_step(&sm, 0);
+
+        // When
+        let result = sftp_copy.execute(&session, &variables, Some(&tracker));
+
+        // Then
+        assert!(result.is_ok());
+        let snapshot = sm.snapshot();
+        assert!(snapshot.steps[0].progress.is_some());
+    }
+
+    #[test]
+    fn test_execute_sftp_session_failure() {
+        init_tracing();
+        // Given
+        let sftp_copy = SftpCopy {
+            source_path: "source.txt".into(),
+            destination_path: "dest.txt".into(),
+        };
+        let session = Session {
+            inner: SessionType::FailSession(ssh2::ErrorCode::Session(libc::EIO)),
+        };
+        let variables = Variables::default();
+
+        // When
+        let result = sftp_copy.execute(&session, &variables, None);
+
+        // Then
+        assert!(matches!(
+            result,
+            Err(SftpCopyError::CannotOpenChannelAndInitializeSftp(_))
+        ));
     }
 }

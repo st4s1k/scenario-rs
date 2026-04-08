@@ -140,4 +140,24 @@ mod tests {
         assert_eq!(credentials.username.len(), 1000);
         assert_eq!(credentials.password, Some(long_string));
     }
+
+    #[test]
+    fn test_credentials_new_with_password() {
+        // Given & When
+        let credentials = Credentials::new("admin".to_string(), Some("secret".to_string()));
+
+        // Then
+        assert_eq!(credentials.username(), "admin");
+        assert_eq!(credentials.password(), Some("secret"));
+    }
+
+    #[test]
+    fn test_credentials_new_without_password() {
+        // Given & When
+        let credentials = Credentials::new("agent_user".to_string(), None);
+
+        // Then
+        assert_eq!(credentials.username(), "agent_user");
+        assert_eq!(credentials.password(), None);
+    }
 }

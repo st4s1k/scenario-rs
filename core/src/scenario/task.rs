@@ -189,7 +189,6 @@ mod tests {
         assert!(debug_str.contains("Remote sudo task"));
     }
 
-    // Test helpers
     fn create_remote_sudo_config() -> TaskConfig {
         TaskConfig {
             description: "Remote sudo task".to_string(),

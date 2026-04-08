@@ -147,9 +147,61 @@ mod tests {
             step::StepConfig,
             task::{TaskConfig, TaskType},
         },
-        scenario::{errors::StepError, step::Step, task::Task, tasks::Tasks},
+        scenario::{errors::StepError, step::Step, task::Task, tasks::Tasks, variables::Variables},
+        session::{Channel, Session, SessionType, Sftp},
+        utils::{ArcMutex, Wrap},
     };
     use std::collections::HashMap;
+
+    fn init_tracing() {
+        let _ = tracing_subscriber::fmt()
+            .with_test_writer()
+            .with_max_level(tracing::Level::TRACE)
+            .try_init();
+    }
+
+    #[test]
+    fn test_step_execute_success() {
+        init_tracing();
+
+        // Given
+        struct TestChannel;
+        impl Channel for TestChannel {
+            fn exec(&mut self, _: &str) -> Result<(), ssh2::Error> { Ok(()) }
+            fn read_to_string(&mut self, _: &mut String) -> Result<usize, ssh2::Error> { Ok(0) }
+            fn exit_status(&self) -> Result<i32, ssh2::Error> { Ok(0) }
+        }
+        struct TestWrite;
+        impl crate::session::Write for TestWrite {
+            fn write_all(&mut self, _: &[u8]) -> Result<(), ssh2::Error> { Ok(()) }
+        }
+        struct TestSftp;
+        impl Sftp for TestSftp {
+            fn create(&self, _: &std::path::Path) -> Result<Box<dyn crate::session::Write>, ssh2::Error> {
+                Ok(Box::new(TestWrite))
+            }
+        }
+
+        let tasks = create_test_tasks();
+        let config = StepConfig {
+            task: "task1".to_string(),
+            on_fail: None,
+        };
+        let step = Step::try_from((0, &tasks, &config)).unwrap();
+        let session = Session {
+            inner: SessionType::Test {
+                channel: ArcMutex::wrap(TestChannel),
+                sftp: ArcMutex::wrap(TestSftp),
+            },
+        };
+        let variables = Variables::default();
+
+        // When
+        let result = step.execute(&session, &variables, None);
+
+        // Then
+        assert!(result.is_ok());
+    }
 
     #[test]
     fn test_step_try_from_success_no_on_fail() {
@@ -239,9 +291,10 @@ mod tests {
         };
 
         // When
-        let step = Step::try_from((0, &tasks, &config)).unwrap();
+        let step = Step::try_from((5, &tasks, &config)).unwrap();
 
         // Then
+        assert_eq!(step.index(), 5);
         assert_eq!(step.task().description(), "Test task 1");
         assert_eq!(step.on_fail_steps().len(), 1);
     }
@@ -264,7 +317,6 @@ mod tests {
         assert_eq!(cloned.on_fail_steps().len(), original.on_fail_steps().len());
     }
 
-    // Test helpers
     fn create_test_tasks() -> Tasks {
         let mut task_map = HashMap::new();
         task_map.insert("task1".to_string(), create_remote_sudo_task());

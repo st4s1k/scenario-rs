@@ -391,7 +391,7 @@ mod tests {
         );
         let mut vars = RequiredVariables(map);
 
-        // When & Then (Deref test)
+        // When & Then
         assert_eq!(vars.len(), 1);
         assert!(vars.contains_key("var1"));
         let var = vars.get("var1").unwrap();
@@ -506,7 +506,7 @@ mod tests {
         vars.upsert(update_map);
 
         // Then
-        assert_eq!(vars.len(), 4); // Original 2 + 2 basename variables
+        assert_eq!(vars.len(), 4);
         assert_eq!(vars.get("path1").unwrap().value(), "/tmp/doc1.md");
         assert_eq!(vars.get("path2").unwrap().value(), "/var/log/file.log");
         assert_eq!(vars.get("basename:path1").unwrap().value(), "doc1.md");
@@ -534,7 +534,7 @@ mod tests {
         vars.upsert(update_map);
 
         // Then
-        assert_eq!(vars.len(), 1); // No basename was added
+        assert_eq!(vars.len(), 1);
         assert_eq!(vars.get("path_var").unwrap().value(), "/tmp/directory/");
         assert!(!vars.contains_key("basename:path_var"));
     }
@@ -657,5 +657,19 @@ mod tests {
 
         // Then
         assert!(read_only_var.read_only());
+    }
+
+    #[test]
+    fn test_required_variable_deref() {
+        // Given
+        let variable = RequiredVariable::default()
+            .with_value("hello".to_string());
+
+        // When
+        let deref_value: &String = &*variable;
+
+        // Then
+        assert_eq!(deref_value, "hello");
+        assert_eq!(variable.len(), 5);
     }
 }
