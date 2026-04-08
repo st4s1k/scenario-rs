@@ -215,37 +215,39 @@ https://github.com/user-attachments/assets/184b3300-50c1-4934-962a-7407656dbe38
 
 </details>
 
-## Build with cargo-make
+## Build with just
 
-All build tasks can be run from the project root using [cargo-make](https://github.com/sagiegurari/cargo-make).
+All build tasks can be run from the project root using [just](https://github.com/casey/just).
 
 ### Setup
 
 ```
-cargo install cargo-make
+cargo install just
 ```
 
-### Available Tasks
+### Available Recipes
 
-Run `cargo make help` to list all available tasks.
+Run `just` to list all available recipes.
 
 | Command | Description |
 |---|---|
-| `cargo make help` | List all available tasks |
-| `cargo make check` | Run `cargo check` on the workspace |
-| `cargo make build` | Build the workspace (debug) |
-| `cargo make build-release` | Build the workspace (release) |
-| `cargo make test` | Run Rust tests with coverage (requires [cargo-tarpaulin](https://github.com/xd009642/tarpaulin)) |
-| `cargo make ng-test` | Run Angular unit tests with coverage |
-| `cargo make test-all` | Run all tests with coverage (Rust + Angular) |
-| `cargo make npm-install` | Install frontend dependencies |
-| `cargo make ng-build` | Build Angular frontend |
-| `cargo make tauri-dev` | Run GUI in development mode |
-| `cargo make tauri-build` | Build GUI (release) |
-| `cargo make tauri-build-debug` | Build GUI (debug) |
-| `cargo make build-all` | Build everything (Rust + GUI debug) |
-| `cargo make build-all-release` | Build everything (Rust + GUI release) |
-| `cargo make verify` | Full verification: check + all tests + Angular build |
+| `just` | List all available recipes |
+| `just check` | Run `cargo check` on the workspace |
+| `just build` | Build the workspace (debug) |
+| `just build-release` | Build the workspace (release) |
+| `just test` | Run Rust tests with coverage (requires [cargo-tarpaulin](https://github.com/xd009642/tarpaulin)) |
+| `just ng-test` | Run Angular unit tests with coverage |
+| `just test-all` | Run all tests with coverage (Rust + Angular) |
+| `just npm-install` | Install frontend dependencies |
+| `just ng-build` | Build Angular frontend |
+| `just tauri-dev` | Run GUI in development mode |
+| `just tauri-build` | Build GUI (release) |
+| `just tauri-build-debug` | Build GUI (debug) |
+| `just build-all` | Build everything (Rust + GUI debug) |
+| `just build-all-release` | Build everything (Rust + GUI release) |
+| `just verify` | Full verification: check + all tests + Angular build |
+| `just version` | Show current version |
+| `just bump-version x.y.z` | Set version across all packages |
 
 ## DIY
 
