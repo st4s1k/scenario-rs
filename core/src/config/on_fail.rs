@@ -107,7 +107,6 @@ mod tests {
         assert!(debug_str.contains("restore"));
     }
 
-    // Test helpers
     fn create_test_config() -> OnFailStepsConfig {
         OnFailStepsConfig(vec![
             "cleanup".to_string(),

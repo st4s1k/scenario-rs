@@ -74,7 +74,6 @@ mod tests {
         assert_eq!(on_fail[0], "cleanup");
     }
 
-    // Test helpers
     fn create_test_config() -> ExecuteConfig {
         let steps = vec![
             StepConfig {

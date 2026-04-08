@@ -282,7 +282,7 @@ mod tests {
         // Then
         assert!(result.is_err());
         match result {
-            Err(ScenarioConfigError::MissingCredentials) => {} // expected
+            Err(ScenarioConfigError::MissingCredentials) => {}
             err => panic!("Expected MissingCredentials error, got {:?}", err),
         }
     }
@@ -299,7 +299,7 @@ mod tests {
         // Then
         assert!(result.is_err());
         match result {
-            Err(ScenarioConfigError::MissingServer) => {} // expected
+            Err(ScenarioConfigError::MissingServer) => {}
             err => panic!("Expected MissingServer error, got {:?}", err),
         }
     }
@@ -316,7 +316,7 @@ mod tests {
         // Then
         assert!(result.is_err());
         match result {
-            Err(ScenarioConfigError::MissingExecute) => {} // expected
+            Err(ScenarioConfigError::MissingExecute) => {}
             err => panic!("Expected MissingExecute error, got {:?}", err),
         }
     }
@@ -333,7 +333,7 @@ mod tests {
         // Then
         assert!(result.is_err());
         match result {
-            Err(ScenarioConfigError::MissingTasks) => {} // expected
+            Err(ScenarioConfigError::MissingTasks) => {}
             err => panic!("Expected MissingTasks error, got {:?}", err),
         }
     }

@@ -274,7 +274,7 @@ mod tests {
         let required = merged.required.unwrap();
         assert_eq!(required.len(), 1);
         assert!(required.contains_key("username"));
-        assert!(!required.contains_key("environment")); // Should be removed because it's defined
+        assert!(!required.contains_key("environment"));
 
         let defined = merged.defined.unwrap();
         assert_eq!(defined.len(), 1);
@@ -364,7 +364,41 @@ mod tests {
         assert!(debug_str.contains("environment"));
     }
 
-    // Test helpers
+    #[test]
+    fn test_partial_variables_config_merge_self_defined_other_none() {
+        // Given
+        let config1 = PartialVariablesConfig {
+            required: None,
+            defined: Some(DefinedVariablesConfig::from(HashMap::from([
+                ("port".to_string(), "8080".to_string()),
+            ]))),
+        };
+
+        let config2 = PartialVariablesConfig {
+            required: Some(RequiredVariablesConfig::from(HashMap::from([(
+                "api_key".to_string(),
+                RequiredVariableConfig {
+                    var_type: VariableTypeConfig::String,
+                    label: Some("API Key".to_string()),
+                    read_only: false,
+                },
+            )]))),
+            defined: None,
+        };
+
+        // When
+        let merged = config1.merge(&config2);
+
+        // Then
+        let required = merged.required.unwrap();
+        assert_eq!(required.len(), 1);
+        assert!(required.contains_key("api_key"));
+
+        let defined = merged.defined.unwrap();
+        assert_eq!(defined.len(), 1);
+        assert_eq!(defined.get("port"), Some(&"8080".to_string()));
+    }
+
     fn create_test_partial_config() -> PartialVariablesConfig {
         let mut required_vars = HashMap::new();
         required_vars.insert(

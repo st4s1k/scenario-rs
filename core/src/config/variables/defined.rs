@@ -143,7 +143,6 @@ mod tests {
         assert!(debug_str.contains("/opt/myapp"));
     }
 
-    // Test helpers
     fn create_test_config() -> DefinedVariablesConfig {
         let mut variables = HashMap::new();
         variables.insert("username".to_string(), "admin".to_string());

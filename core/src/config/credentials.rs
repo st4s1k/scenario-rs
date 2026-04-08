@@ -184,12 +184,11 @@ mod tests {
         // Then
         assert!(result.is_err());
         match result {
-            Err(ScenarioConfigError::MissingUsername) => {} // expected
+            Err(ScenarioConfigError::MissingUsername) => {}
             _ => panic!("Expected MissingUsername error"),
         }
     }
 
-    // Test helpers
     fn create_credentials_with_password() -> CredentialsConfig {
         CredentialsConfig {
             username: "test_user".to_string(),

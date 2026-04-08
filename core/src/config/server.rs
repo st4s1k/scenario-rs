@@ -165,7 +165,7 @@ mod tests {
         // Then
         assert!(result.is_err());
         match result {
-            Err(ScenarioConfigError::MissingHost) => {} // expected
+            Err(ScenarioConfigError::MissingHost) => {}
             _ => panic!("Expected MissingHost error"),
         }
     }
