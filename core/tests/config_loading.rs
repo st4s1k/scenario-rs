@@ -54,49 +54,89 @@ fn load_second_child_with_parent_inheritance() {
 #[test]
 fn load_test_scenario_all_succeed() {
     // Given & When & Then
-    let config = ScenarioConfig::try_from(test_scenario("all-succeed.toml"));
+    let config = ScenarioConfig::try_from(test_scenario("password-auth/all-succeed.toml"));
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
 #[test]
 fn load_test_scenario_sftp_then_sudo() {
     // Given & When & Then
-    let config = ScenarioConfig::try_from(test_scenario("sftp-then-sudo.toml"));
+    let config = ScenarioConfig::try_from(test_scenario("password-auth/sftp-then-sudo.toml"));
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
 #[test]
 fn load_test_scenario_only_sftp() {
     // Given & When & Then
-    let config = ScenarioConfig::try_from(test_scenario("only-sftp-steps.toml"));
+    let config = ScenarioConfig::try_from(test_scenario("password-auth/only-sftp-steps.toml"));
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
 #[test]
 fn load_test_scenario_only_sudo() {
     // Given & When & Then
-    let config = ScenarioConfig::try_from(test_scenario("only-sudo-steps.toml"));
+    let config = ScenarioConfig::try_from(test_scenario("password-auth/only-sudo-steps.toml"));
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
 #[test]
 fn load_test_scenario_empty_steps() {
     // Given & When & Then
-    let config = ScenarioConfig::try_from(test_scenario("empty-steps.toml"));
+    let config = ScenarioConfig::try_from(test_scenario("password-auth/empty-steps.toml"));
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
 #[test]
 fn load_test_scenario_with_on_fail() {
     // Given & When & Then
-    let config = ScenarioConfig::try_from(test_scenario("fail-with-on-fail-succeed.toml"));
+    let config = ScenarioConfig::try_from(test_scenario("password-auth/fail-with-on-fail-succeed.toml"));
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
 #[test]
 fn load_test_scenario_many_on_fail() {
     // Given & When & Then
-    let config = ScenarioConfig::try_from(test_scenario("many-on-fail-steps.toml"));
+    let config = ScenarioConfig::try_from(test_scenario("password-auth/many-on-fail-steps.toml"));
+    assert!(config.is_ok(), "failed: {:?}", config.err());
+}
+
+#[test]
+fn load_key_auth_scenario_only_sudo() {
+    // Given & When
+    let config = ScenarioConfig::try_from(test_scenario("key-auth/only-sudo-steps.toml"));
+
+    // Then
+    assert!(config.is_ok(), "failed: {:?}", config.err());
+    let config = config.unwrap();
+    assert_eq!(config.credentials.username, "test_user");
+    assert!(config.credentials.password.is_none());
+    assert!(config.credentials.private_key.is_some());
+}
+
+#[test]
+fn load_key_auth_scenario_sftp_then_sudo() {
+    // Given & When & Then
+    let config = ScenarioConfig::try_from(test_scenario("key-auth/sftp-then-sudo.toml"));
+    assert!(config.is_ok(), "failed: {:?}", config.err());
+}
+
+#[test]
+fn load_agent_auth_scenario_only_sudo() {
+    // Given & When
+    let config = ScenarioConfig::try_from(test_scenario("agent-auth/only-sudo-steps.toml"));
+
+    // Then
+    assert!(config.is_ok(), "failed: {:?}", config.err());
+    let config = config.unwrap();
+    assert_eq!(config.credentials.username, "test_user");
+    assert!(config.credentials.password.is_none());
+    assert!(config.credentials.private_key.is_none());
+}
+
+#[test]
+fn load_agent_auth_scenario_sftp_then_sudo() {
+    // Given & When & Then
+    let config = ScenarioConfig::try_from(test_scenario("agent-auth/sftp-then-sudo.toml"));
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
@@ -321,5 +361,192 @@ fn parent_not_found_returns_error() {
         result
     );
     let _ = std::fs::remove_file(&path);
+    let _ = std::fs::remove_dir(&dir);
+}
+
+#[test]
+fn load_config_with_private_key_from_parent() {
+    // Given
+    let dir = std::env::temp_dir().join("scenario_rs_test_load_key_parent");
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let parent_path = dir.join("server-key.toml");
+    std::fs::write(
+        &parent_path,
+        r#"
+[credentials]
+username = "key_user"
+private_key = "./my_key"
+
+[server]
+host = "localhost"
+port = 2222
+"#,
+    )
+    .unwrap();
+
+    let child_path = dir.join("child.toml");
+    std::fs::write(
+        &child_path,
+        r#"
+parent = "./server-key.toml"
+
+[execute]
+steps = [{ task = "t" }]
+
+[tasks.t]
+type = "RemoteSudo"
+description = "d"
+command = "echo hi"
+error_message = "e"
+"#,
+    )
+    .unwrap();
+
+    // When
+    let config = ScenarioConfig::try_from(child_path.clone()).unwrap();
+
+    // Then
+    assert_eq!(config.credentials.username, "key_user");
+    assert!(config.credentials.password.is_none());
+    assert!(config.credentials.private_key.is_some());
+    let key = config.credentials.private_key.unwrap();
+    assert!(key.contains("my_key"), "expected path containing 'my_key', got: {key}");
+
+    let _ = std::fs::remove_file(&child_path);
+    let _ = std::fs::remove_file(&parent_path);
+    let _ = std::fs::remove_dir(&dir);
+}
+
+#[test]
+fn private_key_relative_path_resolved_to_config_dir() {
+    // Given
+    let dir = std::env::temp_dir().join("scenario_rs_test_key_resolve");
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("key-scenario.toml");
+    std::fs::write(
+        &path,
+        r#"
+[credentials]
+username = "user"
+private_key = "./keys/id_ed25519"
+
+[server]
+host = "localhost"
+
+[execute]
+steps = []
+
+[tasks]
+"#,
+    )
+    .unwrap();
+
+    // When
+    let config = ScenarioConfig::try_from(path.clone()).unwrap();
+
+    // Then
+    let key = config.credentials.private_key.unwrap();
+    let expected_suffix = dir.join("keys").join("id_ed25519");
+    assert_eq!(
+        std::path::PathBuf::from(&key),
+        expected_suffix,
+        "expected key path resolved to {:?}, got: {key}",
+        expected_suffix
+    );
+    let _ = std::fs::remove_file(&path);
+    let _ = std::fs::remove_dir(&dir);
+}
+
+#[test]
+fn private_key_absolute_path_stays_unchanged() {
+    // Given
+    let dir = std::env::temp_dir().join("scenario_rs_test_key_abs");
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("key-abs.toml");
+    let abs_key = if cfg!(windows) {
+        "C:\\\\Users\\\\user\\\\.ssh\\\\id_ed25519"
+    } else {
+        "/home/user/.ssh/id_ed25519"
+    };
+    std::fs::write(
+        &path,
+        format!(
+            r#"
+[credentials]
+username = "user"
+private_key = "{abs_key}"
+
+[server]
+host = "localhost"
+
+[execute]
+steps = []
+
+[tasks]
+"#
+        ),
+    )
+    .unwrap();
+
+    // When
+    let config = ScenarioConfig::try_from(path.clone()).unwrap();
+
+    // Then
+    let key = config.credentials.private_key.unwrap();
+    let expected = abs_key.replace("\\\\", "\\");
+    assert_eq!(key, expected);
+    let _ = std::fs::remove_file(&path);
+    let _ = std::fs::remove_dir(&dir);
+}
+
+#[test]
+fn private_key_inherited_from_parent() {
+    // Given
+    let dir = std::env::temp_dir().join("scenario_rs_test_key_inherit");
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let parent_path = dir.join("parent.toml");
+    std::fs::write(
+        &parent_path,
+        r#"
+[credentials]
+username = "user"
+private_key = "./parent_key"
+
+[server]
+host = "localhost"
+
+[execute]
+steps = []
+
+[tasks]
+"#,
+    )
+    .unwrap();
+
+    let child_path = dir.join("child.toml");
+    std::fs::write(
+        &child_path,
+        r#"
+parent = "./parent.toml"
+
+[server]
+host = "override-host"
+"#,
+    )
+    .unwrap();
+
+    // When
+    let config = ScenarioConfig::try_from(child_path.clone()).unwrap();
+
+    // Then
+    assert!(config.credentials.private_key.is_some());
+    let key = config.credentials.private_key.unwrap();
+    assert!(key.contains("parent_key"));
+    assert_eq!(config.server.host, "override-host");
+
+    let _ = std::fs::remove_file(&child_path);
+    let _ = std::fs::remove_file(&parent_path);
     let _ = std::fs::remove_dir(&dir);
 }

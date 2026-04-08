@@ -101,7 +101,11 @@ impl Session {
     fn create_session(server: &Server, credentials: &Credentials) -> Result<Session, ssh2::Error> {
         trace!(
             scenario.event = ScenarioEvent::CreateSessionStarted.as_str(),
-            session.password = credentials.password.as_deref().unwrap_or("<ssh-agent>")
+            session.auth = match (&credentials.password, &credentials.private_key) {
+                (Some(_), _) => "password",
+                (None, Some(_)) => "private_key",
+                (None, None) => "ssh-agent",
+            }
         );
 
         let host = &server.host;
@@ -123,15 +127,22 @@ impl Session {
 
         let username = &credentials.username;
         let password = &credentials.password.as_deref();
+        let private_key = &credentials.private_key.as_deref();
 
-        match password {
-            Some(pwd) => real_session
+        match (password, private_key) {
+            (Some(pwd), _) => real_session
                 .userauth_password(username, pwd)
                 .map_err(|error| {
                     debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                     error
                 })?,
-            None => real_session.userauth_agent(username).map_err(|error| {
+            (None, Some(key_path)) => real_session
+                .userauth_pubkey_file(username, None, Path::new(key_path), None)
+                .map_err(|error| {
+                    debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
+                    error
+                })?,
+            (None, None) => real_session.userauth_agent(username).map_err(|error| {
                 debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 error
             })?,
@@ -630,6 +641,7 @@ mod tests {
             } else {
                 None
             },
+            private_key: None,
         }
     }
 }

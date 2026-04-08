@@ -338,6 +338,7 @@ mod tests {
             credentials: CredentialsConfig {
                 username: "testuser".to_string(),
                 password: Some("testpass".to_string()),
+                private_key: None,
             },
             execute: ExecuteConfig::default(),
             tasks: TasksConfig::default(),
@@ -409,6 +410,7 @@ mod tests {
             credentials: CredentialsConfig {
                 username: "testuser".to_string(),
                 password: Some("testpass".to_string()),
+                private_key: None,
             },
             execute: ExecuteConfig {
                 steps: vec![StepConfig {

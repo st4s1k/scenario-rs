@@ -1,10 +1,11 @@
 use crate::config::credentials::CredentialsConfig;
 
-/// Authentication credentials (username + optional password) for scenarios.
+/// Authentication credentials (username + optional password/key) for scenarios.
 #[derive(Clone, Debug)]
 pub struct Credentials {
     pub(crate) username: String,
     pub(crate) password: Option<String>,
+    pub(crate) private_key: Option<String>,
 }
 
 impl From<&CredentialsConfig> for Credentials {
@@ -12,6 +13,7 @@ impl From<&CredentialsConfig> for Credentials {
         Credentials {
             username: credentials_config.username.clone(),
             password: credentials_config.password.clone(),
+            private_key: credentials_config.private_key.clone(),
         }
     }
 }
@@ -19,7 +21,11 @@ impl From<&CredentialsConfig> for Credentials {
 impl Credentials {
     /// Creates a new instance of `Credentials` with the given username and optional password.
     pub fn new(username: String, password: Option<String>) -> Self {
-        Credentials { username, password }
+        Credentials {
+            username,
+            password,
+            private_key: None,
+        }
     }
 
     /// Returns a reference to the username.
@@ -30,6 +36,11 @@ impl Credentials {
     /// Returns a reference to the password, if available.
     pub fn password(&self) -> Option<&str> {
         self.password.as_deref()
+    }
+
+    /// Returns a reference to the private key path, if available.
+    pub fn private_key(&self) -> Option<&str> {
+        self.private_key.as_deref()
     }
 }
 
@@ -43,6 +54,7 @@ mod tests {
         let credentials = Credentials {
             username: "".to_string(),
             password: Some("".to_string()),
+            private_key: None,
         };
 
         // Then
@@ -56,6 +68,7 @@ mod tests {
         let config = CredentialsConfig {
             username: "configuser".to_string(),
             password: None,
+            private_key: None,
         };
 
         // When
@@ -72,6 +85,7 @@ mod tests {
         let config = CredentialsConfig {
             username: "".to_string(),
             password: Some("".to_string()),
+            private_key: None,
         };
 
         // When
@@ -88,6 +102,7 @@ mod tests {
         let credentials = Credentials {
             username: "user123".to_string(),
             password: Some("pass123".to_string()),
+            private_key: None,
         };
 
         // When
@@ -104,6 +119,7 @@ mod tests {
         let original = Credentials {
             username: "cloneuser".to_string(),
             password: Some("clonepass".to_string()),
+            private_key: None,
         };
 
         // When
@@ -120,6 +136,7 @@ mod tests {
         let credentials = Credentials {
             username: "user@123!#$%".to_string(),
             password: Some("p@ss!#$%^&*()".to_string()),
+            private_key: None,
         };
 
         // Then
@@ -134,6 +151,7 @@ mod tests {
         let credentials = Credentials {
             username: long_string.clone(),
             password: Some(long_string.clone()),
+            private_key: None,
         };
 
         // Then
@@ -159,5 +177,50 @@ mod tests {
         // Then
         assert_eq!(credentials.username(), "agent_user");
         assert_eq!(credentials.password(), None);
+        assert_eq!(credentials.private_key(), None);
+    }
+
+    #[test]
+    fn test_from_credentials_config_with_private_key() {
+        // Given
+        let config = CredentialsConfig {
+            username: "keyuser".to_string(),
+            password: None,
+            private_key: Some("/path/to/key".to_string()),
+        };
+
+        // When
+        let credentials = Credentials::from(&config);
+
+        // Then
+        assert_eq!(credentials.username(), "keyuser");
+        assert_eq!(credentials.password(), None);
+        assert_eq!(credentials.private_key(), Some("/path/to/key"));
+    }
+
+    #[test]
+    fn test_from_credentials_config_with_password_and_private_key() {
+        // Given
+        let config = CredentialsConfig {
+            username: "bothuser".to_string(),
+            password: Some("pass".to_string()),
+            private_key: Some("/path/to/key".to_string()),
+        };
+
+        // When
+        let credentials = Credentials::from(&config);
+
+        // Then
+        assert_eq!(credentials.password(), Some("pass"));
+        assert_eq!(credentials.private_key(), Some("/path/to/key"));
+    }
+
+    #[test]
+    fn test_credentials_new_has_no_private_key() {
+        // Given & When
+        let credentials = Credentials::new("user".to_string(), Some("pass".to_string()));
+
+        // Then
+        assert_eq!(credentials.private_key(), None);
     }
 }

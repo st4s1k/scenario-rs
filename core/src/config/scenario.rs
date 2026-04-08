@@ -157,6 +157,11 @@ impl TryFrom<PathBuf> for ScenarioConfig {
     type Error = ScenarioConfigError;
 
     fn try_from(config_path: PathBuf) -> Result<Self, Self::Error> {
+        let config_dir = config_path
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .to_path_buf();
+
         let configs_to_merge = Self::resolve_config_imports(config_path)?;
 
         let empty_config = PartialScenarioConfig {
@@ -172,7 +177,18 @@ impl TryFrom<PathBuf> for ScenarioConfig {
             .iter()
             .fold(empty_config, |acc, config| acc.merge(config));
 
-        ScenarioConfig::try_from(merged_partial_config)
+        let mut config = ScenarioConfig::try_from(merged_partial_config)?;
+
+        if let Some(ref key_path) = config.credentials.private_key {
+            let path = std::path::Path::new(key_path);
+            if !path.is_absolute() {
+                let resolved = config_dir.join(path);
+                config.credentials.private_key =
+                    Some(resolved.to_string_lossy().into_owned());
+            }
+        }
+
+        Ok(config)
     }
 }
 
@@ -344,6 +360,7 @@ mod tests {
         let partial_creds = PartialCredentialsConfig {
             username: Some("test_user".to_string()),
             password: Some("test_pass".to_string()),
+            private_key: None,
         };
 
         // When
@@ -456,6 +473,7 @@ mod tests {
             credentials: Some(PartialCredentialsConfig {
                 username: Some("user1".to_string()),
                 password: Some("pass1".to_string()),
+                private_key: None,
             }),
             server: Some(PartialServerConfig {
                 host: Some("host1".to_string()),
@@ -473,6 +491,7 @@ mod tests {
             credentials: Some(PartialCredentialsConfig {
                 username: Some("user2".to_string()),
                 password: None,
+                private_key: None,
             }),
             server: Some(PartialServerConfig {
                 host: Some("host2".to_string()),
@@ -490,6 +509,7 @@ mod tests {
             credentials: Some(PartialCredentialsConfig {
                 username: Some("user".to_string()),
                 password: Some("pass".to_string()),
+                private_key: None,
             }),
             server: Some(PartialServerConfig {
                 host: Some("host".to_string()),
@@ -499,5 +519,75 @@ mod tests {
             variables: Some(PartialVariablesConfig::default()),
             tasks: Some(TasksConfig::default()),
         }
+    }
+
+    #[test]
+    fn test_partial_scenario_merge_preserves_private_key() {
+        // Given
+        let base = PartialScenarioConfig {
+            parent: None,
+            credentials: Some(PartialCredentialsConfig {
+                username: Some("user".to_string()),
+                password: None,
+                private_key: Some("/base/key".to_string()),
+            }),
+            server: Some(PartialServerConfig {
+                host: Some("host".to_string()),
+                port: Some(22),
+            }),
+            execute: Some(ExecuteConfig::default()),
+            variables: Some(PartialVariablesConfig::default()),
+            tasks: Some(TasksConfig::default()),
+        };
+
+        let child = PartialScenarioConfig {
+            parent: None,
+            credentials: Some(PartialCredentialsConfig {
+                username: None,
+                password: None,
+                private_key: None,
+            }),
+            server: None,
+            execute: None,
+            variables: None,
+            tasks: None,
+        };
+
+        // When
+        let merged = base.merge(&child);
+
+        // Then
+        assert_eq!(
+            merged.credentials.as_ref().unwrap().private_key,
+            Some("/base/key".to_string())
+        );
+    }
+
+    #[test]
+    fn test_partial_scenario_config_deserialization_with_private_key() {
+        // Given
+        let toml_str = r#"
+            [credentials]
+            username = "key_user"
+            private_key = "./my_key"
+
+            [server]
+            host = "host"
+            port = 22
+
+            [execute]
+            steps = []
+
+            [tasks]
+        "#;
+
+        // When
+        let config: PartialScenarioConfig = toml::from_str(toml_str).unwrap();
+
+        // Then
+        let creds = config.credentials.unwrap();
+        assert_eq!(creds.username, Some("key_user".to_string()));
+        assert!(creds.password.is_none());
+        assert_eq!(creds.private_key, Some("./my_key".to_string()));
     }
 }
