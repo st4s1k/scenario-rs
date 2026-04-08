@@ -75,7 +75,17 @@
           textarea {
             border: none;
             padding: styles.$gap-small;
-            field-sizing: content;
+            resize: none;
+            overflow: hidden;
+
+            @supports (field-sizing: content) {
+              field-sizing: content;
+            }
+
+            @supports not (field-sizing: content) {
+              min-height: 2rem;
+              overflow-y: auto;
+            }
           }
 
           &.output textarea {
