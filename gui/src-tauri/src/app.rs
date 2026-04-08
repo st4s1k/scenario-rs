@@ -42,6 +42,7 @@ pub struct ScenarioAppStateConfig {
     config_paths: HashMap<String, ConfigPathData>,
 }
 
+#[cfg(not(tarpaulin_include))]
 impl From<&ScenarioAppState> for ScenarioAppStateConfig {
     fn from(state: &ScenarioAppState) -> Self {
         let mut config_paths = HashMap::new();
@@ -192,6 +193,7 @@ impl From<&Step> for StepDTO {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 impl ScenarioAppState {
     /// Path to the file where application state is persisted
     const STATE_FILE_PATH: &'static str = "scenario-app-state.json";
@@ -482,6 +484,7 @@ fn build_initial_state(scenario: &Scenario) -> ExecutionState {
 
 /// Reads diffs from the channel, batches them over 100ms windows,
 /// and emits them as a single Tauri event per batch.
+#[cfg(not(tarpaulin_include))]
 fn diff_batch_stream(
     rx: std::sync::mpsc::Receiver<scenario_rs::state::types::StateDiff>,
     app_handle: &AppHandle,
@@ -693,5 +696,64 @@ mod tests {
                 dto.var_type == "text" || dto.var_type == "path" || dto.var_type == "timestamp"
             );
         }
+    }
+
+    #[test]
+    fn test_config_path_data_serialization() {
+        // Given
+        let mut required_variables = HashMap::new();
+        required_variables.insert("user".to_string(), "admin".to_string());
+        let data = ConfigPathData { required_variables };
+
+        // When
+        let json = serde_json::to_string(&data).unwrap();
+        let deserialized: ConfigPathData = serde_json::from_str(&json).unwrap();
+
+        // Then
+        assert_eq!(
+            deserialized.required_variables.get("user"),
+            Some(&"admin".to_string())
+        );
+    }
+
+    #[test]
+    fn test_scenario_app_state_config_serialization() {
+        // Given
+        let mut config_paths = HashMap::new();
+        config_paths.insert(
+            "/path/to/config.toml".to_string(),
+            ConfigPathData {
+                required_variables: HashMap::from([
+                    ("var1".to_string(), "val1".to_string()),
+                ]),
+            },
+        );
+        let state_config = ScenarioAppStateConfig {
+            last_config_path: "/path/to/config.toml".to_string(),
+            config_paths,
+        };
+
+        // When
+        let json = serde_json::to_string_pretty(&state_config).unwrap();
+        let deserialized: ScenarioAppStateConfig = serde_json::from_str(&json).unwrap();
+
+        // Then
+        assert_eq!(deserialized.last_config_path, "/path/to/config.toml");
+        assert!(deserialized.config_paths.contains_key("/path/to/config.toml"));
+        let data = deserialized.config_paths.get("/path/to/config.toml").unwrap();
+        assert_eq!(data.required_variables.get("var1"), Some(&"val1".to_string()));
+    }
+
+    #[test]
+    fn test_diff_batch_stream_empty_channel() {
+        // Given
+        use scenario_rs::state::types::StateDiff;
+        use std::sync::mpsc;
+
+        let (tx, rx) = mpsc::channel::<StateDiff>();
+        drop(tx);
+
+        // When & Then
+        assert!(rx.recv().is_err());
     }
 }

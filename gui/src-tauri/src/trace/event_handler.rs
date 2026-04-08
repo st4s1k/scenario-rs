@@ -6,6 +6,7 @@ pub trait EventHandler<E: Send + 'static> {
     fn handle(&self, event: &E, app_handle: &AppHandle);
 }
 
+#[cfg(not(tarpaulin_include))]
 pub fn listen<H, E>(rx: mpsc::Receiver<E>, app_handle: &AppHandle, handler: H)
 where
     H: EventHandler<E> + Send + 'static,

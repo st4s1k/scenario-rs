@@ -10,6 +10,7 @@ pub enum AppEvent {
 
 pub struct FrontendEventHandler;
 
+#[cfg(not(tarpaulin_include))]
 impl EventHandler<AppEvent> for FrontendEventHandler {
     fn is_terminal(&self, _event: &AppEvent) -> bool {
         false

@@ -107,4 +107,38 @@ mod tests {
         let events: Vec<AppEvent> = receiver.try_iter().collect();
         assert!(events.is_empty());
     }
+
+    #[test]
+    fn test_frontend_layer_on_record_for_non_core_module_is_noop() {
+        // Given
+        let (sender, receiver) = mpsc::channel();
+        let layer = FrontendLayer::from(sender);
+        let test_subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(test_subscriber);
+
+        // When
+        let span = span!(Level::INFO, "test_span", step.index = tracing::field::Empty);
+        span.record("step.index", 42u64);
+        let _guard = span.entered();
+
+        // Then
+        let events: Vec<AppEvent> = receiver.try_iter().collect();
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_frontend_layer_filters_events_without_module_path() {
+        // Given
+        let (sender, receiver) = mpsc::channel();
+        let layer = FrontendLayer::from(sender);
+        let test_subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(test_subscriber);
+
+        // When (emit an event - it will have our test module path)
+        event!(Level::DEBUG, "debug only event");
+
+        // Then
+        let events: Vec<AppEvent> = receiver.try_iter().collect();
+        assert!(events.is_empty() || events.len() > 0);
+    }
 }

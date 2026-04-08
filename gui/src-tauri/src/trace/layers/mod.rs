@@ -83,3 +83,75 @@ pub trait EventLayer {
     where
         S: Subscriber + for<'a> LookupSpan<'a>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::mpsc;
+    use tracing::{event, span, subscriber, Level, Subscriber};
+    use tracing_subscriber::{
+        layer::Context, prelude::*, registry::LookupSpan, Layer, Registry,
+    };
+
+    struct DefaultImplLayer;
+
+    impl EventLayer for DefaultImplLayer {
+        fn process_event<S>(&self, _event: &Event<'_>, _ctx: Context<'_, S>)
+        where
+            S: Subscriber + for<'a> LookupSpan<'a>,
+        {
+        }
+    }
+
+    struct TestDefaultLayer(DefaultImplLayer);
+
+    impl<S> Layer<S> for TestDefaultLayer
+    where
+        S: Subscriber + for<'a> LookupSpan<'a>,
+    {
+        fn on_new_span(
+            &self,
+            attrs: &tracing::span::Attributes<'_>,
+            id: &Id,
+            ctx: Context<'_, S>,
+        ) {
+            self.0.on_new_span(attrs, id, ctx);
+        }
+
+        fn on_record(
+            &self,
+            id: &Id,
+            record: &tracing::span::Record<'_>,
+            ctx: Context<'_, S>,
+        ) {
+            self.0.on_record(id, record, ctx);
+        }
+
+        fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
+            self.0.process_event(event, ctx);
+        }
+    }
+
+    #[test]
+    fn test_default_on_new_span_is_noop() {
+        // Given
+        let layer = TestDefaultLayer(DefaultImplLayer);
+        let test_subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(test_subscriber);
+
+        // When & Then
+        let _span = span!(Level::INFO, "test_span", step.index = 1u64).entered();
+    }
+
+    #[test]
+    fn test_default_on_record_is_noop() {
+        // Given
+        let layer = TestDefaultLayer(DefaultImplLayer);
+        let test_subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(test_subscriber);
+
+        // When & Then
+        let span = span!(Level::INFO, "test_span", step.index = tracing::field::Empty);
+        span.record("step.index", 42u64);
+    }
+}

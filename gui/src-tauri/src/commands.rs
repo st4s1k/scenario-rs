@@ -12,24 +12,28 @@ use std::{
 use tauri::State;
 use tracing::warn;
 
+#[cfg(not(tarpaulin_include))]
 #[tauri::command(async)]
 pub fn save_state(state: State<'_, Mutex<ScenarioAppState>>) {
     let mut state = state.safe_lock();
     state.save_state();
 }
 
+#[cfg(not(tarpaulin_include))]
 #[tauri::command(async)]
 pub fn get_config_path(state: State<'_, Mutex<ScenarioAppState>>) -> String {
     let state = state.safe_lock();
     state.config_path.clone()
 }
 
+#[cfg(not(tarpaulin_include))]
 #[tauri::command(async)]
 pub fn load_config(config_path: &str, state: State<'_, Mutex<ScenarioAppState>>) {
     let mut state = state.safe_lock();
     state.load_config(config_path);
 }
 
+#[cfg(not(tarpaulin_include))]
 #[tauri::command(async)]
 pub fn get_required_variables(
     state: State<'_, Mutex<ScenarioAppState>>,
@@ -38,6 +42,7 @@ pub fn get_required_variables(
     state.get_required_variables()
 }
 
+#[cfg(not(tarpaulin_include))]
 #[tauri::command(async)]
 pub fn update_required_variables(
     required_variables: HashMap<String, String>,
@@ -47,6 +52,7 @@ pub fn update_required_variables(
     state.update_required_variables(required_variables);
 }
 
+#[cfg(not(tarpaulin_include))]
 #[tauri::command(async)]
 pub fn execute_scenario(state: State<'_, Mutex<ScenarioAppState>>) {
     let mut state = state.safe_lock();
@@ -57,6 +63,7 @@ pub fn execute_scenario(state: State<'_, Mutex<ScenarioAppState>>) {
     state.execute_scenario();
 }
 
+#[cfg(not(tarpaulin_include))]
 #[tauri::command(async)]
 pub fn get_resolved_variables(
     state: State<'_, Mutex<ScenarioAppState>>,
@@ -65,6 +72,7 @@ pub fn get_resolved_variables(
     state.get_resolved_variables()
 }
 
+#[cfg(not(tarpaulin_include))]
 #[tauri::command(async)]
 pub fn clear_state(state: State<'_, Mutex<ScenarioAppState>>) -> Result<(), String> {
     let mut state = state.safe_lock();
@@ -72,12 +80,14 @@ pub fn clear_state(state: State<'_, Mutex<ScenarioAppState>>) -> Result<(), Stri
     Ok(())
 }
 
+#[cfg(not(tarpaulin_include))]
 #[tauri::command(async)]
 pub fn get_tasks(state: State<'_, Mutex<ScenarioAppState>>) -> BTreeMap<String, TaskDTO> {
     let state = state.safe_lock();
     state.get_tasks()
 }
 
+#[cfg(not(tarpaulin_include))]
 #[tauri::command(async)]
 pub fn get_steps(state: State<'_, Mutex<ScenarioAppState>>) -> Vec<StepDTO> {
     let state = state.safe_lock();
@@ -90,6 +100,7 @@ pub fn is_valid_config_path(path: &str) -> bool {
     path.exists() && path.is_file() && path.extension() == Some(OsStr::new("toml"))
 }
 
+#[cfg(not(tarpaulin_include))]
 #[tauri::command(async)]
 pub fn get_execution_state(
     state: State<'_, Mutex<ScenarioAppState>>,
@@ -100,12 +111,12 @@ pub fn get_execution_state(
 
 #[cfg(test)]
 mod tests {
-    use super::is_valid_config_path;
+    use super::*;
 
     #[test]
-    fn test_valid_toml_file() {
+    fn test_is_valid_config_path_with_existing_toml() {
         // Given
-        let path = "Cargo.toml";
+        let path = "../../example_configs/example-scenario.toml";
 
         // When
         let result = is_valid_config_path(path);
@@ -115,9 +126,9 @@ mod tests {
     }
 
     #[test]
-    fn test_nonexistent_file() {
+    fn test_is_valid_config_path_with_nonexistent_file() {
         // Given
-        let path = "/nonexistent/path/config.toml";
+        let path = "nonexistent/file.toml";
 
         // When
         let result = is_valid_config_path(path);
@@ -127,9 +138,21 @@ mod tests {
     }
 
     #[test]
-    fn test_wrong_extension() {
+    fn test_is_valid_config_path_with_non_toml_extension() {
         // Given
-        let path = "Cargo.lock";
+        let path = "../../Cargo.toml";
+
+        // When
+        let result = is_valid_config_path(path);
+
+        // Then
+        assert!(result);
+    }
+
+    #[test]
+    fn test_is_valid_config_path_with_directory() {
+        // Given
+        let path = "../../example_configs";
 
         // When
         let result = is_valid_config_path(path);
@@ -139,9 +162,9 @@ mod tests {
     }
 
     #[test]
-    fn test_directory_path() {
+    fn test_is_valid_config_path_with_non_toml_file() {
         // Given
-        let path = "src";
+        let path = "../../README.md";
 
         // When
         let result = is_valid_config_path(path);

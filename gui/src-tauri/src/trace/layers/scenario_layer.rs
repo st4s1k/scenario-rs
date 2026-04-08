@@ -57,6 +57,12 @@ impl EventLayer for ScenarioEventLayer {
             }
         }
 
+        self.handle_visitor(visitor);
+    }
+}
+
+impl ScenarioEventLayer {
+    fn handle_visitor(&self, visitor: ScenarioEventVisitor) {
         const SCENARIO_PREFIX: &str = "[SCN]";
 
         if let Some(scenario_event_str) = visitor.scenario_event {
@@ -1051,5 +1057,545 @@ mod tests {
             }
             other => panic!("Expected LogMessage, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn test_step_started_without_context_emits_nothing() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::INFO, scenario.event = "step_started");
+        });
+
+        // Then
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_remote_sudo_started_without_context_emits_nothing() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::INFO, scenario.event = "remote_sudo_started");
+        });
+
+        // Then
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_remote_sudo_output_without_context_emits_nothing() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::INFO, scenario.event = "remote_sudo_output");
+        });
+
+        // Then
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_sftp_copy_started_without_context_emits_nothing() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::INFO, scenario.event = "sftp_copy_started");
+        });
+
+        // Then
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_sftp_copy_completed_without_context_emits_nothing() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::INFO, scenario.event = "sftp_copy_completed");
+        });
+
+        // Then
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_sftp_copy_progress_without_context_emits_nothing() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::INFO, scenario.event = "sftp_copy_progress");
+        });
+
+        // Then
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_on_fail_steps_started_without_context_emits_nothing() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::INFO, scenario.event = "on_fail_steps_started");
+        });
+
+        // Then
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_on_fail_steps_completed_without_context_emits_nothing() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::INFO, scenario.event = "on_fail_steps_completed");
+        });
+
+        // Then
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_on_fail_step_started_without_context_emits_nothing() {
+        // Given & When
+        let events = collect_events(|| {
+            event!(Level::INFO, scenario.event = "on_fail_step_started");
+        });
+
+        // Then
+        assert!(events.is_empty());
+    }
+
+    fn make_layer_and_rx() -> (ScenarioEventLayer, mpsc::Receiver<AppEvent>) {
+        let (tx, rx) = mpsc::channel();
+        (ScenarioEventLayer::new(tx), rx)
+    }
+
+    fn visitor_with(event: &str) -> scenario_rs::trace::ScenarioEventVisitor {
+        scenario_rs::trace::ScenarioEventVisitor {
+            scenario_event: Some(event.to_string()),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_handle_visitor_scenario_started() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let visitor = visitor_with("scenario_started");
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("Scenario started")));
+    }
+
+    #[test]
+    fn test_handle_visitor_scenario_completed() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let visitor = visitor_with("scenario_completed");
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("Scenario completed")));
+    }
+
+    #[test]
+    fn test_handle_visitor_scenario_failed() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let visitor = visitor_with("scenario_failed");
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("Scenario failed")));
+    }
+
+    #[test]
+    fn test_handle_visitor_error_with_step_context() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("error");
+        visitor.scenario_error = Some("connection refused".to_string());
+        visitor.step_index = Some(0);
+        visitor.steps_total = Some(3);
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("[1/3]") && m.contains("connection refused")));
+    }
+
+    #[test]
+    fn test_handle_visitor_error_with_on_fail_context() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("error");
+        visitor.scenario_error = Some("recovery timeout".to_string());
+        visitor.step_index = Some(0);
+        visitor.steps_total = Some(3);
+        visitor.on_fail_step_index = Some(1);
+        visitor.on_fail_steps_total = Some(2);
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("[on-fail]") && m.contains("[2/2]")));
+    }
+
+    #[test]
+    fn test_handle_visitor_error_without_step_context() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("error");
+        visitor.scenario_error = Some("global failure".to_string());
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("global failure")));
+    }
+
+    #[test]
+    fn test_handle_visitor_error_without_error_message() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let visitor = visitor_with("error");
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("Scenario execution failed")));
+    }
+
+    #[test]
+    fn test_handle_visitor_step_started() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("step_started");
+        visitor.step_index = Some(1);
+        visitor.steps_total = Some(5);
+        visitor.task_description = Some("Deploy service".to_string());
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("[2/5]") && m.contains("Deploy service")));
+    }
+
+    #[test]
+    fn test_handle_visitor_remote_sudo_started() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("remote_sudo_started");
+        visitor.step_index = Some(0);
+        visitor.steps_total = Some(2);
+        visitor.remote_sudo_command = Some("systemctl restart app".to_string());
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("systemctl restart app")));
+    }
+
+    #[test]
+    fn test_handle_visitor_remote_sudo_started_with_on_fail() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("remote_sudo_started");
+        visitor.step_index = Some(0);
+        visitor.steps_total = Some(2);
+        visitor.on_fail_step_index = Some(0);
+        visitor.on_fail_steps_total = Some(1);
+        visitor.remote_sudo_command = Some("recovery cmd".to_string());
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("[on-fail]")));
+    }
+
+    #[test]
+    fn test_handle_visitor_remote_sudo_output() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("remote_sudo_output");
+        visitor.step_index = Some(0);
+        visitor.steps_total = Some(1);
+        visitor.remote_sudo_output = Some("command output".to_string());
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 2);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("Output:")));
+        assert!(matches!(&msgs[1], AppEvent::LogPlainMessage(m) if m == "command output"));
+    }
+
+    #[test]
+    fn test_handle_visitor_remote_sudo_output_with_on_fail() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("remote_sudo_output");
+        visitor.step_index = Some(0);
+        visitor.steps_total = Some(1);
+        visitor.on_fail_step_index = Some(0);
+        visitor.on_fail_steps_total = Some(1);
+        visitor.remote_sudo_output = Some("recovery output".to_string());
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 2);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("[on-fail]")));
+    }
+
+    #[test]
+    fn test_handle_visitor_sftp_copy_started() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("sftp_copy_started");
+        visitor.step_index = Some(0);
+        visitor.steps_total = Some(2);
+        visitor.sftp_copy_source = Some("/local/file.tar".to_string());
+        visitor.sftp_copy_destination = Some("/remote/file.tar".to_string());
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 2);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("/local/file.tar")));
+        assert!(matches!(&msgs[1], AppEvent::LogMessage(m) if m.contains("/remote/file.tar")));
+    }
+
+    #[test]
+    fn test_handle_visitor_sftp_copy_started_with_on_fail() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("sftp_copy_started");
+        visitor.step_index = Some(0);
+        visitor.steps_total = Some(2);
+        visitor.on_fail_step_index = Some(0);
+        visitor.on_fail_steps_total = Some(1);
+        visitor.sftp_copy_source = Some("/backup/file.tar".to_string());
+        visitor.sftp_copy_destination = Some("/remote/file.tar".to_string());
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 2);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("[on-fail]")));
+    }
+
+    #[test]
+    fn test_handle_visitor_sftp_copy_completed() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("sftp_copy_completed");
+        visitor.step_index = Some(0);
+        visitor.steps_total = Some(1);
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("SFTP copy finished")));
+    }
+
+    #[test]
+    fn test_handle_visitor_sftp_copy_completed_with_on_fail() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("sftp_copy_completed");
+        visitor.step_index = Some(0);
+        visitor.steps_total = Some(1);
+        visitor.on_fail_step_index = Some(0);
+        visitor.on_fail_steps_total = Some(1);
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("[on-fail]")));
+    }
+
+    #[test]
+    fn test_handle_visitor_sftp_copy_progress() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("sftp_copy_progress");
+        visitor.step_index = Some(0);
+        visitor.steps_total = Some(1);
+        visitor.sftp_copy_progress_current = Some(500);
+        visitor.sftp_copy_progress_total = Some(1000);
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("50.0%")));
+    }
+
+    #[test]
+    fn test_handle_visitor_sftp_copy_progress_with_on_fail() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("sftp_copy_progress");
+        visitor.step_index = Some(0);
+        visitor.steps_total = Some(1);
+        visitor.on_fail_step_index = Some(0);
+        visitor.on_fail_steps_total = Some(1);
+        visitor.sftp_copy_progress_current = Some(750);
+        visitor.sftp_copy_progress_total = Some(1000);
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("[on-fail]") && m.contains("75.0%")));
+    }
+
+    #[test]
+    fn test_handle_visitor_on_fail_steps_started() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("on_fail_steps_started");
+        visitor.step_index = Some(0);
+        visitor.steps_total = Some(3);
+        visitor.on_fail_steps_total = Some(2);
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("Starting failure recovery steps")));
+    }
+
+    #[test]
+    fn test_handle_visitor_on_fail_steps_completed() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("on_fail_steps_completed");
+        visitor.step_index = Some(0);
+        visitor.steps_total = Some(3);
+        visitor.on_fail_steps_total = Some(2);
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("Failure recovery steps completed")));
+    }
+
+    #[test]
+    fn test_handle_visitor_on_fail_step_started() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let mut visitor = visitor_with("on_fail_step_started");
+        visitor.step_index = Some(1);
+        visitor.steps_total = Some(3);
+        visitor.on_fail_step_index = Some(0);
+        visitor.on_fail_steps_total = Some(2);
+        visitor.task_description = Some("Rollback deployment".to_string());
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert_eq!(msgs.len(), 1);
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("[on-fail]") && m.contains("Rollback deployment")));
+    }
+
+    #[test]
+    fn test_handle_visitor_noop_events() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+
+        // When
+        for event in [
+            "step_completed", "on_fail_step_completed", "create_session_started",
+            "create_session_completed", "created_mock_session", "session_created",
+            "steps_started", "remote_sudo_completed", "steps_completed",
+        ] {
+            layer.handle_visitor(visitor_with(event));
+        }
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert!(msgs.is_empty());
+    }
+
+    #[test]
+    fn test_handle_visitor_unrecognized_event() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let visitor = visitor_with("totally_unknown_event_xyz");
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert!(msgs.is_empty());
+    }
+
+    #[test]
+    fn test_handle_visitor_no_event() {
+        // Given
+        let (layer, rx) = make_layer_and_rx();
+        let visitor = scenario_rs::trace::ScenarioEventVisitor::default();
+
+        // When
+        layer.handle_visitor(visitor);
+
+        // Then
+        let msgs: Vec<_> = rx.try_iter().collect();
+        assert!(msgs.is_empty());
     }
 }
