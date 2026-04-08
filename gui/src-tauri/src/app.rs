@@ -18,7 +18,9 @@ use scenario_rs::{
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
+    ffi::OsStr,
     ops::Deref,
+    path::Path,
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::Receiver,
@@ -582,6 +584,11 @@ fn diff_batch_stream(
     while let Some(batch) = collect_batch(&rx, Duration::from_millis(100)) {
         let _ = app_handle.emit("execution-diff", &batch);
     }
+}
+
+pub fn is_valid_config_path(path: &str) -> bool {
+    let path = Path::new(path);
+    path.exists() && path.is_file() && path.extension() == Some(OsStr::new("toml"))
 }
 
 #[cfg(test)]
@@ -1475,5 +1482,65 @@ mod tests {
         // Then
         assert!(batch.is_some());
         assert!(!batch.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_is_valid_config_path_with_existing_toml() {
+        // Given
+        let path = "../../example_configs/example-scenario.toml";
+
+        // When
+        let result = super::is_valid_config_path(path);
+
+        // Then
+        assert!(result);
+    }
+
+    #[test]
+    fn test_is_valid_config_path_with_nonexistent_file() {
+        // Given
+        let path = "nonexistent/file.toml";
+
+        // When
+        let result = super::is_valid_config_path(path);
+
+        // Then
+        assert!(!result);
+    }
+
+    #[test]
+    fn test_is_valid_config_path_with_toml_extension() {
+        // Given
+        let path = "../../Cargo.toml";
+
+        // When
+        let result = super::is_valid_config_path(path);
+
+        // Then
+        assert!(result);
+    }
+
+    #[test]
+    fn test_is_valid_config_path_with_directory() {
+        // Given
+        let path = "../../example_configs";
+
+        // When
+        let result = super::is_valid_config_path(path);
+
+        // Then
+        assert!(!result);
+    }
+
+    #[test]
+    fn test_is_valid_config_path_with_non_toml_file() {
+        // Given
+        let path = "../../README.md";
+
+        // When
+        let result = super::is_valid_config_path(path);
+
+        // Then
+        assert!(!result);
     }
 }
