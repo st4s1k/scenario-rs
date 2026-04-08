@@ -125,18 +125,36 @@ describe('ExecutionProgressComponent', () => {
   });
 
   describe('displayStates', () => {
-    it('should return stepExecStates when onFailExecStates is undefined', () => {
+    it('should return empty array for all-Pending stepExecStates', () => {
       // Given
       component.stepExecStates = [makeExecState()];
+      component.onFailExecStates = undefined;
+
+      // When & Then
+      expect(component.displayStates).toEqual([]);
+    });
+
+    it('should return stepExecStates when any step has started', () => {
+      // Given
+      component.stepExecStates = [makeExecState({ status: 'Running' })];
       component.onFailExecStates = undefined;
 
       // When & Then
       expect(component.displayStates).toBe(component.stepExecStates);
     });
 
-    it('should return onFailExecStates when defined', () => {
+    it('should return empty array for all-Pending onFailExecStates', () => {
       // Given
       const onFail = [makeOnFailExecState()];
+      component.onFailExecStates = onFail;
+
+      // When & Then
+      expect(component.displayStates).toEqual([]);
+    });
+
+    it('should return onFailExecStates when any step has started', () => {
+      // Given
+      const onFail = [makeOnFailExecState({ status: 'Running' })];
       component.onFailExecStates = onFail;
 
       // When & Then
@@ -224,7 +242,7 @@ describe('ExecutionProgressComponent', () => {
       });
 
       // Then
-      expect(component.uiStates[0].statusColor()).toBeUndefined();
+      expect(component.uiStates.length).toBe(0);
     });
 
     it('should collapse step on Completed', () => {
@@ -259,11 +277,12 @@ describe('ExecutionProgressComponent', () => {
       triggerChanges(component, {
         stepExecStates: { prev: null, curr: component.stepExecStates, first: true },
       });
+      expect(component.uiStates[0].statusColor()).toBe('blue');
       component.uiStates[0].statusColor.set(undefined);
 
       // When
       triggerChanges(component, {
-        stepExecStates: { prev: component.stepExecStates, curr: component.stepExecStates, first: false },
+        isExecuting: { prev: true, curr: true, first: false },
       });
 
       // Then

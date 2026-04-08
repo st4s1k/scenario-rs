@@ -51,7 +51,7 @@ describe('AppComponent', () => {
       'update_required_variables': undefined,
     });
 
-    executionStateService = jasmine.createSpyObj('ExecutionStateService', ['init', 'destroy', 'isExecuting'], {
+    executionStateService = jasmine.createSpyObj('ExecutionStateService', ['init', 'destroy', 'reset', 'isExecuting'], {
       isExecuting: jasmine.createSpy('isExecuting').and.returnValue(false),
       executionState: jasmine.createSpy('executionState').and.returnValue(null),
     });
