@@ -25,5 +25,5 @@ error_message = "Failed to upload configuration file"
 [tasks.apply_config]
 type = "RemoteSudo"
 description = "Applying configuration"
-command = "sudo systemctl reload myapp"
+command = "echo 'Configuration applied'"
 error_message = "Failed to apply configuration"

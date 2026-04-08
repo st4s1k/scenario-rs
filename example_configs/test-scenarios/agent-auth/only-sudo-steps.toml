@@ -25,5 +25,5 @@ error_message = "Memory check failed"
 [tasks.check_services]
 type = "RemoteSudo"
 description = "Checking running services"
-command = "systemctl list-units --type=service --state=running"
+command = "ps aux | head -10"
 error_message = "Service check failed"

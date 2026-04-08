@@ -16,7 +16,7 @@ steps = [
 [tasks.stop_service]
 type = "RemoteSudo"
 description = "Stopping the service"
-command = "sudo systemctl stop myapp"
+command = "echo 'Service stopped'"
 error_message = "Failed to stop service"
 
 [tasks.deploy_with_bad_var]
@@ -28,11 +28,11 @@ error_message = "Deployment failed"
 [tasks.rollback_deploy]
 type = "RemoteSudo"
 description = "Rolling back deployment"
-command = "sudo cp /opt/myapp/backup/myapp.jar /opt/myapp/myapp.jar"
+command = "echo 'Rollback complete'"
 error_message = "Rollback failed"
 
 [tasks.start_service]
 type = "RemoteSudo"
 description = "Starting the service"
-command = "sudo systemctl start myapp"
+command = "echo 'Service started'"
 error_message = "Failed to start service"
