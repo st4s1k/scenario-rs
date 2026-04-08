@@ -23,18 +23,35 @@ export class ExecutionStateService {
     await this.hydrate();
 
     this.unlistenDiff = await listen<StateDiff[]>('execution-diff', (event) => {
-      if (!this.executionState()) {
-        // State not yet available — queue diffs and hydrate
+      const hasRunningTransition = event.payload.some(
+        d => d.kind === 'ExecutionStatusChanged' && d.status.kind === 'Running'
+      );
+
+      if (hasRunningTransition) {
+        this.executionState.set(null);
         this.pendingDiffs.push(event.payload);
         this.hydrateAndFlush();
         return;
       }
+
+      if (this.hydrating || !this.executionState()) {
+        this.pendingDiffs.push(event.payload);
+        if (!this.hydrating) {
+          this.hydrateAndFlush();
+        }
+        return;
+      }
+
       this.applyDiffs(event.payload);
     });
   }
 
   async destroy(): Promise<void> {
     this.unlistenDiff?.();
+  }
+
+  reset(): void {
+    this.executionState.set(null);
   }
 
   private async hydrate(): Promise<void> {
@@ -49,7 +66,6 @@ export class ExecutionStateService {
     this.hydrating = true;
     try {
       await this.hydrate();
-      // Apply any diffs that arrived while we were fetching
       const queued = this.pendingDiffs.splice(0);
       for (const batch of queued) {
         this.applyDiffs(batch);
@@ -62,7 +78,6 @@ export class ExecutionStateService {
   private applyDiffs(diffs: StateDiff[]): void {
     this.executionState.update(state => {
       if (!state) return state;
-      // Shallow-clone top level and steps for immutable signal update
       const newState: ExecutionState = {
         status: { ...state.status },
         steps: state.steps.map(s => ({

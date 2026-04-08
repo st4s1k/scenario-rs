@@ -8,11 +8,61 @@
 
   .titlebar {
     display: grid;
-    grid-template-columns: auto 1fr auto auto auto auto;
+    grid-template-columns: auto auto 1fr auto auto auto auto;
     height: $size;
     background: styles.$secondary-color-lighter-5;
     border-bottom: styles.$border-width solid styles.$secondary-color-lighter-20;
     box-sizing: border-box;
+
+    .debug-toggle {
+      display: flex;
+      align-items: center;
+      gap: styles.$gap-small;
+      cursor: pointer;
+      position: relative;
+      padding: 0 styles.$gap-medium;
+
+      .toggle-track {
+        width: 2rem;
+        height: 1rem;
+        border-radius: 0.5rem;
+        background-color: styles.$secondary-color-lighter-20;
+        border: styles.$border-width solid styles.$secondary-color-lighter-40;
+        position: relative;
+        transition: background-color 0.2s;
+
+        .toggle-thumb {
+          width: 0.75rem;
+          height: 0.75rem;
+          border-radius: 50%;
+          background-color: styles.$secondary-color-lighter-60;
+          position: absolute;
+          top: 50%;
+          left: 0.1rem;
+          transform: translateY(-50%);
+          transition: left 0.2s, background-color 0.2s;
+        }
+
+        &.active {
+          background-color: styles.$primary-color-transparent-60;
+          border-color: styles.$primary-color;
+
+          .toggle-thumb {
+            left: calc(100% - 0.85rem);
+            background-color: styles.$primary-color;
+          }
+        }
+      }
+
+      .toggle-label {
+        font-size: styles.$font-size-small;
+        color: styles.$secondary-color-lighter-60;
+      }
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+    }
 
     #spacer {
       flex: 1;

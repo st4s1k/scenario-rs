@@ -38,7 +38,9 @@ export class ExecutionProgressComponent implements OnChanges {
   @Input() onFailExecStates?: OnFailStepExecState[];
 
   get displayStates(): readonly (StepExecState | OnFailStepExecState)[] {
-    return this.onFailExecStates ?? this.stepExecStates;
+    const states = this.onFailExecStates ?? this.stepExecStates;
+    const anyStarted = states.some(s => s.status !== 'Pending');
+    return anyStarted ? states : [];
   }
 
   uiStates: UiState[] = [];
@@ -47,9 +49,10 @@ export class ExecutionProgressComponent implements OnChanges {
   private previousIsExecuting?: boolean;
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['isExecuting']
-      && this.previousIsExecuting === false
-      && this.isExecuting === true) {
+    if (changes['stepExecStates'] || changes['onFailExecStates']
+      || (changes['isExecuting']
+        && this.previousIsExecuting === false
+        && this.isExecuting === true)) {
       this.uiStates = [];
     }
     this.previousIsExecuting = this.isExecuting;

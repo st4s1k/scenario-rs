@@ -7,8 +7,11 @@ $red: #FD5E53; // Sunset orange
 $green: #69D84F; // Fresh green
 $blue: #069AF3; // Azure
 
-// Lighter shades
+// Primary color shades
 $primary-color-lighter-40: color-mix(in srgb, white 40%, $primary-color);
+$primary-color-transparent-60: color-mix(in srgb, transparent 60%, $primary-color);
+
+// Secondary color shades
 $secondary-color-lighter-2: color-mix(in srgb, white 2%, $secondary-color);
 $secondary-color-lighter-5: color-mix(in srgb, white 5%, $secondary-color);
 $secondary-color-lighter-10: color-mix(in srgb, white 10%, $secondary-color);

@@ -102,6 +102,10 @@ export class AppComponent implements OnDestroy {
 
   isExecuting = this.executionStateService.isExecuting;
   stepExecStates = computed(() => this.executionStateService.executionState()?.steps ?? []);
+  executionError = computed(() => {
+    const status = this.executionStateService.executionState()?.status;
+    return status?.kind === 'Failed' ? status.error : null;
+  });
 
   executionLog = signal('');
   private pendingLogBuffer: string[] = [];
@@ -214,6 +218,7 @@ export class AppComponent implements OnDestroy {
   }
 
   async loadConfig() {
+    this.executionStateService.reset();
     await invoke('load_config', { configPath: this.scenarioConfigPath.value });
     await this.getTasks();
     await this.getSteps();
@@ -307,6 +312,7 @@ export class AppComponent implements OnDestroy {
   }
 
   executeScenario(): void {
+    this.executionStateService.reset();
     invoke('execute_scenario');
   }
 }

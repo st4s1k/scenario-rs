@@ -55,6 +55,12 @@
         <div class="section">
           <execution-progress [steps]="steps" [stepExecStates]="stepExecStates()" [isExecuting]="isExecuting()">
           </execution-progress>
+          @if (executionError()) {
+          <div class="execution-error">
+            <span class="execution-error-label">Execution failed:</span>
+            <span>{{ executionError() }}</span>
+          </div>
+          }
         </div>
       </expandable>
 

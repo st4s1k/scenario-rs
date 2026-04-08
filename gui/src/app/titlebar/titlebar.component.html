@@ -8,6 +8,14 @@
     <tooltip text="Clear application state" arrow="left"></tooltip>
   </div>
 
+  <div class="debug-toggle" (click)="toggleDebugMode()">
+    <div class="toggle-track" [class.active]="debugMode()">
+      <div class="toggle-thumb"></div>
+    </div>
+    <span class="toggle-label">Debug</span>
+    <tooltip [text]="debugMode() ? 'Using simulated SSH (no real connections)' : 'Using real SSH connections'" arrow="left"></tooltip>
+  </div>
+
   <div data-tauri-drag-region id="spacer"></div>
 
   <div class="button" id="save" (click)="save()">

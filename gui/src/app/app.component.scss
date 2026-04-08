@@ -158,6 +158,20 @@
         overflow: none;
       }
 
+      .execution-error {
+        display: flex;
+        gap: styles.$gap-small;
+        padding: styles.$gap-medium;
+        color: styles.$red;
+        border: styles.$border-width solid styles.$red;
+        font-size: styles.$font-size-small;
+
+        .execution-error-label {
+          font-weight: 700;
+          white-space: nowrap;
+        }
+      }
+
       .log-section {
         flex-grow: 1;
         display: grid;
