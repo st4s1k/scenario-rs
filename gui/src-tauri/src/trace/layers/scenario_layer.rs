@@ -18,6 +18,18 @@ impl ScenarioEventLayer {
     }
 }
 
+fn format_bytes(bytes: u64) -> String {
+    const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
+    let mut value = bytes as f64;
+    for unit in UNITS {
+        if value < 1024.0 {
+            return format!("{:.2} {}", value, unit);
+        }
+        value /= 1024.0;
+    }
+    format!("{:.2} PB", value)
+}
+
 impl EventLayer for ScenarioEventLayer {
     fn on_new_span<S>(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>)
     where
@@ -308,25 +320,33 @@ impl ScenarioEventLayer {
                             / sftp_copy_progress_total as f64)
                             * 100.0;
 
+                        let transferred =
+                            format_bytes(sftp_copy_progress_current);
+                        let total = format_bytes(sftp_copy_progress_total);
+
                         if let (Some(on_fail_step_index), Some(on_fail_steps_total)) =
                             (visitor.on_fail_step_index, visitor.on_fail_steps_total)
                         {
-                            self.sender.send_event(AppEvent::LogMessage(format!(
-                                "{} [{}/{}] [on-fail] [{}/{}] Progress: {:.1}%",
+                            self.sender.send_event(AppEvent::LogProgress(format!(
+                                "{} [{}/{}] [on-fail] [{}/{}] [{:.1}%] {}/{}",
                                 SCENARIO_PREFIX,
                                 step_index + 1,
                                 steps_total,
                                 on_fail_step_index + 1,
                                 on_fail_steps_total,
-                                percentage
+                                percentage,
+                                transferred,
+                                total
                             )));
                         } else {
-                            self.sender.send_event(AppEvent::LogMessage(format!(
-                                "{} [{}/{}] Progress: {:.1}%",
+                            self.sender.send_event(AppEvent::LogProgress(format!(
+                                "{} [{}/{}] [{:.1}%] {}/{}",
                                 SCENARIO_PREFIX,
                                 step_index + 1,
                                 steps_total,
-                                percentage
+                                percentage,
+                                transferred,
+                                total
                             )));
                         }
                     }
@@ -403,7 +423,7 @@ impl ScenarioEventLayer {
 #[cfg(test)]
 mod tests {
     use crate::trace::{
-        layers::{scenario_layer::ScenarioEventLayer, EventLayer},
+        layers::{scenario_layer::{ScenarioEventLayer, format_bytes}, EventLayer},
         AppEvent,
     };
     use std::sync::mpsc;
@@ -683,10 +703,11 @@ mod tests {
         // Then
         assert_eq!(events.len(), 1);
         match &events[0] {
-            AppEvent::LogMessage(msg) => {
+            AppEvent::LogProgress(msg) => {
                 assert!(msg.contains("50.0%"), "expected 50.0%% in: {msg}");
+                assert!(msg.contains("500.00 B/1000.00 B"), "expected bytes in: {msg}");
             }
-            other => panic!("Expected LogMessage, got {other:?}"),
+            other => panic!("Expected LogProgress, got {other:?}"),
         }
     }
 
@@ -975,11 +996,12 @@ mod tests {
         // Then
         assert_eq!(events.len(), 1);
         match &events[0] {
-            AppEvent::LogMessage(msg) => {
+            AppEvent::LogProgress(msg) => {
                 assert!(msg.contains("[on-fail]"), "expected [on-fail] in: {msg}");
                 assert!(msg.contains("75.0%"), "expected 75.0%% in: {msg}");
+                assert!(msg.contains("750.00 B/1000.00 B"), "expected bytes in: {msg}");
             }
-            other => panic!("Expected LogMessage, got {other:?}"),
+            other => panic!("Expected LogProgress, got {other:?}"),
         }
     }
 
@@ -1489,7 +1511,7 @@ mod tests {
         // Then
         let msgs: Vec<_> = rx.try_iter().collect();
         assert_eq!(msgs.len(), 1);
-        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("50.0%")));
+        assert!(matches!(&msgs[0], AppEvent::LogProgress(m) if m.contains("50.0%")));
     }
 
     #[test]
@@ -1510,7 +1532,7 @@ mod tests {
         // Then
         let msgs: Vec<_> = rx.try_iter().collect();
         assert_eq!(msgs.len(), 1);
-        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("[on-fail]") && m.contains("75.0%")));
+        assert!(matches!(&msgs[0], AppEvent::LogProgress(m) if m.contains("[on-fail]") && m.contains("75.0%")));
     }
 
     #[test]
@@ -1614,5 +1636,40 @@ mod tests {
         // Then
         let msgs: Vec<_> = rx.try_iter().collect();
         assert!(msgs.is_empty());
+    }
+
+    #[test]
+    fn test_format_bytes_zero() {
+        assert_eq!(format_bytes(0), "0.00 B");
+    }
+
+    #[test]
+    fn test_format_bytes_bytes() {
+        assert_eq!(format_bytes(500), "500.00 B");
+    }
+
+    #[test]
+    fn test_format_bytes_fractional() {
+        assert_eq!(format_bytes(1536), "1.50 KB");
+    }
+
+    #[test]
+    fn test_format_bytes_kilobytes() {
+        assert_eq!(format_bytes(1024), "1.00 KB");
+    }
+
+    #[test]
+    fn test_format_bytes_megabytes() {
+        assert_eq!(format_bytes(1048576), "1.00 MB");
+    }
+
+    #[test]
+    fn test_format_bytes_gigabytes() {
+        assert_eq!(format_bytes(1073741824), "1.00 GB");
+    }
+
+    #[test]
+    fn test_format_bytes_petabytes() {
+        assert_eq!(format_bytes(1125899906842624), "1.00 PB");
     }
 }

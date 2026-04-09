@@ -6,6 +6,7 @@ use tauri::{AppHandle, Emitter};
 pub enum AppEvent {
     LogMessage(String),
     LogPlainMessage(String),
+    LogProgress(String),
 }
 
 pub struct FrontendEventHandler;
@@ -25,6 +26,11 @@ impl EventHandler<AppEvent> for FrontendEventHandler {
             }
             AppEvent::LogPlainMessage(text) => {
                 let _ = app_handle.emit("log-message", text);
+            }
+            AppEvent::LogProgress(message) => {
+                let timestamp = Local::now().format("%H:%M:%S.%3f").to_string();
+                let message = format!("[{timestamp}] {message}");
+                let _ = app_handle.emit("log-progress", message);
             }
         }
     }
@@ -62,6 +68,19 @@ mod tests {
     }
 
     #[test]
+    fn test_is_terminal_returns_false_for_log_progress() {
+        // Given
+        let handler = FrontendEventHandler;
+        let event = AppEvent::LogProgress("progress".to_string());
+
+        // When
+        let result = handler.is_terminal(&event);
+
+        // Then
+        assert!(!result);
+    }
+
+    #[test]
     fn test_app_event_log_message_holds_string() {
         // Given & When
         let event = AppEvent::LogMessage("hello world".to_string());
@@ -82,6 +101,18 @@ mod tests {
         match event {
             AppEvent::LogPlainMessage(msg) => assert_eq!(msg, "raw output"),
             _ => panic!("Expected LogPlainMessage variant"),
+        }
+    }
+
+    #[test]
+    fn test_app_event_log_progress_holds_string() {
+        // Given & When
+        let event = AppEvent::LogProgress("50% done".to_string());
+
+        // Then
+        match event {
+            AppEvent::LogProgress(msg) => assert_eq!(msg, "50% done"),
+            _ => panic!("Expected LogProgress variant"),
         }
     }
 

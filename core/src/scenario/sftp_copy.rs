@@ -158,6 +158,7 @@ impl SftpCopy {
                         destination: resolved_destination.clone(),
                         bytes_transferred: current_bytes,
                         bytes_total: total_bytes,
+                        elapsed_ms: transfer_start.elapsed().as_millis() as u64,
                     });
                 }
 
@@ -174,6 +175,17 @@ impl SftpCopy {
             })?;
 
         let elapsed = transfer_start.elapsed();
+
+        if let Some(tracker) = tracker {
+            tracker.update_progress(TaskProgress::SftpCopy {
+                source: resolved_source.clone(),
+                destination: resolved_destination.clone(),
+                bytes_transferred: total_bytes,
+                bytes_total: total_bytes,
+                elapsed_ms: elapsed.as_millis() as u64,
+            });
+        }
+
         let mb_transferred = total_bytes as f64 / (1024.0 * 1024.0);
         let throughput_mbps = mb_transferred / elapsed.as_secs_f64().max(f64::MIN_POSITIVE);
 

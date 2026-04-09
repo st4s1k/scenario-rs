@@ -28,6 +28,7 @@ pub enum TaskProgress {
         destination: String,
         bytes_transferred: u64,
         bytes_total: u64,
+        elapsed_ms: u64,
     },
     RemoteSudo {
         command: String,
@@ -126,6 +127,7 @@ mod tests {
                     destination: "/opt/b".into(),
                     bytes_transferred: 50,
                     bytes_total: 100,
+                    elapsed_ms: 500,
                 }),
                 output: "done\n".into(),
                 errors: vec!["warning".into()],
@@ -168,6 +170,7 @@ mod tests {
             destination: "b".into(),
             bytes_transferred: 10,
             bytes_total: 20,
+            elapsed_ms: 100,
         };
         let json = serde_json::to_value(&p).unwrap();
         assert_eq!(json["type"], "SftpCopy");
@@ -213,6 +216,7 @@ mod tests {
                 destination: "dst".into(),
                 bytes_transferred: 42,
                 bytes_total: 100,
+                elapsed_ms: 200,
             },
         };
 

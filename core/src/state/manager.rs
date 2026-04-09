@@ -445,6 +445,7 @@ mod tests {
             destination: "/remote/file".to_string(),
             bytes_transferred: 512,
             bytes_total: 1024,
+            elapsed_ms: 300,
         };
 
         // When
