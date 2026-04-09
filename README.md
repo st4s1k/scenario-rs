@@ -2,9 +2,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) or [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-
-[![publish](https://github.com/st4s1k/scenario-rs/actions/workflows/scenario-rs.yml/badge.svg)](https://github.com/st4s1k/scenario-rs/actions/workflows/scenario-rs.yml)
-[![Rust Coverage](https://codecov.io/gh/st4s1k/scenario-rs/graph/badge.svg?flag=rust)](https://codecov.io/gh/st4s1k/scenario-rs) [![Angular Coverage](https://codecov.io/gh/st4s1k/scenario-rs/graph/badge.svg?flag=angular)](https://codecov.io/gh/st4s1k/scenario-rs)
+<table>
+<tr><td>Publish</td><td><a href="https://github.com/st4s1k/scenario-rs/actions/workflows/scenario-rs.yml"><img src="https://github.com/st4s1k/scenario-rs/actions/workflows/scenario-rs.yml/badge.svg" alt="publish"></a></td></tr>
+<tr><td>Rust Coverage</td><td><a href="https://codecov.io/gh/st4s1k/scenario-rs"><img src="https://codecov.io/gh/st4s1k/scenario-rs/graph/badge.svg?flag=rust" alt="Rust Coverage"></a></td></tr>
+<tr><td>Angular Coverage</td><td><a href="https://codecov.io/gh/st4s1k/scenario-rs"><img src="https://codecov.io/gh/st4s1k/scenario-rs/graph/badge.svg?flag=angular" alt="Angular Coverage"></a></td></tr>
+</table>
 
 A powerful automation tool for executing remote commands and transferring files via SSH. It uses configuration files to define execution scenarios, making system administration and deployment tasks repeatable and reliable.
 
