@@ -13,7 +13,6 @@ use crate::{
 };
 use std::sync::Mutex;
 use tauri::Manager;
-use tracing::Level;
 use tracing_subscriber::{
     filter::EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt, Layer,
 };

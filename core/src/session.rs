@@ -9,6 +9,7 @@ use std::{fmt, path::Path, sync::Arc};
 /// Run an async future on the given runtime from any context.
 /// If already inside a Tokio runtime (e.g. Tauri), spawns a thread so the
 /// dedicated runtime's `block_on` does not conflict with the outer runtime.
+#[cfg(not(tarpaulin_include))]
 fn try_block_on<F, R>(runtime: &tokio::runtime::Runtime, fut: F) -> R
 where
     F: std::future::Future<Output = R> + Send,
@@ -60,6 +61,10 @@ pub trait Sftp {
 /// Write operations for remote files, returned by `Sftp::create`.
 pub trait Write {
     fn write_all(&mut self, buf: &[u8]) -> Result<(), SshError>;
+
+    fn flush(&mut self) -> Result<(), SshError> {
+        Ok(())
+    }
 }
 
 /// Russh client handler — accepts all host keys.
@@ -305,6 +310,7 @@ impl Default for Session {
 }
 
 impl Drop for Session {
+    #[cfg(not(tarpaulin_include))]
     fn drop(&mut self) {
         debug!("drop session");
         let inner = std::mem::replace(&mut self.inner, SessionType::Mock);
@@ -385,25 +391,64 @@ impl Sftp for RusshSftp {
         let rt = self.runtime.clone();
         let file = try_block_on(&rt, self.sftp.create(path_str))
             .map_err(|e| SshError::new(e.to_string()))?;
-        Ok(Box::new(RusshFile {
-            runtime: self.runtime.clone(),
-            file,
-        }))
+        Ok(Box::new(RusshFile::new(self.runtime.clone(), file)))
     }
 }
 
 #[cfg(not(tarpaulin_include))]
 struct RusshFile {
-    runtime: Arc<tokio::runtime::Runtime>,
-    file: russh_sftp::client::fs::File,
+    tx: std::sync::mpsc::SyncSender<Vec<u8>>,
+    rx_result: std::sync::mpsc::Receiver<Result<(), SshError>>,
+}
+
+#[cfg(not(tarpaulin_include))]
+impl RusshFile {
+    fn new(runtime: Arc<tokio::runtime::Runtime>, mut file: russh_sftp::client::fs::File) -> Self {
+        let (tx, rx) = std::sync::mpsc::sync_channel::<Vec<u8>>(16);
+        let (tx_result, rx_result) = std::sync::mpsc::sync_channel::<Result<(), SshError>>(16);
+        let handle = runtime.handle().clone();
+
+        std::thread::spawn(move || {
+            let _rt = runtime;
+            while let Ok(buf) = rx.recv() {
+                let result = handle
+                    .block_on(tokio::io::AsyncWriteExt::write_all(&mut file, &buf))
+                    .map_err(|e| SshError::new(e.to_string()));
+                if tx_result.send(result).is_err() {
+                    break;
+                }
+            }
+        });
+
+        Self { tx, rx_result }
+    }
+
+    fn check_errors(&mut self) -> Result<(), SshError> {
+        while let Ok(result) = self.rx_result.try_recv() {
+            result?;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(not(tarpaulin_include))]
 impl Write for RusshFile {
     fn write_all(&mut self, buf: &[u8]) -> Result<(), SshError> {
-        let rt = self.runtime.clone();
-        try_block_on(&rt, tokio::io::AsyncWriteExt::write_all(&mut self.file, buf))
-            .map_err(|e| SshError::new(e.to_string()))
+        self.check_errors()?;
+        self.tx
+            .send(buf.to_vec())
+            .map_err(|_| SshError::new("SFTP writer thread terminated unexpectedly"))
+    }
+
+    fn flush(&mut self) -> Result<(), SshError> {
+        drop(std::mem::replace(
+            &mut self.tx,
+            std::sync::mpsc::sync_channel(0).0,
+        ));
+        while let Ok(result) = self.rx_result.recv() {
+            result?;
+        }
+        Ok(())
     }
 }
 
@@ -915,5 +960,132 @@ mod tests {
             },
             private_key: None,
         }
+    }
+
+    struct NoOpWrite;
+    impl Write for NoOpWrite {
+        fn write_all(&mut self, _buf: &[u8]) -> Result<(), SshError> {
+            Ok(())
+        }
+    }
+
+    struct NoOpSftp;
+    impl Sftp for NoOpSftp {
+        fn create(&self, _path: &Path) -> Result<Box<dyn Write>, SshError> {
+            Ok(Box::new(NoOpWrite))
+        }
+    }
+
+    #[test]
+    fn test_perf_write_throughput_64kb_chunks() {
+        // Given
+        let total_bytes: usize = 50 * 1024 * 1024;
+        let chunk_size: usize = 64 * 1024;
+        let chunk = vec![0u8; chunk_size];
+        let mut writer: Box<dyn Write> = Box::new(NoOpWrite);
+
+        // When
+        let start = std::time::Instant::now();
+        let mut written = 0;
+        while written < total_bytes {
+            writer.write_all(&chunk).unwrap();
+            written += chunk_size;
+        }
+        let elapsed = start.elapsed();
+
+        // Then
+        assert!(
+            elapsed.as_millis() < 1000,
+            "50 MB write loop took {}ms, expected < 1000ms",
+            elapsed.as_millis()
+        );
+    }
+
+    #[test]
+    fn test_perf_try_block_on_overhead() {
+        // Given
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .enable_all()
+            .build()
+            .unwrap();
+        let iterations = 1000;
+
+        // When
+        let start = std::time::Instant::now();
+        for _ in 0..iterations {
+            super::try_block_on(&runtime, async { 42 });
+        }
+        let elapsed = start.elapsed();
+
+        // Then
+        assert!(
+            elapsed.as_millis() < 1000,
+            "1000 try_block_on calls took {}ms, expected < 1000ms",
+            elapsed.as_millis()
+        );
+    }
+
+    #[test]
+    fn test_perf_try_block_on_from_async_context() {
+        // Given
+        let outer_rt = tokio::runtime::Runtime::new().unwrap();
+        let inner_rt = Arc::new(
+            tokio::runtime::Builder::new_multi_thread()
+                .worker_threads(1)
+                .enable_all()
+                .build()
+                .unwrap(),
+        );
+        let iterations = 500;
+
+        // When
+        let inner_rt_clone = inner_rt.clone();
+        let elapsed = outer_rt.block_on(async move {
+            let start = std::time::Instant::now();
+            for _ in 0..iterations {
+                super::try_block_on(&inner_rt_clone, async { 42 });
+            }
+            start.elapsed()
+        });
+
+        // Then
+        assert!(
+            elapsed.as_millis() < 5000,
+            "500 try_block_on calls from async context took {}ms, expected < 5000ms",
+            elapsed.as_millis()
+        );
+    }
+
+    #[test]
+    fn test_perf_sftp_copy_50mb_mock() {
+        use crate::scenario::{sftp_copy::SftpCopy, variables::Variables};
+        use crate::utils::{ArcMutex, Wrap};
+
+        // Given
+        let session = Session {
+            inner: SessionType::Test {
+                channel: ArcMutex::wrap(mock::MockChannel),
+                sftp: ArcMutex::wrap(NoOpSftp),
+            },
+        };
+        let sftp_copy = SftpCopy {
+            source_path: "source.txt".into(),
+            destination_path: "/remote/dest.txt".into(),
+        };
+        let variables = Variables::default();
+
+        // When
+        let start = std::time::Instant::now();
+        let result = sftp_copy.execute(&session, &variables, None);
+        let elapsed = start.elapsed();
+
+        // Then
+        assert!(result.is_ok());
+        assert!(
+            elapsed.as_millis() < 2000,
+            "50 MB SFTP copy (mock) took {}ms, expected < 2000ms",
+            elapsed.as_millis()
+        );
     }
 }

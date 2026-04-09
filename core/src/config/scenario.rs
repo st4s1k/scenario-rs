@@ -590,4 +590,230 @@ mod tests {
         assert!(creds.password.is_none());
         assert_eq!(creds.private_key, Some("./my_key".to_string()));
     }
+
+    #[test]
+    fn test_try_from_pathbuf_single_config() {
+        // Given
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("scenario.toml");
+        std::fs::write(
+            &config_path,
+            r#"
+            [credentials]
+            username = "user"
+            password = "pass"
+
+            [server]
+            host = "host"
+            port = 22
+
+            [execute]
+            steps = []
+
+            [tasks]
+            "#,
+        )
+        .unwrap();
+
+        // When
+        let result = ScenarioConfig::try_from(config_path);
+
+        // Then
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.credentials.username, "user");
+        assert_eq!(config.server.host, "host");
+    }
+
+    #[test]
+    fn test_try_from_pathbuf_with_parent() {
+        // Given
+        let dir = tempfile::tempdir().unwrap();
+        let parent_path = dir.path().join("parent.toml");
+        std::fs::write(
+            &parent_path,
+            r#"
+            [credentials]
+            username = "parent_user"
+            password = "parent_pass"
+
+            [server]
+            host = "parent_host"
+            port = 22
+
+            [execute]
+            steps = []
+
+            [tasks]
+            "#,
+        )
+        .unwrap();
+
+        let child_path = dir.path().join("child.toml");
+        std::fs::write(
+            &child_path,
+            r#"
+            parent = "parent.toml"
+
+            [credentials]
+            username = "child_user"
+            "#,
+        )
+        .unwrap();
+
+        // When
+        let result = ScenarioConfig::try_from(child_path);
+
+        // Then
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.credentials.username, "child_user");
+        assert_eq!(config.credentials.password, Some("parent_pass".to_string()));
+        assert_eq!(config.server.host, "parent_host");
+    }
+
+    #[test]
+    fn test_try_from_pathbuf_circular_dependency() {
+        // Given
+        let dir = tempfile::tempdir().unwrap();
+        let a_path = dir.path().join("a.toml");
+        let b_path = dir.path().join("b.toml");
+
+        std::fs::write(&a_path, "parent = \"b.toml\"\n").unwrap();
+        std::fs::write(&b_path, "parent = \"a.toml\"\n").unwrap();
+
+        // When
+        let result = ScenarioConfig::try_from(a_path);
+
+        // Then
+        assert!(result.is_err());
+        match result {
+            Err(ScenarioConfigError::CircularDependency(path)) => {
+                assert_eq!(path, "b.toml");
+            }
+            err => panic!("Expected CircularDependency error, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_try_from_pathbuf_parent_not_found() {
+        // Given
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("scenario.toml");
+        std::fs::write(&config_path, "parent = \"missing.toml\"\n").unwrap();
+
+        // When
+        let result = ScenarioConfig::try_from(config_path);
+
+        // Then
+        assert!(result.is_err());
+        match result {
+            Err(ScenarioConfigError::ParentConfigNotFound(path)) => {
+                assert_eq!(path, "missing.toml");
+            }
+            err => panic!("Expected ParentConfigNotFound error, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_try_from_pathbuf_cannot_open_config() {
+        // Given
+        let path = std::path::PathBuf::from("/nonexistent/path/config.toml");
+
+        // When
+        let result = ScenarioConfig::try_from(path);
+
+        // Then
+        assert!(matches!(result, Err(ScenarioConfigError::CannotOpenConfig(_))));
+    }
+
+    #[test]
+    fn test_try_from_pathbuf_invalid_toml() {
+        // Given
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("bad.toml");
+        std::fs::write(&config_path, "this is not valid toml {{{").unwrap();
+
+        // When
+        let result = ScenarioConfig::try_from(config_path);
+
+        // Then
+        assert!(matches!(result, Err(ScenarioConfigError::CannotReadConfig(_))));
+    }
+
+    #[test]
+    fn test_try_from_pathbuf_absolute_parent_path() {
+        // Given
+        let dir = tempfile::tempdir().unwrap();
+        let parent_path = dir.path().join("parent.toml");
+        std::fs::write(
+            &parent_path,
+            r#"
+            [credentials]
+            username = "user"
+            password = "pass"
+
+            [server]
+            host = "host"
+            port = 22
+
+            [execute]
+            steps = []
+
+            [tasks]
+            "#,
+        )
+        .unwrap();
+
+        let child_path = dir.path().join("child.toml");
+        let absolute_parent = parent_path.to_string_lossy().replace('\\', "/");
+        std::fs::write(
+            &child_path,
+            format!("parent = \"{}\"\n", absolute_parent),
+        )
+        .unwrap();
+
+        // When
+        let result = ScenarioConfig::try_from(child_path);
+
+        // Then
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_try_from_pathbuf_resolves_relative_private_key() {
+        // Given
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("scenario.toml");
+        std::fs::write(
+            &config_path,
+            r#"
+            [credentials]
+            username = "user"
+            private_key = "./keys/id_rsa"
+
+            [server]
+            host = "host"
+            port = 22
+
+            [execute]
+            steps = []
+
+            [tasks]
+            "#,
+        )
+        .unwrap();
+
+        // When
+        let result = ScenarioConfig::try_from(config_path);
+
+        // Then
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        let key_path = config.credentials.private_key.unwrap();
+        assert!(
+            std::path::Path::new(&key_path).is_absolute(),
+            "Relative private key should be resolved to absolute path"
+        );
+    }
 }

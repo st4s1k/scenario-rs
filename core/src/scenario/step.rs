@@ -204,6 +204,72 @@ mod tests {
     }
 
     #[test]
+    fn test_step_execute_success_with_state_manager() {
+        init_tracing();
+
+        // Given
+        use crate::state::{
+            types::{ExecutionState, ExecutionStatus, StepExecState, StepStatus},
+            ExecutionStateManager,
+        };
+        use std::sync::mpsc;
+
+        struct TestChannel;
+        impl Channel for TestChannel {
+            fn exec(&mut self, _: &str) -> Result<(), SshError> { Ok(()) }
+            fn read_to_string(&mut self, _: &mut String) -> Result<usize, SshError> { Ok(0) }
+            fn exit_status(&self) -> Result<i32, SshError> { Ok(0) }
+        }
+        struct TestWrite;
+        impl crate::session::Write for TestWrite {
+            fn write_all(&mut self, _: &[u8]) -> Result<(), SshError> { Ok(()) }
+        }
+        struct TestSftp;
+        impl Sftp for TestSftp {
+            fn create(&self, _: &std::path::Path) -> Result<Box<dyn crate::session::Write>, SshError> {
+                Ok(Box::new(TestWrite))
+            }
+        }
+
+        let tasks = create_test_tasks();
+        let config = StepConfig {
+            task: "task1".to_string(),
+            on_fail: None,
+        };
+        let step = Step::try_from((0, &tasks, &config)).unwrap();
+        let session = Session {
+            inner: SessionType::Test {
+                channel: ArcMutex::wrap(TestChannel),
+                sftp: ArcMutex::wrap(TestSftp),
+            },
+        };
+        let variables = Variables::default();
+
+        let (tx, _rx) = mpsc::channel();
+        let state = ExecutionState {
+            status: ExecutionStatus::Idle,
+            steps: vec![StepExecState {
+                index: 0,
+                task_description: "test".into(),
+                status: StepStatus::Pending,
+                progress: None,
+                output: String::new(),
+                errors: Vec::new(),
+                on_fail_steps: Vec::new(),
+            }],
+        };
+        let sm = ExecutionStateManager::new(state, tx);
+
+        // When
+        let result = step.execute(&session, &variables, Some(&sm));
+
+        // Then
+        assert!(result.is_ok());
+        let snapshot = sm.snapshot();
+        assert_eq!(snapshot.steps[0].status, StepStatus::Completed);
+    }
+
+    #[test]
     fn test_step_try_from_success_no_on_fail() {
         // Given
         let tasks = create_test_tasks();
@@ -345,5 +411,141 @@ mod tests {
             },
         };
         Task::from(&config)
+    }
+
+    #[test]
+    fn test_step_execute_remote_sudo_failure() {
+        init_tracing();
+
+        // Given
+        use crate::scenario::on_fail_steps::OnFailSteps;
+
+        struct FailChannel;
+        impl Channel for FailChannel {
+            fn exec(&mut self, _: &str) -> Result<(), SshError> {
+                Err(SshError::new("exec failed"))
+            }
+            fn read_to_string(&mut self, _: &mut String) -> Result<usize, SshError> { Ok(0) }
+            fn exit_status(&self) -> Result<i32, SshError> { Ok(0) }
+        }
+        struct TestWrite;
+        impl crate::session::Write for TestWrite {
+            fn write_all(&mut self, _: &[u8]) -> Result<(), SshError> { Ok(()) }
+        }
+        struct TestSftp;
+        impl Sftp for TestSftp {
+            fn create(&self, _: &std::path::Path) -> Result<Box<dyn crate::session::Write>, SshError> {
+                Ok(Box::new(TestWrite))
+            }
+        }
+
+        let step = Step {
+            index: 0,
+            task: create_remote_sudo_task(),
+            on_fail_steps: OnFailSteps::default(),
+        };
+        let session = Session {
+            inner: SessionType::Test {
+                channel: ArcMutex::wrap(FailChannel),
+                sftp: ArcMutex::wrap(TestSftp),
+            },
+        };
+        let variables = Variables::default();
+
+        // When
+        let result = step.execute(&session, &variables, None);
+
+        // Then
+        assert!(matches!(
+            result,
+            Err(StepError::CannotExecuteRemoteSudoCommand(_, _))
+        ));
+    }
+
+    #[test]
+    fn test_step_execute_failure_triggers_on_fail_steps() {
+        init_tracing();
+
+        // Given
+        use crate::scenario::{
+            on_fail_step::OnFailStep, on_fail_steps::OnFailSteps,
+        };
+
+        let on_fail_task = create_sftp_copy_task();
+        let step = Step {
+            index: 0,
+            task: create_remote_sudo_task(),
+            on_fail_steps: OnFailSteps::from(vec![OnFailStep::from((0, on_fail_task))]),
+        };
+        let session = Session {
+            inner: SessionType::FailSession("channel failed".to_string()),
+        };
+        let variables = Variables::default();
+
+        // When
+        let result = step.execute(&session, &variables, None);
+
+        // Then
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_step_execute_on_fail_steps_also_fail() {
+        init_tracing();
+
+        // Given
+        use crate::scenario::{
+            on_fail_step::OnFailStep, on_fail_steps::OnFailSteps,
+            sftp_copy::SftpCopy, task::Task,
+        };
+
+        struct FailChannel;
+        impl Channel for FailChannel {
+            fn exec(&mut self, _: &str) -> Result<(), SshError> {
+                Err(SshError::new("exec failed"))
+            }
+            fn read_to_string(&mut self, _: &mut String) -> Result<usize, SshError> { Ok(0) }
+            fn exit_status(&self) -> Result<i32, SshError> { Ok(0) }
+        }
+        struct TestWrite;
+        impl crate::session::Write for TestWrite {
+            fn write_all(&mut self, _: &[u8]) -> Result<(), SshError> { Ok(()) }
+        }
+        struct TestSftp;
+        impl Sftp for TestSftp {
+            fn create(&self, _: &std::path::Path) -> Result<Box<dyn crate::session::Write>, SshError> {
+                Ok(Box::new(TestWrite))
+            }
+        }
+
+        let failing_on_fail_task = Task::SftpCopy {
+            sftp_copy: SftpCopy {
+                source_path: "{non-existent-var}".to_string(),
+                destination_path: "/test/dest".to_string(),
+            },
+            description: "Failing on-fail task".to_string(),
+            error_message: "On-fail failed".to_string(),
+        };
+        let step = Step {
+            index: 0,
+            task: create_remote_sudo_task(),
+            on_fail_steps: OnFailSteps::from(vec![OnFailStep::from((0, failing_on_fail_task))]),
+        };
+        let session = Session {
+            inner: SessionType::Test {
+                channel: ArcMutex::wrap(FailChannel),
+                sftp: ArcMutex::wrap(TestSftp),
+            },
+        };
+        let variables = Variables::default();
+
+        // When
+        let result = step.execute(&session, &variables, None);
+
+        // Then
+        assert!(matches!(
+            result,
+            Err(StepError::CannotExecuteOnFailSteps(_))
+        ));
     }
 }

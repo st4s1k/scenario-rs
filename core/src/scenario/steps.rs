@@ -288,4 +288,68 @@ mod tests {
             on_fail: None,
         }])
     }
+
+    #[test]
+    fn test_steps_from_vec() {
+        // Given
+        use crate::scenario::{on_fail_steps::OnFailSteps, step::Step};
+
+        let steps = vec![Step {
+            index: 0,
+            task: create_remote_sudo_task(),
+            on_fail_steps: OnFailSteps::default(),
+        }];
+
+        // When
+        let result = Steps::from(steps);
+
+        // Then
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn test_steps_execute_non_empty_success() {
+        // Given
+        use crate::{
+            scenario::{on_fail_steps::OnFailSteps, step::Step, variables::Variables},
+            session::{Channel, Session, SessionType, Sftp, SshError, Write},
+            utils::{ArcMutex, Wrap},
+        };
+
+        struct TestChannel;
+        impl Channel for TestChannel {
+            fn exec(&mut self, _: &str) -> Result<(), SshError> { Ok(()) }
+            fn read_to_string(&mut self, _: &mut String) -> Result<usize, SshError> { Ok(0) }
+            fn exit_status(&self) -> Result<i32, SshError> { Ok(0) }
+        }
+        struct TestWrite;
+        impl Write for TestWrite {
+            fn write_all(&mut self, _: &[u8]) -> Result<(), SshError> { Ok(()) }
+        }
+        struct TestSftp;
+        impl Sftp for TestSftp {
+            fn create(&self, _: &std::path::Path) -> Result<Box<dyn Write>, SshError> {
+                Ok(Box::new(TestWrite))
+            }
+        }
+
+        let steps = Steps::from(vec![Step {
+            index: 0,
+            task: create_remote_sudo_task(),
+            on_fail_steps: OnFailSteps::default(),
+        }]);
+        let session = Session {
+            inner: SessionType::Test {
+                channel: ArcMutex::wrap(TestChannel),
+                sftp: ArcMutex::wrap(TestSftp),
+            },
+        };
+        let variables = Variables::default();
+
+        // When
+        let result = steps.execute(&session, &variables, None);
+
+        // Then
+        assert!(result.is_ok());
+    }
 }

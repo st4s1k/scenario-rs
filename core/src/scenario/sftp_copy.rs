@@ -164,6 +164,14 @@ impl SftpCopy {
             }
         }
 
+        destination_file
+            .flush()
+            .map_err(SftpCopyError::CannotWriteDestinationFile)
+            .map_err(|error| {
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
+                error
+            })?;
+
         debug!(scenario.event = ScenarioEvent::SftpCopyCompleted.as_str());
 
         Ok(())
@@ -613,6 +621,48 @@ mod tests {
         assert!(matches!(
             result,
             Err(SftpCopyError::CannotOpenChannelAndInitializeSftp(_))
+        ));
+    }
+
+    #[test]
+    fn test_flush_error() {
+        init_tracing();
+
+        // Given
+        struct FlushFailWrite;
+        impl Write for FlushFailWrite {
+            fn write_all(&mut self, _buf: &[u8]) -> Result<(), SshError> { Ok(()) }
+            fn flush(&mut self) -> Result<(), SshError> {
+                Err(SshError::new("flush failed"))
+            }
+        }
+
+        struct FlushFailSftp;
+        impl Sftp for FlushFailSftp {
+            fn create(&self, _path: &std::path::Path) -> Result<Box<dyn Write>, SshError> {
+                Ok(Box::new(FlushFailWrite))
+            }
+        }
+
+        let sftp_copy = SftpCopy {
+            source_path: "source.txt".into(),
+            destination_path: "dest.txt".into(),
+        };
+        let session = Session {
+            inner: SessionType::Test {
+                channel: ArcMutex::wrap(MockSuccessfulChannel),
+                sftp: ArcMutex::wrap(FlushFailSftp),
+            },
+        };
+        let variables = Variables::default();
+
+        // When
+        let result = sftp_copy.execute(&session, &variables, None);
+
+        // Then
+        assert!(matches!(
+            result,
+            Err(SftpCopyError::CannotWriteDestinationFile(_))
         ));
     }
 }

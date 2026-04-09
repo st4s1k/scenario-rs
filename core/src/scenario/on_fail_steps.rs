@@ -305,4 +305,57 @@ mod tests {
     fn create_invalid_on_fail_config() -> OnFailStepsConfig {
         OnFailStepsConfig::from(vec!["non_existent_task".to_string()])
     }
+
+    #[test]
+    fn test_on_fail_steps_from_vec() {
+        // Given
+        let steps = vec![create_remote_sudo_step(), create_sftp_copy_step()];
+
+        // When
+        let on_fail_steps = OnFailSteps::from(steps);
+
+        // Then
+        assert_eq!(on_fail_steps.len(), 2);
+    }
+
+    #[test]
+    fn test_on_fail_steps_execute_non_empty_success() {
+        // Given
+        use crate::{
+            session::{Channel, SessionType, Sftp, SshError, Write},
+            utils::{ArcMutex, Wrap},
+        };
+
+        struct TestChannel;
+        impl Channel for TestChannel {
+            fn exec(&mut self, _: &str) -> Result<(), SshError> { Ok(()) }
+            fn read_to_string(&mut self, _: &mut String) -> Result<usize, SshError> { Ok(0) }
+            fn exit_status(&self) -> Result<i32, SshError> { Ok(0) }
+        }
+        struct TestWrite;
+        impl Write for TestWrite {
+            fn write_all(&mut self, _: &[u8]) -> Result<(), SshError> { Ok(()) }
+        }
+        struct TestSftp;
+        impl Sftp for TestSftp {
+            fn create(&self, _: &std::path::Path) -> Result<Box<dyn Write>, SshError> {
+                Ok(Box::new(TestWrite))
+            }
+        }
+
+        let on_fail_steps = OnFailSteps::from(vec![create_remote_sudo_step()]);
+        let session = Session {
+            inner: SessionType::Test {
+                channel: ArcMutex::wrap(TestChannel),
+                sftp: ArcMutex::wrap(TestSftp),
+            },
+        };
+        let variables = Variables::default();
+
+        // When
+        let result = on_fail_steps.execute(&session, &variables, None, 0);
+
+        // Then
+        assert!(result.is_ok());
+    }
 }

@@ -472,9 +472,7 @@ mod tests {
     fn test_execute_channel_session_failure() {
         init_tracing();
         // Given
-        let remote_sudo = RemoteSudo {
-            command: "echo test".into(),
-        };
+        let remote_sudo = RemoteSudo::new("echo test".into());
         let session = Session {
             inner: SessionType::FailSession("session channel failed".to_string()),
         };
