@@ -117,7 +117,8 @@ impl SftpCopy {
             .len();
 
         let mut current_bytes = 0u64;
-        let mut buffer = [0u8; 64 * 1024];
+        let mut buffer = vec![0u8; 128 * 1024];
+        let transfer_start = Instant::now();
         let mut last_progress_emit = Instant::now();
         let throttle_interval = std::time::Duration::from_millis(50);
         loop {
@@ -172,7 +173,15 @@ impl SftpCopy {
                 error
             })?;
 
-        debug!(scenario.event = ScenarioEvent::SftpCopyCompleted.as_str());
+        let elapsed = transfer_start.elapsed();
+        let mb_transferred = total_bytes as f64 / (1024.0 * 1024.0);
+        let throughput_mbps = mb_transferred / elapsed.as_secs_f64().max(f64::MIN_POSITIVE);
+
+        debug!(
+            scenario.event = ScenarioEvent::SftpCopyCompleted.as_str(),
+            sftp_copy.elapsed_ms = elapsed.as_millis() as u64,
+            sftp_copy.throughput_mbps = format!("{:.2}", throughput_mbps).as_str(),
+        );
 
         Ok(())
     }

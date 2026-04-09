@@ -120,6 +120,8 @@ pub struct ScenarioEventVisitor {
     pub sftp_copy_destination: Option<String>,
     pub sftp_copy_progress_current: Option<u64>,
     pub sftp_copy_progress_total: Option<u64>,
+    pub sftp_copy_elapsed_ms: Option<u64>,
+    pub sftp_copy_throughput_mbps: Option<String>,
     pub step_index: Option<usize>,
     pub steps_total: Option<usize>,
     pub on_fail_step_index: Option<usize>,
@@ -149,6 +151,8 @@ impl ScenarioEventVisitor {
         fill!(sftp_copy_destination);
         fill!(sftp_copy_progress_current);
         fill!(sftp_copy_progress_total);
+        fill!(sftp_copy_elapsed_ms);
+        fill!(sftp_copy_throughput_mbps);
         fill!(step_index);
         fill!(steps_total);
         fill!(on_fail_step_index);
@@ -169,6 +173,8 @@ impl Default for ScenarioEventVisitor {
             sftp_copy_destination: None,
             sftp_copy_progress_current: None,
             sftp_copy_progress_total: None,
+            sftp_copy_elapsed_ms: None,
+            sftp_copy_throughput_mbps: None,
             step_index: None,
             steps_total: None,
             on_fail_step_index: None,
@@ -192,6 +198,7 @@ impl Visit for ScenarioEventVisitor {
             "remote_sudo.output" => self.remote_sudo_output = Some(value.to_string()),
             "sftp_copy.source" => self.sftp_copy_source = Some(value.to_string()),
             "sftp_copy.destination" => self.sftp_copy_destination = Some(value.to_string()),
+            "sftp_copy.throughput_mbps" => self.sftp_copy_throughput_mbps = Some(value.to_string()),
             _ => {
                 error!("Unrecognized field: {}", field.name());
             }
@@ -213,6 +220,7 @@ impl Visit for ScenarioEventVisitor {
             "remote_sudo.output" => self.remote_sudo_output = Some(value_str),
             "sftp_copy.source" => self.sftp_copy_source = Some(value_str),
             "sftp_copy.destination" => self.sftp_copy_destination = Some(value_str),
+            "sftp_copy.throughput_mbps" => self.sftp_copy_throughput_mbps = Some(value_str),
             _ => {
                 error!("Unrecognized field: {}", field.name());
             }
@@ -224,6 +232,7 @@ impl Visit for ScenarioEventVisitor {
             "session.port" => {}
             "sftp_copy.progress.current" => self.sftp_copy_progress_current = Some(value),
             "sftp_copy.progress.total" => self.sftp_copy_progress_total = Some(value),
+            "sftp_copy.elapsed_ms" => self.sftp_copy_elapsed_ms = Some(value),
             "step.index" => self.step_index = Some(value as usize),
             "steps.total" => self.steps_total = Some(value as usize),
             "on_fail_step.index" => self.on_fail_step_index = Some(value as usize),
@@ -287,6 +296,7 @@ mod tests {
         visitor.record_str(&field("remote_sudo.output"), "Reading package lists...");
         visitor.record_str(&field("sftp_copy.source"), "/local/file.txt");
         visitor.record_str(&field("sftp_copy.destination"), "/remote/file.txt");
+        visitor.record_str(&field("sftp_copy.throughput_mbps"), "3.28");
         visitor.record_str(&field("ignored_field"), "Should be ignored");
 
         // Then
@@ -300,6 +310,7 @@ mod tests {
         assert_eq!(visitor.scenario_error.unwrap(), "Connection failed");
         assert_eq!(visitor.sftp_copy_source.unwrap(), "/local/file.txt");
         assert_eq!(visitor.sftp_copy_destination.unwrap(), "/remote/file.txt");
+        assert_eq!(visitor.sftp_copy_throughput_mbps.unwrap(), "3.28");
     }
 
     #[test]
@@ -310,6 +321,7 @@ mod tests {
         // When
         visitor.record_u64(&field("sftp_copy.progress.current"), 1024);
         visitor.record_u64(&field("sftp_copy.progress.total"), 4096);
+        visitor.record_u64(&field("sftp_copy.elapsed_ms"), 15230);
         visitor.record_u64(&field("step.index"), 2);
         visitor.record_u64(&field("steps.total"), 5);
         visitor.record_u64(&field("on_fail_step.index"), 1);
@@ -319,6 +331,7 @@ mod tests {
         // Then
         assert_eq!(visitor.sftp_copy_progress_current.unwrap(), 1024);
         assert_eq!(visitor.sftp_copy_progress_total.unwrap(), 4096);
+        assert_eq!(visitor.sftp_copy_elapsed_ms.unwrap(), 15230);
         assert_eq!(visitor.step_index.unwrap(), 2);
         assert_eq!(visitor.steps_total.unwrap(), 5);
         assert_eq!(visitor.on_fail_step_index.unwrap(), 1);
@@ -351,6 +364,7 @@ mod tests {
         visitor.record_debug(&field("remote_sudo.output"), &"Reading package lists...");
         visitor.record_debug(&field("sftp_copy.source"), &"/local/file.txt");
         visitor.record_debug(&field("sftp_copy.destination"), &"/remote/file.txt");
+        visitor.record_debug(&field("sftp_copy.throughput_mbps"), &"3.28");
         visitor.record_debug(&field("ignored_field"), &"Should be ignored");
 
         // Then
@@ -364,6 +378,7 @@ mod tests {
         );
         assert_eq!(visitor.sftp_copy_source.unwrap(), "/local/file.txt");
         assert_eq!(visitor.sftp_copy_destination.unwrap(), "/remote/file.txt");
+        assert_eq!(visitor.sftp_copy_throughput_mbps.unwrap(), "3.28");
     }
 
     #[test]
@@ -414,6 +429,8 @@ mod tests {
                     "sftp_copy.destination",
                     "sftp_copy.progress.current",
                     "sftp_copy.progress.total",
+                    "sftp_copy.elapsed_ms",
+                    "sftp_copy.throughput_mbps",
 
                     "step.index",
                     "steps.total",

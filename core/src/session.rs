@@ -208,7 +208,11 @@ impl Session {
         let private_key = credentials.private_key.as_deref();
 
         let handle = try_block_on(Arc::as_ref(&runtime), async {
-            let config = Arc::new(russh::client::Config::default());
+            let config = Arc::new(russh::client::Config {
+                window_size: 16 * 1024 * 1024,
+                nodelay: true,
+                ..Default::default()
+            });
             let mut session = russh::client::connect(config, (host.as_str(), port), ClientHandler)
                 .await
                 .map_err(|e| {
@@ -404,7 +408,7 @@ struct RusshFile {
 #[cfg(not(tarpaulin_include))]
 impl RusshFile {
     fn new(runtime: Arc<tokio::runtime::Runtime>, mut file: russh_sftp::client::fs::File) -> Self {
-        let (tx, rx) = std::sync::mpsc::sync_channel::<Vec<u8>>(16);
+        let (tx, rx) = std::sync::mpsc::sync_channel::<Vec<u8>>(64);
         let (tx_result, rx_result) = std::sync::mpsc::sync_channel::<Result<(), SshError>>(16);
         let handle = runtime.handle().clone();
 
