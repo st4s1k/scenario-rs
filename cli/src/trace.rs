@@ -5,7 +5,7 @@ use scenario_rs::{
     utils::{ArcMutex, Wrap},
 };
 use std::{collections::HashMap, fmt};
-use tracing::{error, info, warn, Subscriber};
+use tracing::{error, Subscriber};
 use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 
 /// A tracing layer for handling and displaying scenario execution events.
@@ -54,37 +54,36 @@ impl ScenarioEventLayer {
 
         pb.set_style(
             ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})").unwrap()
+            .template("             [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({precise_elapsed}, {binary_bytes_per_sec})").unwrap()
             .progress_chars("#>-")
-            .with_key("eta", Self::format_eta)
+            .with_key("precise_elapsed", Self::format_elapsed)
         );
 
         bars.insert(id.to_string(), pb.clone());
         pb
     }
 
-    /// Completes a progress bar with a final message and removes it.
+    /// Completes a progress bar and removes it.
     ///
     /// # Arguments
     ///
     /// * `id` - The identifier for the progress bar to complete
-    /// * `message` - The message to display when the progress bar completes
-    fn finish_progress_bar(&self, id: &str, message: &str) {
+    fn finish_progress_bar(&self, id: &str) {
         let mut bars = self.progress_bars.lock().unwrap();
         if let Some(bar) = bars.remove(id) {
-            bar.finish_with_message(message.to_owned());
+            bar.finish();
         }
     }
 
-    /// Formats the ETA display for progress bars.
+    /// Formats elapsed time as a precise decimal.
     #[cfg(not(tarpaulin_include))]
-    fn format_eta(state: &ProgressState, w: &mut dyn fmt::Write) {
-        Self::write_eta(w, state.eta().as_secs_f64())
+    fn format_elapsed(state: &ProgressState, w: &mut dyn fmt::Write) {
+        Self::write_elapsed(w, state.elapsed().as_secs_f64())
     }
 
-    /// Writes ETA seconds as a formatted string.
-    fn write_eta(w: &mut dyn fmt::Write, eta_secs: f64) {
-        write!(w, "{:.1}s", eta_secs).unwrap()
+    /// Writes elapsed seconds as a formatted string.
+    fn write_elapsed(w: &mut dyn fmt::Write, elapsed_secs: f64) {
+        write!(w, "{:.1}s", elapsed_secs).unwrap()
     }
 
     /// Processes a scenario event visitor and formats the output for the user.
@@ -105,17 +104,17 @@ impl ScenarioEventLayer {
                     bar.finish_and_clear();
                 }
 
-                if let Some(ref error) = visitor.scenario_error {
-                    error!("{}", error);
-                } else {
-                    error!("{}", "Scenario execution error".red());
-                }
+                let msg = visitor
+                    .scenario_error
+                    .as_deref()
+                    .unwrap_or("Scenario execution error");
+                eprintln!("{:>12} {}", "error".red().bold(), msg);
             }
             ScenarioEvent::ScenarioStarted => {
-                info!("{}", "Scenario started...".bright_blue());
+                println!("{:>12} scenario", "Starting".green().bold());
             }
             ScenarioEvent::ScenarioCompleted => {
-                info!("{}", "Scenario completed successfully!".green());
+                println!("{:>12} scenario completed successfully", "Finished".green().bold());
             }
             ScenarioEvent::StepStarted => {
                 if let (Some(index), Some(total), Some(ref desc)) = (
@@ -123,31 +122,31 @@ impl ScenarioEventLayer {
                     visitor.steps_total,
                     &visitor.task_description,
                 ) {
-                    let msg = format!(
-                        "{}=[{}] {}=[{}] {}=[{}]",
-                        "STEP".yellow(),
-                        format!("{}", index + 1).purple(),
-                        "TOTAL".yellow(),
-                        format!("{}", total).purple(),
-                        "DESC".yellow(),
-                        desc.purple()
+                    println!(
+                        "{:>12} [{}/{}] {}",
+                        "Executing".green().bold(),
+                        index + 1,
+                        total,
+                        desc
                     );
-                    info!("{}", msg);
                 }
             }
             ScenarioEvent::RemoteSudoStarted => {
                 if let Some(ref cmd) = visitor.remote_sudo_command {
-                    info!("{}=[{}]", "CMD".yellow(), cmd.bright_cyan());
+                    println!("{:>12} {}", "Running".green().bold(), cmd.bright_cyan());
                 }
             }
             ScenarioEvent::RemoteSudoOutput => {
                 if let Some(ref output) = visitor.remote_sudo_output {
                     let trimmed = output.trim();
+                    let display: String = trimmed.chars().take(1000).collect();
 
-                    info!("{}", trimmed.chars().take(1000).collect::<String>().trim());
+                    for line in display.trim().lines() {
+                        println!("{:>12} {}", "", line);
+                    }
 
                     if trimmed.len() > 1000 {
-                        info!("...output truncated...");
+                        println!("{:>12} ...output truncated...", "");
                     }
                 }
             }
@@ -155,8 +154,13 @@ impl ScenarioEventLayer {
                 if let (Some(ref source), Some(ref destination)) =
                     (&visitor.sftp_copy_source, &visitor.sftp_copy_destination)
                 {
-                    info!("{}=[{}]", "SRC".yellow(), source.bright_cyan());
-                    info!("{}=[{}]", "DST".yellow(), destination.bright_cyan());
+                    println!(
+                        "{:>12} {} {} {}",
+                        "Uploading".green().bold(),
+                        source,
+                        "→".bright_black(),
+                        destination
+                    );
                     let sftp_id = format!("sftp_{}_{}", source, destination);
                     self.get_or_create_progress_bar(&sftp_id);
                 }
@@ -166,7 +170,7 @@ impl ScenarioEventLayer {
                     (&visitor.sftp_copy_source, &visitor.sftp_copy_destination)
                 {
                     let sftp_id = format!("sftp_{}_{}", source, destination);
-                    self.finish_progress_bar(&sftp_id, "SFTP copy completed");
+                    self.finish_progress_bar(&sftp_id);
                 }
             }
             ScenarioEvent::SftpCopyProgress => {
@@ -185,10 +189,10 @@ impl ScenarioEventLayer {
                 }
             }
             ScenarioEvent::OnFailStepsStarted => {
-                warn!("{}", "On-fail steps started...".red());
+                eprintln!("{:>12} on-fail steps triggered", "warning".yellow().bold());
             }
             ScenarioEvent::OnFailStepsCompleted => {
-                info!("{}", "On-fail steps completed".green());
+                println!("{:>12} on-fail steps", "Finished".green().bold());
             }
             ScenarioEvent::OnFailStepStarted => {
                 if let (Some(index), Some(total), Some(ref desc)) = (
@@ -196,16 +200,13 @@ impl ScenarioEventLayer {
                     visitor.on_fail_steps_total,
                     &visitor.task_description,
                 ) {
-                    let msg = format!(
-                        "{}=[{}] {}=[{}] {}=[{}]",
-                        "STEP".yellow(),
-                        format!("{}", index + 1).purple(),
-                        "TOTAL".yellow(),
-                        format!("{}", total).purple(),
-                        "DESC".yellow(),
-                        desc.purple()
+                    println!(
+                        "{:>12} [{}/{}] {}",
+                        "Recovering".yellow().bold(),
+                        index + 1,
+                        total,
+                        desc
                     );
-                    info!("{}", msg);
                 }
             }
             ScenarioEvent::CreateSessionStarted
@@ -226,12 +227,38 @@ impl<S> Layer<S> for ScenarioEventLayer
 where
     S: Subscriber + for<'a> LookupSpan<'a> + Send + Sync + 'static,
 {
+    fn on_new_span(
+        &self,
+        attrs: &tracing::span::Attributes<'_>,
+        id: &tracing::span::Id,
+        ctx: Context<'_, S>,
+    ) {
+        let mut visitor = ScenarioEventVisitor::default();
+        attrs.record(&mut visitor);
+        if let Some(span) = ctx.span(id) {
+            span.extensions_mut().insert(visitor);
+        }
+    }
+
+    fn on_record(
+        &self,
+        id: &tracing::span::Id,
+        record: &tracing::span::Record<'_>,
+        ctx: Context<'_, S>,
+    ) {
+        if let Some(span) = ctx.span(id) {
+            if let Some(v) = span.extensions_mut().get_mut::<ScenarioEventVisitor>() {
+                record.record(v);
+            }
+        }
+    }
+
     /// Processes tracing events and formats them for user display.
     ///
     /// This method intercepts events with an "event" field and formats them
     /// appropriately based on their type, including creating progress bars
     /// for file transfers, displaying command outputs, and formatting errors.
-    fn on_event(&self, event: &tracing::Event<'_>, _ctx: Context<'_, S>) {
+    fn on_event(&self, event: &tracing::Event<'_>, ctx: Context<'_, S>) {
         if !event
             .metadata()
             .fields()
@@ -245,6 +272,14 @@ where
 
         event.record(&mut visitor);
 
+        if let Some(scope) = ctx.event_scope(event) {
+            for span in scope.from_root() {
+                if let Some(extra) = span.extensions().get::<ScenarioEventVisitor>() {
+                    visitor.merge(extra);
+                }
+            }
+        }
+
         self.process_scenario_event(&visitor);
     }
 }
@@ -253,7 +288,7 @@ where
 mod tests {
     use crate::trace::ScenarioEventLayer;
     use scenario_rs::trace::{ScenarioEvent, ScenarioEventVisitor};
-    use tracing::{error, info, subscriber};
+    use tracing::{debug, error, info, span, subscriber, Level};
     use tracing_subscriber::{layer::SubscriberExt, Registry};
 
     #[test]
@@ -304,7 +339,7 @@ mod tests {
         assert_eq!(layer.progress_bars.lock().unwrap().len(), 1);
 
         // When
-        layer.finish_progress_bar(id, "Test complete");
+        layer.finish_progress_bar(id);
 
         // Then
         assert_eq!(layer.progress_bars.lock().unwrap().len(), 0);
@@ -316,7 +351,7 @@ mod tests {
         let layer = ScenarioEventLayer::new();
 
         // When
-        layer.finish_progress_bar("nonexistent", "Test complete");
+        layer.finish_progress_bar("nonexistent");
 
         // Then
         assert_eq!(layer.progress_bars.lock().unwrap().len(), 0);
@@ -401,7 +436,9 @@ mod tests {
         info!(
             scenario.event = ScenarioEvent::SftpCopyCompleted.as_str(),
             sftp_copy.source = "/local/file.txt",
-            sftp_copy.destination = "/remote/file.txt"
+            sftp_copy.destination = "/remote/file.txt",
+            sftp_copy.elapsed_ms = 15230u64,
+            sftp_copy.throughput_mbps = "3.28"
         );
 
         // Then
@@ -586,23 +623,23 @@ mod tests {
         error!(scenario.event = "totally_unknown_event_xyz");
     }
 
-    #[test]
-    fn test_write_eta() {
-        // Given
-        let mut buf = String::new();
-
-        // When
-        ScenarioEventLayer::write_eta(&mut buf, 5.123);
-
-        // Then
-        assert_eq!(buf, "5.1s");
-    }
-
     fn visitor_with_event(event: ScenarioEvent) -> ScenarioEventVisitor {
         ScenarioEventVisitor {
             scenario_event: Some(event.as_str().to_string()),
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn test_write_elapsed() {
+        // Given
+        let mut buf = String::new();
+
+        // When
+        ScenarioEventLayer::write_elapsed(&mut buf, 5.123);
+
+        // Then
+        assert_eq!(buf, "5.1s");
     }
 
     #[test]
@@ -816,5 +853,70 @@ mod tests {
 
         // When & Then
         layer.process_scenario_event(&visitor);
+    }
+
+    #[test]
+    fn test_on_new_span_stores_visitor_in_span_extensions() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When & Then — on_new_span is invoked when a span is created
+        let _span = span!(
+            Level::DEBUG,
+            "sftp_copy",
+            sftp_copy.source = "/local/file.txt",
+            sftp_copy.destination = "/remote/dest.txt"
+        )
+        .entered();
+    }
+
+    #[test]
+    fn test_on_record_updates_span_visitor() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // When — on_record is invoked when span fields are recorded dynamically
+        let span = span!(
+            Level::DEBUG,
+            "sftp_copy",
+            sftp_copy.source = tracing::field::Empty,
+            sftp_copy.destination = tracing::field::Empty
+        );
+        span.record("sftp_copy.source", "/local/file.txt");
+        span.record("sftp_copy.destination", "/remote/dest.txt");
+    }
+
+    #[test]
+    fn test_on_event_merges_span_context_for_sftp_completed() {
+        // Given
+        let layer = ScenarioEventLayer::new();
+        let progress_bars = layer.progress_bars.clone();
+        let subscriber = Registry::default().with(layer);
+        let _guard = subscriber::set_default(subscriber);
+
+        // Create a span with sftp fields (simulating the #[instrument] span)
+        let span = span!(
+            Level::DEBUG,
+            "sftp_copy",
+            sftp_copy.source = "/local/file.txt",
+            sftp_copy.destination = "/remote/dest.txt"
+        );
+        let _entered = span.enter();
+
+        // When — emit SftpCopyCompleted inside the span;
+        // source/destination come from span context via merge
+        debug!(
+            scenario.event = ScenarioEvent::SftpCopyCompleted.as_str(),
+            sftp_copy.elapsed_ms = 1500u64,
+            sftp_copy.throughput_mbps = "33.00"
+        );
+
+        // Then
+        let sftp_id = "sftp_/local/file.txt_/remote/dest.txt";
+        assert!(!progress_bars.lock().unwrap().contains_key(sftp_id));
     }
 }

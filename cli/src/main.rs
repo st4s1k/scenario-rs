@@ -31,7 +31,7 @@ fn main() {
 
     // Initialize the tracing system with the custom ScenarioEventLayer
     Registry::default()
-        .with(LevelFilter::DEBUG)
+        .with(LevelFilter::TRACE)
         .with(
             fmt::Layer::new()
                 .with_target(false)
