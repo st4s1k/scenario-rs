@@ -110,12 +110,14 @@ export class AppComponent implements OnDestroy {
   executionLog = signal('');
   private pendingLogBuffer: string[] = [];
   private flushTimeout: ReturnType<typeof setTimeout> | undefined;
+  private lastWasProgress = false;
 
   resolvedVariables: ResolvedVariables = {};
   tasks: { [key: string]: Task } = {};
   steps: Step[] = [];
 
   unlistenLogUpdates?: UnlistenFn;
+  unlistenLogProgress?: UnlistenFn;
 
   ngOnInit(): void {
     this.fetchConfigPath()
@@ -128,6 +130,7 @@ export class AppComponent implements OnDestroy {
 
     this.setupFormValueChangeListener();
     this.setupLogUpdatesListener();
+    this.setupLogProgressListener();
     this.executionStateService.init();
   }
 
@@ -135,6 +138,9 @@ export class AppComponent implements OnDestroy {
     this.cleanupSubscriptions();
     if (this.unlistenLogUpdates) {
       this.unlistenLogUpdates();
+    }
+    if (this.unlistenLogProgress) {
+      this.unlistenLogProgress();
     }
     this.executionStateService.destroy();
     this.flushBufferedLog();
@@ -290,6 +296,7 @@ export class AppComponent implements OnDestroy {
 
   private async setupLogUpdatesListener(): Promise<void> {
     this.unlistenLogUpdates = await listen<string>('log-message', (event) => {
+      this.lastWasProgress = false;
       this.pendingLogBuffer.push(event.payload);
 
       if (!this.flushTimeout) {
@@ -298,7 +305,28 @@ export class AppComponent implements OnDestroy {
     });
   }
 
+  private async setupLogProgressListener(): Promise<void> {
+    this.unlistenLogProgress = await listen<string>('log-progress', (event) => {
+      this.flushBufferedLog();
+      const prev = this.executionLog();
+      if (this.lastWasProgress) {
+        const lastNewline = prev.lastIndexOf('\n');
+        this.executionLog.set(
+          lastNewline === -1
+            ? event.payload
+            : prev.slice(0, lastNewline) + '\n' + event.payload
+        );
+      } else {
+        this.lastWasProgress = true;
+        this.executionLog.set(prev === '' ? event.payload : prev + '\n' + event.payload);
+      }
+    });
+  }
+
   private flushBufferedLog(): void {
+    if (this.pendingLogBuffer.length === 0) {
+      return;
+    }
     const chunk = this.pendingLogBuffer.join('\n');
     this.executionLog.update(prev => {
       const combined = prev === '' ? chunk : prev + '\n' + chunk;

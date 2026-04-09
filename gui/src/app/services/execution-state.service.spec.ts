@@ -156,6 +156,7 @@ describe('ExecutionStateService', () => {
         destination: '/b',
         bytes_transferred: 512,
         bytes_total: 1024,
+        elapsed_ms: 500,
       };
 
       // When
@@ -256,6 +257,7 @@ describe('ExecutionStateService', () => {
         destination: '/dst',
         bytes_transferred: 100,
         bytes_total: 200,
+        elapsed_ms: 300,
       };
 
       // When

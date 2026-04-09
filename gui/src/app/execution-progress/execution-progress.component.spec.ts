@@ -439,4 +439,32 @@ describe('ExecutionProgressComponent', () => {
       expect(component.uiStates[0].statusColor()).toBe('blue');
     });
   });
+
+  describe('getTransferStats', () => {
+    it('should return empty string when no bytes transferred', () => {
+      // Given & When & Then
+      expect(component.getTransferStats(1000, 0)).toBe('');
+    });
+
+    it('should return empty string when elapsed is below 100ms', () => {
+      // Given & When & Then
+      expect(component.getTransferStats(99, 1024)).toBe('');
+    });
+
+    it('should return elapsed time and throughput', () => {
+      // Given & When
+      const result = component.getTransferStats(2000, 10 * 1024 * 1024);
+
+      // Then
+      expect(result).toBe('2.0s, 5.00 MB/s');
+    });
+
+    it('should handle exact 100ms boundary', () => {
+      // Given & When
+      const result = component.getTransferStats(100, 1024 * 1024);
+
+      // Then
+      expect(result).toBe('0.1s, 10.00 MB/s');
+    });
+  });
 });

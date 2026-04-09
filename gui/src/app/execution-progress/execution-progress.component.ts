@@ -49,12 +49,14 @@ export class ExecutionProgressComponent implements OnChanges {
   private previousIsExecuting?: boolean;
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['stepExecStates'] || changes['onFailExecStates']
-      || (changes['isExecuting']
-        && this.previousIsExecuting === false
-        && this.isExecuting === true)) {
+    const executionRestarted = changes['isExecuting']
+      && this.previousIsExecuting === false
+      && this.isExecuting === true;
+
+    if (changes['stepExecStates'] || changes['onFailExecStates'] || executionRestarted) {
       this.uiStates = [];
     }
+
     this.previousIsExecuting = this.isExecuting;
     this.syncAllUi();
   }
@@ -76,6 +78,13 @@ export class ExecutionProgressComponent implements OnChanges {
     const baseSize = Math.pow(sizeFactor, exponent);
     const convertedSize = bytes / baseSize;
     return convertedSize.toFixed(decimals) + ' ' + sizes[exponent];
+  }
+
+  getTransferStats(elapsedMs: number, bytesTransferred: number): string {
+    if (bytesTransferred === 0 || elapsedMs < 100) return '';
+    const elapsed = elapsedMs / 1000;
+    const mbps = (bytesTransferred / (1024 * 1024)) / elapsed;
+    return `${elapsed.toFixed(1)}s, ${mbps.toFixed(2)} MB/s`;
   }
 
   private syncAllUi(): void {

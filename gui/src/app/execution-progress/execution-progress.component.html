@@ -60,10 +60,13 @@
 
         @let total = stepState.progress && stepState.progress.type === 'SftpCopy' ? stepState.progress.bytes_total : 0;
         @let current = stepState.progress && stepState.progress.type === 'SftpCopy' ? stepState.progress.bytes_transferred : 0;
+        @let elapsedMs = stepState.progress && stepState.progress.type === 'SftpCopy' ? stepState.progress.elapsed_ms : 0;
         @let progress = total == 0 ? 0 : Math.round((current / total) * 100);
+        @let stats = getTransferStats(elapsedMs, current);
+        @let label = stats ? progress + '% (' + formatBytes(current) + ' / ' + formatBytes(total) + ' — ' + stats + ')' : progress + '% (' + formatBytes(current) + ' / ' + formatBytes(total) + ')';
         <div class="progress-bar" role="progressbar" aria-label="File transfer progress" [attr.aria-valuemin]="0"
           [attr.aria-valuemax]="total" [attr.aria-valuenow]="current"
-          [attr.data-content]="progress + '% (' + formatBytes(current) + ' / ' + formatBytes(total) + ')'"
+          [attr.data-content]="label"
           [style.--progress-percentage]="progress + '%'">
         </div>
       </div>

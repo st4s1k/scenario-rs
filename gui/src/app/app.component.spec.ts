@@ -443,6 +443,91 @@ describe('AppComponent', () => {
       expect(component.executionLog()).toContain('first log line');
       expect(component.executionLog()).toContain('second log line');
     });
+
+    it('should reset lastWasProgress on log-message', async () => {
+      // Given
+      await (component as any).setupLogUpdatesListener();
+      (component as any).lastWasProgress = true;
+
+      // When
+      tauri.emitEvent('log-message', 'regular message');
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // Then
+      expect((component as any).lastWasProgress).toBe(false);
+    });
+  });
+
+  describe('setupLogProgressListener', () => {
+    it('should register log-progress event listener', async () => {
+      // Given & When
+      await (component as any).setupLogProgressListener();
+
+      // Then
+      tauri.expectInvoked('plugin:event|listen');
+      const calls = tauri.invokeSpy.calls.allArgs();
+      const listenCall = calls.find((a: any[]) => a[0] === 'plugin:event|listen' && a[1].event === 'log-progress');
+      expect(listenCall).toBeTruthy();
+    });
+
+    it('should replace last line on consecutive progress events', async () => {
+      // Given
+      await (component as any).setupLogProgressListener();
+
+      // When
+      tauri.emitEvent('log-progress', 'Progress: 25%');
+      tauri.emitEvent('log-progress', 'Progress: 50%');
+      tauri.emitEvent('log-progress', 'Progress: 75%');
+
+      // Then
+      expect(component.executionLog()).not.toContain('25%');
+      expect(component.executionLog()).not.toContain('50%');
+      expect(component.executionLog()).toContain('75%');
+    });
+
+    it('should replace single progress line without prior log', async () => {
+      // Given
+      await (component as any).setupLogProgressListener();
+      tauri.emitEvent('log-progress', 'Progress: 25%');
+
+      // When
+      tauri.emitEvent('log-progress', 'Progress: 50%');
+
+      // Then
+      expect(component.executionLog()).toBe('Progress: 50%');
+    });
+
+    it('should append first progress line normally', async () => {
+      // Given
+      await (component as any).setupLogUpdatesListener();
+      await (component as any).setupLogProgressListener();
+      tauri.emitEvent('log-message', 'Starting...');
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // When
+      tauri.emitEvent('log-progress', 'Progress: 10%');
+
+      // Then
+      expect(component.executionLog()).toContain('Starting...');
+      expect(component.executionLog()).toContain('Progress: 10%');
+    });
+
+    it('should replace progress line after log message', async () => {
+      // Given
+      await (component as any).setupLogUpdatesListener();
+      await (component as any).setupLogProgressListener();
+      tauri.emitEvent('log-message', 'Starting...');
+      await new Promise(resolve => setTimeout(resolve, 150));
+      tauri.emitEvent('log-progress', 'Progress: 10%');
+
+      // When
+      tauri.emitEvent('log-progress', 'Progress: 50%');
+
+      // Then
+      expect(component.executionLog()).toContain('Starting...');
+      expect(component.executionLog()).not.toContain('10%');
+      expect(component.executionLog()).toContain('Progress: 50%');
+    });
   });
 
   describe('setupFormValueChangeListener', () => {
@@ -467,6 +552,7 @@ describe('AppComponent', () => {
     it('should cleanup subscriptions and call service destroy', async () => {
       // Given
       await (component as any).setupLogUpdatesListener();
+      await (component as any).setupLogProgressListener();
       await (component as any).setupFormValueChangeListener();
 
       // When

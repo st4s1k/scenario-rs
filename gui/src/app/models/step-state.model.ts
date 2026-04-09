@@ -9,7 +9,7 @@ export type ExecutionStatus =
 export type StepStatus = 'Pending' | 'Running' | 'Completed' | 'Failed' | 'Skipped';
 
 export type TaskProgress =
-  | { type: 'SftpCopy'; source: string; destination: string; bytes_transferred: number; bytes_total: number }
+  | { type: 'SftpCopy'; source: string; destination: string; bytes_transferred: number; bytes_total: number; elapsed_ms: number }
   | { type: 'RemoteSudo'; command: string; output: string };
 
 export interface OnFailStepExecState {
