@@ -128,7 +128,6 @@
         justify-items: center;
         width: 100%;
         padding: styles.$gap-medium 0;
-        cursor: pointer;
         box-sizing: border-box;
         border-bottom: styles.$border-width solid styles.$secondary-color-lighter-20;
 
@@ -141,7 +140,6 @@
 
 
         .tab-title {
-          cursor: pointer;
         }
 
         &.active {
