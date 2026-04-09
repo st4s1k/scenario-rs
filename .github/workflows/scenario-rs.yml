@@ -1,5 +1,8 @@
 name: "publish"
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
   push:
@@ -38,8 +41,7 @@ jobs:
         run: cargo test --workspace
 
   publish-tauri:
-    permissions:
-      contents: write
+    needs: test
     strategy:
       fail-fast: false
       matrix:
