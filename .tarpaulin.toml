@@ -6,6 +6,7 @@ exclude-files = [
     # Entry points (runtime glue, not testable)
     "cli/src/main.rs",
     "gui/src-tauri/src/main.rs",
+    "tui/src/main.rs",
     # Tauri command handlers (pure delegation to ScenarioAppStateCore)
     "gui/src-tauri/src/commands.rs",
 ]

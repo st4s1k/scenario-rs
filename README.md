@@ -17,7 +17,7 @@ A powerful automation tool for executing remote commands and transferring files 
 - **Error Recovery**: Define fallback tasks to execute when operations fail
 - **Path Handling**: Special handling for file paths with automatic basename extraction
 - **Progress Tracking**: Monitor execution progress with detailed feedback
-- **GUI & CLI Interfaces**: Choose between a graphical interface or command-line tool
+- **GUI, TUI & CLI Interfaces**: Choose between a graphical interface, terminal UI, or command-line tool
 
 ## Usage
 
@@ -147,6 +147,40 @@ The GUI provides a modern Tauri-based interface for managing and executing scena
 - **Task Explorer**: Hierarchical view of tasks and their relationships
 - **Variables Inspector**: View all defined and resolved variables
 
+## TUI
+
+The TUI provides an interactive terminal interface for selecting configs, filling in variables, and monitoring execution — no desktop environment required.
+
+```
+scenario-rs-tui [--config-path <path-to-config.toml>]
+```
+
+### Features
+
+- **File Browser**: Browse and select TOML configuration files interactively
+- **Variable Form**: Fill in required variables with type-aware input (includes file picker for Path variables)
+- **Live Execution View**: Monitor step-by-step progress with output and error details
+- **Keyboard-Driven**: Fully navigable with keyboard shortcuts
+
+### Keyboard Shortcuts
+
+| Screen | Key | Action |
+|---|---|---|
+| File Browser | `↑/↓` | Navigate entries |
+| File Browser | `Enter` | Open directory / confirm file |
+| File Browser | `Backspace` | Go to parent directory |
+| File Browser | `Esc` | Cancel |
+| Variables | `Tab/↑/↓` | Navigate fields |
+| Variables | `Ctrl+B` | Open file picker (Path fields) |
+| Variables | `Ctrl+D` | Toggle debug mode |
+| Variables | `Enter` | Start execution |
+| Variables | `Esc` | Quit |
+| Executing | `↑/↓` | Select step |
+| Executing | `PgUp/PgDn` | Scroll output |
+| Done | `q/Esc` | Quit |
+| Done | `r` | Re-run same scenario |
+| Done | `n` | Pick new scenario |
+
 ## CLI
 
 For automation scripts or CI/CD pipelines, use the command-line interface:
@@ -241,6 +275,8 @@ Run `just` to list all available recipes.
 | `just test-all` | Run all tests with coverage (Rust + Angular) |
 | `just npm-install` | Install frontend dependencies |
 | `just ng-build` | Build Angular frontend |
+| `just tui-run` | Run TUI in development mode |
+| `just tui-build` | Build TUI (release) |
 | `just tauri-dev` | Run GUI in development mode |
 | `just tauri-build` | Build GUI (release) |
 | `just tauri-build-debug` | Build GUI (debug) |
@@ -294,7 +330,33 @@ npm run tauri build
 <cloned-dir>/scenario-rs/target/release/scenario-rs.exe
 ```
 
-### 📟 [cli]
+### �️ [tui]
+
+▶️ **run:**
+
+```
+cargo run -p scenario-rs-tui
+```
+
+or with a config:
+
+```
+cargo run -p scenario-rs-tui -- -c ./example_configs/example-scenario.toml
+```
+
+🛠️ **build (release):**
+
+```
+cargo build -p scenario-rs-tui --release
+```
+
+⚡ **run executable:**
+
+```
+<cloned-dir>/scenario-rs/target/release/scenario-rs-tui.exe
+```
+
+### �📟 [cli]
 
 ❗ **go to:**
 

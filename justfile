@@ -52,6 +52,18 @@ ng-test: npm-install
 [doc("Run all tests (Rust + Angular)")]
 test-all: test ng-test
 
+# --- TUI ---
+
+# Run TUI in development mode
+[doc("Run TUI in development mode")]
+tui-run *args:
+    cargo run -p scenario-rs-tui -- {{args}}
+
+# Build TUI (release)
+[doc("Build TUI (release)")]
+tui-build:
+    cargo build -p scenario-rs-tui --release
+
 # --- Frontend ---
 
 # Install frontend dependencies

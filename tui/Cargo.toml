@@ -1,0 +1,23 @@
+[package]
+name = "scenario-rs-tui"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "TUI for scenario-rs"
+license.workspace = true
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
+
+[[bin]]
+name = "scenario-rs-tui"
+path = "src/main.rs"
+
+[dependencies]
+scenario-rs = { package = "scenario-rs-core", path = "../core" }
+clap = { version = "4.6.0", features = ["derive"] }
+ratatui = "0.30.0"
+crossterm = "0.29.0"
+
+[dev-dependencies]
+tempfile = "3"

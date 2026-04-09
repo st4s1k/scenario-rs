@@ -24,7 +24,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Run Rust coverage
-        run: cargo tarpaulin -p scenario-rs-core -p scenario-rs-cli -p scenario-rs-gui --out xml --output-dir coverage
+        run: cargo tarpaulin -p scenario-rs-core -p scenario-rs-cli -p scenario-rs-gui -p scenario-rs-tui --out xml --output-dir coverage
 
       - name: Upload Rust coverage to Codecov
         uses: codecov/codecov-action@v5
