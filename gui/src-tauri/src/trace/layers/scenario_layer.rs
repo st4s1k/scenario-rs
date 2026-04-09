@@ -258,23 +258,36 @@ impl ScenarioEventLayer {
                     if let (Some(step_index), Some(steps_total)) =
                         (visitor.step_index, visitor.steps_total)
                     {
+                        let stats = match (
+                            visitor.sftp_copy_elapsed_ms,
+                            &visitor.sftp_copy_throughput_mbps,
+                        ) {
+                            (Some(ms), Some(mbps)) => {
+                                let secs = ms as f64 / 1000.0;
+                                format!(" ({:.1}s, {} MB/s)", secs, mbps)
+                            }
+                            _ => String::new(),
+                        };
+
                         if let (Some(on_fail_step_index), Some(on_fail_steps_total)) =
                             (visitor.on_fail_step_index, visitor.on_fail_steps_total)
                         {
                             self.sender.send_event(AppEvent::LogMessage(format!(
-                                "{} [{}/{}] [on-fail] [{}/{}] SFTP copy finished",
+                                "{} [{}/{}] [on-fail] [{}/{}] SFTP copy finished{}",
                                 SCENARIO_PREFIX,
                                 step_index + 1,
                                 steps_total,
                                 on_fail_step_index + 1,
-                                on_fail_steps_total
+                                on_fail_steps_total,
+                                stats
                             )));
                         } else {
                             self.sender.send_event(AppEvent::LogMessage(format!(
-                                "{} [{}/{}] SFTP copy finished",
+                                "{} [{}/{}] SFTP copy finished{}",
                                 SCENARIO_PREFIX,
                                 step_index + 1,
-                                steps_total
+                                steps_total,
+                                stats
                             )));
                         }
                     }
@@ -1427,6 +1440,8 @@ mod tests {
         let mut visitor = visitor_with("sftp_copy_completed");
         visitor.step_index = Some(0);
         visitor.steps_total = Some(1);
+        visitor.sftp_copy_elapsed_ms = Some(15230);
+        visitor.sftp_copy_throughput_mbps = Some("3.28".to_string());
 
         // When
         layer.handle_visitor(visitor);
@@ -1434,7 +1449,7 @@ mod tests {
         // Then
         let msgs: Vec<_> = rx.try_iter().collect();
         assert_eq!(msgs.len(), 1);
-        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("SFTP copy finished")));
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("SFTP copy finished") && m.contains("3.28 MB/s")));
     }
 
     #[test]
@@ -1446,6 +1461,8 @@ mod tests {
         visitor.steps_total = Some(1);
         visitor.on_fail_step_index = Some(0);
         visitor.on_fail_steps_total = Some(1);
+        visitor.sftp_copy_elapsed_ms = Some(5000);
+        visitor.sftp_copy_throughput_mbps = Some("2.50".to_string());
 
         // When
         layer.handle_visitor(visitor);
@@ -1453,7 +1470,7 @@ mod tests {
         // Then
         let msgs: Vec<_> = rx.try_iter().collect();
         assert_eq!(msgs.len(), 1);
-        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("[on-fail]")));
+        assert!(matches!(&msgs[0], AppEvent::LogMessage(m) if m.contains("[on-fail]") && m.contains("2.50 MB/s")));
     }
 
     #[test]
