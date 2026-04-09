@@ -1,0 +1,57 @@
+name: coverage
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies (ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Run Rust coverage
+        run: cargo tarpaulin -p scenario-rs-core -p scenario-rs-cli -p scenario-rs-gui --out xml --output-dir coverage
+
+      - name: Upload Rust coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/cobertura.xml
+          flags: rust
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: ./gui
+
+      - name: Run Angular tests with coverage
+        run: npx ng test --watch=false --browsers=ChromeHeadless --code-coverage
+        working-directory: ./gui
+
+      - name: Upload Angular coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: gui/coverage/lcov.info
+          flags: angular
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}

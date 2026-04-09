@@ -4,6 +4,7 @@
 
 
 [![publish](https://github.com/st4s1k/scenario-rs/actions/workflows/scenario-rs.yml/badge.svg)](https://github.com/st4s1k/scenario-rs/actions/workflows/scenario-rs.yml)
+[![Rust Coverage](https://codecov.io/gh/st4s1k/scenario-rs/graph/badge.svg?flag=rust)](https://codecov.io/gh/st4s1k/scenario-rs) [![Angular Coverage](https://codecov.io/gh/st4s1k/scenario-rs/graph/badge.svg?flag=angular)](https://codecov.io/gh/st4s1k/scenario-rs)
 
 A powerful automation tool for executing remote commands and transferring files via SSH. It uses configuration files to define execution scenarios, making system administration and deployment tasks repeatable and reliable.
 
