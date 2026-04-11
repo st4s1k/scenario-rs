@@ -234,7 +234,7 @@ impl ScenarioConfig {
             .unwrap_or_else(|| std::path::Path::new("."))
             .to_path_buf();
 
-        let mut configs_to_merge = Self::resolve_config_imports(config_path)?;
+        let configs_to_merge = Self::resolve_config_imports(config_path)?;
 
         // The leaf config is the last element (after reversal, parents come first)
         let leaf = configs_to_merge.last().cloned().unwrap();
