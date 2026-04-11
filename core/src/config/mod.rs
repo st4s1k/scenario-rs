@@ -26,7 +26,7 @@ pub mod variables;
 
 /// Returns the JSON Schema for the scenario configuration format.
 pub fn json_schema() -> schemars::Schema {
-    schemars::generate::SchemaSettings::openapi3()
+    schemars::generate::SchemaSettings::draft2020_12()
         .into_generator()
         .into_root_schema_for::<scenario::PartialScenarioConfig>()
 }

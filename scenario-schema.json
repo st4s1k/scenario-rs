@@ -1,0 +1,342 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PartialScenarioConfig",
+  "description": "Partial scenario config supporting inheritance via a `parent` field.",
+  "type": "object",
+  "properties": {
+    "credentials": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PartialCredentialsConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "parent": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sequences": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SequencesConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "server": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PartialServerConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "steps": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/StepsConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "tasks": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TasksConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "variables": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PartialVariablesConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "DefinedVariablesConfig": {
+      "description": "Map of variable names to predefined values.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "PartialCredentialsConfig": {
+      "description": "Partial credentials supporting inheritance/merging.",
+      "type": "object",
+      "properties": {
+        "password": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "private_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "username": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "PartialServerConfig": {
+      "description": "Partial server config supporting inheritance/merging.",
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "port": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0
+        }
+      }
+    },
+    "PartialVariablesConfig": {
+      "description": "Partial variables config supporting inheritance/merging.",
+      "type": "object",
+      "properties": {
+        "defined": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DefinedVariablesConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "required": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RequiredVariablesConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "RemoteSudoTaskConfig": {
+      "description": "Configuration for a remote sudo command task.",
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "error_message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "command"
+      ]
+    },
+    "RequiredVariableConfig": {
+      "description": "Metadata for a single required variable.",
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "read_only": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "String"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "description": "Filesystem path — supports automatic basename extraction.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "Path"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "description": "Initialized with the current time in the given format.",
+          "type": "object",
+          "properties": {
+            "format": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "Timestamp"
+            }
+          },
+          "required": [
+            "type",
+            "format"
+          ]
+        }
+      ]
+    },
+    "RequiredVariablesConfig": {
+      "description": "Map of variable names to their required variable configs.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/RequiredVariableConfig"
+      }
+    },
+    "SequencesConfig": {
+      "description": "Named reusable sequences of task names.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "SftpCopyTaskConfig": {
+      "description": "Configuration for an SFTP file copy task.",
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "destination": {
+          "type": "string"
+        },
+        "error_message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "destination"
+      ]
+    },
+    "StepContext": {
+      "description": "A step context: references either a single task or a sequence, with optional on-fail fallback.",
+      "type": "object",
+      "properties": {
+        "on-fail": {
+          "description": "Sequence name to execute as fallback on failure.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sequence": {
+          "description": "Reference to a sequence name (mutually exclusive with `task`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "task": {
+          "description": "Reference to a task name (mutually exclusive with `sequence`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "StepsConfig": {
+      "description": "Ordered map of step names to their contexts, preserving TOML declaration order.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/StepContext"
+      }
+    },
+    "TasksConfig": {
+      "description": "Categorized task library: tasks organized by type.",
+      "type": "object",
+      "properties": {
+        "remote_sudo": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/RemoteSudoTaskConfig"
+          }
+        },
+        "sftp_copy": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/SftpCopyTaskConfig"
+          }
+        }
+      }
+    }
+  }
+}
