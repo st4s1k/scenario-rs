@@ -28,6 +28,15 @@ use std::{
     },
     time::{Duration, Instant},
 };
+
+/// Drop guard that resets `is_executing` to `false` when the execution task ends.
+struct ExecutingGuard(Arc<AtomicBool>);
+
+impl Drop for ExecutingGuard {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::SeqCst);
+    }
+}
 use tauri::{AppHandle, Emitter};
 use tracing::{error, info, instrument, warn};
 
@@ -502,8 +511,8 @@ impl ScenarioAppState {
             // Spawn scenario execution
             tauri::async_runtime::spawn(async move {
                 is_executing.store(true, Ordering::SeqCst);
+                let _guard = ExecutingGuard(is_executing);
                 scenario.execute(Some(&state_manager), debug_mode);
-                is_executing.store(false, Ordering::SeqCst);
             });
         } else {
             info!("No scenario loaded");
