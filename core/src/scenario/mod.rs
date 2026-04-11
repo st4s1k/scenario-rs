@@ -1,8 +1,8 @@
 use crate::{
     config::scenario::ScenarioConfig,
     scenario::{
-        credentials::Credentials, errors::ScenarioError, execute::Execute, server::Server,
-        tasks::Tasks, variables::Variables,
+        credentials::Credentials, errors::ScenarioError, server::Server,
+        steps::Steps, tasks::Tasks, variables::Variables,
     },
     session::{Session, SshError},
     state::ExecutionStateManager,
@@ -32,7 +32,6 @@ enum ExecutionOutcome {
 
 pub mod credentials;
 pub mod errors;
-pub mod execute;
 pub mod on_fail_step;
 pub mod on_fail_steps;
 pub mod remote_sudo;
@@ -49,7 +48,7 @@ pub mod variables;
 pub struct Scenario {
     pub(crate) server: Server,
     pub(crate) credentials: Credentials,
-    pub(crate) execute: Execute,
+    pub(crate) steps: Steps,
     pub(crate) variables: Variables,
     pub(crate) tasks: Tasks,
 }
@@ -67,8 +66,8 @@ impl Scenario {
         &self.tasks
     }
 
-    pub fn steps(&self) -> &steps::Steps {
-        &self.execute.steps
+    pub fn steps(&self) -> &Steps {
+        &self.steps
     }
 }
 
@@ -78,9 +77,12 @@ impl TryFrom<ScenarioConfig> for Scenario {
     fn try_from(config: ScenarioConfig) -> Result<Self, Self::Error> {
         let server = Server::from(&config.server);
         let credentials = Credentials::from(&config.credentials);
-        let tasks = Tasks::from(&config.tasks);
-        let execute = Execute::try_from((&tasks, &config.execute))
-            .map_err(ScenarioError::CannotCreateExecuteFromConfig)
+        let tasks = Tasks::try_from(&config.tasks)
+            .map_err(|error| {
+                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
+                error
+            })?;
+        let steps = Steps::from_config(&tasks, &config.steps, &config.sequences)
             .map_err(|error| {
                 debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %error);
                 error
@@ -99,7 +101,7 @@ impl TryFrom<ScenarioConfig> for Scenario {
         let scenario = Scenario {
             server,
             credentials,
-            execute,
+            steps,
             variables,
             tasks,
         };
@@ -179,7 +181,6 @@ impl Scenario {
         log_scenario_event(ScenarioEvent::SessionCreated);
 
         match self
-            .execute
             .steps
             .execute(&session, &self.variables, state_manager)
         {
@@ -206,8 +207,9 @@ impl Scenario {
 mod tests {
     use crate::{
         config::{
-            credentials::CredentialsConfig, execute::ExecuteConfig, scenario::ScenarioConfig,
-            server::ServerConfig, step::StepConfig, tasks::TasksConfig, variables::VariablesConfig,
+            credentials::CredentialsConfig, scenario::ScenarioConfig,
+            sequences::SequencesConfig, server::ServerConfig,
+            steps::StepsConfig, tasks::TasksConfig, variables::VariablesConfig,
         },
         scenario::Scenario,
         session::{Session, SshError},
@@ -340,7 +342,8 @@ mod tests {
                 password: Some("testpass".to_string()),
                 private_key: None,
             },
-            execute: ExecuteConfig::default(),
+            steps: StepsConfig::default(),
+            sequences: SequencesConfig::default(),
             tasks: TasksConfig::default(),
             variables: VariablesConfig::default(),
         }
@@ -398,10 +401,23 @@ mod tests {
     }
 
     #[test]
-    fn test_scenario_try_from_config_with_invalid_execute() {
+    fn test_scenario_try_from_config_with_invalid_steps() {
         init_tracing();
 
+        use crate::config::step::StepContext;
+        use indexmap::IndexMap;
+
         // Given
+        let mut step_map = IndexMap::new();
+        step_map.insert(
+            "bad_step".to_string(),
+            StepContext {
+                task: Some("nonexistent_task".to_string()),
+                sequence: None,
+                on_fail: None,
+            },
+        );
+
         let config = ScenarioConfig {
             server: ServerConfig {
                 host: "test.example.com".to_string(),
@@ -412,13 +428,8 @@ mod tests {
                 password: Some("testpass".to_string()),
                 private_key: None,
             },
-            execute: ExecuteConfig {
-                steps: vec![StepConfig {
-                    task: "nonexistent_task".to_string(),
-                    on_fail: None,
-                }]
-                .into(),
-            },
+            steps: StepsConfig::from(step_map),
+            sequences: SequencesConfig::default(),
             tasks: TasksConfig::default(),
             variables: VariablesConfig::default(),
         };
@@ -438,22 +449,21 @@ mod tests {
         let scenario =
             Scenario::try_from("../example_configs/example-scenario.toml").unwrap();
 
-        // When
+        // When & Then
         scenario.execute(None, true);
 
-        // Then
     }
 
     #[test]
     #[cfg(not(tarpaulin_include))]
     fn test_scenario_execute_with_state_manager() {
-        // Given
         use crate::state::{
             types::{ExecutionState, ExecutionStatus, StepStatus},
             ExecutionStateManager,
         };
         use std::sync::mpsc;
 
+        // Given
         let scenario =
             Scenario::try_from("../example_configs/example-scenario.toml").unwrap();
 
@@ -490,13 +500,13 @@ mod tests {
     #[test]
     fn test_scenario_execute_with_session_failure() {
         init_tracing();
-        // Given
         use crate::state::{
             types::{ExecutionState, ExecutionStatus},
             ExecutionStateManager,
         };
         use std::sync::mpsc;
 
+        // Given
         let scenario =
             Scenario::try_from("../example_configs/example-scenario.toml").unwrap();
 
@@ -537,7 +547,6 @@ mod tests {
     #[test]
     fn test_scenario_execute_with_steps_failure() {
         init_tracing();
-        // Given
         use crate::{
             session::SessionType,
             utils::{ArcMutex, Wrap},
@@ -577,6 +586,7 @@ mod tests {
             }
         }
 
+        // Given
         let scenario =
             Scenario::try_from("../example_configs/example-scenario.toml").unwrap();
 

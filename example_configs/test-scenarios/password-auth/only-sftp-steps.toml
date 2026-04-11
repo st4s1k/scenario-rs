@@ -1,40 +1,47 @@
+#:schema ../../../scenario-schema.json
+
 # Test: Only SftpCopy steps
 # UI: Multiple progress bars in sequence
 
 parent = "./server.toml"
 
-[execute]
-steps = [
-    { task = "upload_app" },
-    { task = "upload_config" },
-    { task = "upload_scripts" },
-]
+[steps.app]
+task = "upload_app"
 
-[variables.required]
-app_jar = { type = "Path", label = "Application JAR" }
-config_file = { type = "Path", label = "Config File" }
-scripts_archive = { type = "Path", label = "Scripts Archive" }
+[steps.config]
+task = "upload_config"
+
+[steps.scripts]
+task = "upload_scripts"
+
+[variables.required.app_jar]
+type = "Path"
+label = "Application JAR"
+
+[variables.required.config_file]
+type = "Path"
+label = "Config File"
+
+[variables.required.scripts_archive]
+type = "Path"
+label = "Scripts Archive"
 
 [variables.defined]
 remote_base = "/home/{username}/deploy"
 
-[tasks.upload_app]
-type = "SftpCopy"
+[tasks.sftp_copy.upload_app]
+source = "{app_jar}"
+destination = "{remote_base}/{basename:app_jar}"
 description = "Uploading application JAR"
-source_path = "{app_jar}"
-destination_path = "{remote_base}/{basename:app_jar}"
 error_message = "Failed to upload application"
 
-[tasks.upload_config]
-type = "SftpCopy"
+[tasks.sftp_copy.upload_config]
+source = "{config_file}"
+destination = "{remote_base}/config/{basename:config_file}"
 description = "Uploading configuration"
-source_path = "{config_file}"
-destination_path = "{remote_base}/config/{basename:config_file}"
 error_message = "Failed to upload config"
 
-[tasks.upload_scripts]
-type = "SftpCopy"
+[tasks.sftp_copy.upload_scripts]
+source = "{scripts_archive}"
+destination = "{remote_base}/scripts/{basename:scripts_archive}"
 description = "Uploading deployment scripts"
-source_path = "{scripts_archive}"
-destination_path = "{remote_base}/scripts/{basename:scripts_archive}"
-error_message = "Failed to upload scripts"

@@ -1,13 +1,15 @@
-use crate::config::step::StepConfig;
+use crate::config::step::StepContext;
+use indexmap::IndexMap;
+use schemars::JsonSchema;
 use serde::Deserialize;
 use std::ops::{Deref, DerefMut};
 
-/// Ordered sequence of steps to execute.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
-pub struct StepsConfig(Vec<StepConfig>);
+/// Ordered map of step names to their contexts, preserving TOML declaration order.
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+pub struct StepsConfig(IndexMap<String, StepContext>);
 
 impl Deref for StepsConfig {
-    type Target = Vec<StepConfig>;
+    type Target = IndexMap<String, StepContext>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -20,106 +22,65 @@ impl DerefMut for StepsConfig {
     }
 }
 
-impl From<Vec<StepConfig>> for StepsConfig {
-    fn from(steps: Vec<StepConfig>) -> Self {
+impl From<IndexMap<String, StepContext>> for StepsConfig {
+    fn from(steps: IndexMap<String, StepContext>) -> Self {
         StepsConfig(steps)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{step::StepConfig, steps::StepsConfig};
+    use super::*;
+    use crate::config::step::StepContext;
 
     #[test]
-    fn test_default_creates_empty_vector() {
-        // Given
+    fn test_steps_config_default() {
         let steps = StepsConfig::default();
-
-        // Then
         assert!(steps.is_empty());
     }
 
     #[test]
-    fn test_deref_provides_access_to_vector_methods() {
-        // Given
-        let step1 = create_test_step_config();
-        let step2 = create_test_step_config();
-        let steps = StepsConfig::from(vec![step1.clone(), step2.clone()]);
+    fn test_steps_config_preserves_order() {
+        let toml_str = r#"
+            [first]
+            task = "task_a"
 
-        // When & Then
-        assert_eq!(steps.len(), 2);
-        assert_eq!(&steps[0], &step1);
-        assert_eq!(&steps[1], &step2);
+            [second]
+            task = "task_b"
+
+            [third]
+            sequence = "seq_c"
+        "#;
+        let steps: StepsConfig = toml::from_str(toml_str).unwrap();
+        let keys: Vec<&String> = steps.keys().collect();
+        assert_eq!(keys, vec!["first", "second", "third"]);
     }
 
     #[test]
-    fn test_deref_mut_allows_modification_of_vector() {
-        // Given
-        let step = create_test_step_config();
-        let mut steps = StepsConfig::from(vec![step.clone()]);
-
-        // When
-        let new_step = create_test_step_config();
-        steps.push(new_step.clone());
-
-        // Then
-        assert_eq!(steps.len(), 2);
-        assert_eq!(&steps[1], &new_step);
+    fn test_steps_config_from_indexmap() {
+        let mut map = IndexMap::new();
+        map.insert(
+            "step1".to_string(),
+            StepContext {
+                task: Some("task1".to_string()),
+                sequence: None,
+                on_fail: None,
+            },
+        );
+        let steps = StepsConfig::from(map);
+        assert_eq!(steps.len(), 1);
     }
 
     #[test]
-    fn test_from_creates_steps_from_vector() {
-        // Given
-        let step1 = create_test_step_config();
-        let step2 = create_test_step_config();
-        let vec = vec![step1.clone(), step2.clone()];
-
-        // When
-        let steps = StepsConfig::from(vec);
-
-        // Then
-        assert_eq!(steps.len(), 2);
-        assert_eq!(&steps[0], &step1);
-        assert_eq!(&steps[1], &step2);
-    }
-
-    #[test]
-    fn test_clone_creates_identical_copy() {
-        // Given
-        let steps = StepsConfig::from(vec![create_test_step_config(), create_test_step_config()]);
-
-        // When
-        let cloned = steps.clone();
-
-        // Then
-        assert_eq!(steps, cloned);
-    }
-
-    #[test]
-    fn test_partial_eq_compares_contents() {
-        // Given
-        let steps1 = StepsConfig::from(vec![create_test_step_config(), create_test_step_config()]);
-        let steps2 = StepsConfig::from(vec![create_test_step_config()]);
-
-        // When & Then
-        assert_eq!(steps1, steps1.clone());
-        assert_ne!(steps1, steps2);
-        assert_eq!(StepsConfig::default(), StepsConfig::default());
-    }
-
-    #[test]
-    fn test_debug_formatting() {
-        // Given
-        let steps = StepsConfig::default();
-
-        // When
-        let debug_str = format!("{:?}", steps);
-
-        // Then
-        assert!(debug_str.contains("StepsConfig"));
-    }
-
-    fn create_test_step_config() -> StepConfig {
-        StepConfig::default()
+    fn test_steps_config_with_on_fail() {
+        let toml_str = r#"
+            [deploy]
+            task = "deploy_app"
+            on-fail = "cleanup_sequence"
+        "#;
+        let steps: StepsConfig = toml::from_str(toml_str).unwrap();
+        let step = steps.get("deploy").unwrap();
+        assert_eq!(step.task.as_deref(), Some("deploy_app"));
+        assert_eq!(step.on_fail.as_deref(), Some("cleanup_sequence"));
     }
 }

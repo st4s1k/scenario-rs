@@ -1,3 +1,5 @@
+#:schema ../scenario-schema.json
+
 [credentials]
 username = "my_username_parent" # will be added to the variables
 password = "my_password_parent" # if not provided, will use the ssh-agent
@@ -7,85 +9,92 @@ password = "my_password_parent" # if not provided, will use the ssh-agent
 host = "parent.example.com" # required
 port = 22 # optional, default is 22
 
-[execute]
-steps = [
-    { task = "copy_jar_to_server" },
-    { task = "stop_service", on-fail = [
-        "start_service"
-    ] },
-    { task = "create_backup", on-fail = [
-        "start_service"
-    ] },
-    { task = "remove_current_deploy", on-fail = [
-        "restore_backup",
-        "start_service"
-    ] },
-    { task = "deploy_new_file", on-fail = [
-        "restore_backup",
-        "start_service"
-    ] },
-    { task = "start_service", on-fail = [
-        "restore_backup",
-        "start_service"
-    ] }
-]
+# Steps — executed in declaration order
+[steps.copy_jar]
+task = "copy_jar_to_server"
+
+[steps.stop]
+task = "stop_service"
+on-fail = "recovery_start"
+
+[steps.backup]
+task = "create_backup"
+on-fail = "recovery_start"
+
+[steps.remove_old]
+task = "remove_current_deploy"
+on-fail = "recovery_restore_start"
+
+[steps.deploy]
+task = "deploy_new_file"
+on-fail = "recovery_restore_start"
+
+[steps.start]
+task = "start_service"
+on-fail = "recovery_restore_start"
+
+# Sequences for on-fail recovery
+[sequences]
+recovery_start = ["start_service"]
+recovery_restore_start = ["restore_backup", "start_service"]
 
 # Required Variables
 
-[variables.required]
-service_name = { type = "String", label = "Service Name" }
-local_jar_path = { type = "Path", label = "Local JAR Path" }
-timestamp = { type = "Timestamp", label = "Timestamp", format = "%Y-%m-%dT%H%M%S%:z", read_only = true }
+[variables.required.service_name]
+type = "String"
+label = "Service Name"
+
+[variables.required.local_jar_path]
+type = "Path"
+label = "Local JAR Path"
+
+[variables.required.timestamp]
+type = "Timestamp"
+label = "Timestamp"
+format = "%Y-%m-%dT%H%M%S%:z"
+read_only = true
 
 # Defined Variables
 
 [variables.defined]
 remote_service_script_path = "/usr/local/bin/{service_name}.sh"
 remote_deploy_path = "/usr/local/{service_name}/{service_name}.jar"
-remote_backup_path = "/usr/local/backup/{service_name}/{service_name}-{timestamp}.jar"
+remote_backup_path = "/usr/local/backup/{service_name}/{service_name}-{timestamp}.{env:USER}.jar"
 remote_base_path = "/home/{username}"
 
-# Tasks
-
-[tasks.copy_jar_to_server]
-type = "SftpCopy"
+# Tasks — categorized by type
+[tasks.sftp_copy.copy_jar_to_server]
+source = "{local_jar_path}"
+destination = "{remote_base_path}/{basename:local_jar_path}"
 description = "Copying new deploy file to server"
-source_path = "{local_jar_path}"
-destination_path = "{remote_base_path}/{basename:local_jar_path}"
 error_message = "Failed to copy new deploy file to server"
 
-[tasks.stop_service]
-type = "RemoteSudo"
-description = "Stopping the service on remote server"
+[tasks.remote_sudo.stop_service]
 command = "{remote_service_script_path} stop"
+description = "Stopping the service on remote server"
 error_message = "Failed to stop the service on the remote server"
 
-[tasks.create_backup]
-type = "RemoteSudo"
-description = "Creating backup of current deployment"
+[tasks.remote_sudo.create_backup]
 command = "cp -a {remote_deploy_path} {remote_backup_path}"
+description = "Creating backup of current deployment"
 error_message = "Failed to create backup of the current deployment"
 
-[tasks.remove_current_deploy]
-type = "RemoteSudo"
-description = "Removing current deployment"
+[tasks.remote_sudo.remove_current_deploy]
 command = "rm {remote_deploy_path}"
+description = "Removing current deployment"
 error_message = "Failed to remove the current deployment"
 
-[tasks.deploy_new_file]
-type = "RemoteSudo"
-description = "Deploying the new file"
+[tasks.remote_sudo.deploy_new_file]
 command = "mv {remote_base_path}/{basename:local_jar_path} {remote_deploy_path}"
+description = "Deploying the new file"
 error_message = "Failed to deploy the new file"
 
-[tasks.start_service]
-type = "RemoteSudo"
-description = "Starting the service on remote server"
+[tasks.remote_sudo.start_service]
 command = "{remote_service_script_path} start"
+description = "Starting the service on remote server"
 error_message = "Failed to start the service on the remote server"
 
-[tasks.restore_backup]
-type = "RemoteSudo"
-description = "Restoring backup of current deployment"
+[tasks.remote_sudo.restore_backup]
 command = "cp -a {remote_backup_path} {remote_deploy_path}"
+description = "Restoring backup of current deployment"
 error_message = "Failed to restore backup of the current deployment"

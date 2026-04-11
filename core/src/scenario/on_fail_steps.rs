@@ -97,7 +97,7 @@ mod tests {
     use crate::{
         config::{
             on_fail::OnFailStepsConfig,
-            task::{TaskConfig, TaskType},
+            task::{RemoteSudoTaskConfig, SftpCopyTaskConfig},
         },
         scenario::{
             on_fail_step::OnFailStep,
@@ -107,7 +107,7 @@ mod tests {
             tasks::Tasks,
             variables::Variables,
         },
-       session::Session,
+        session::Session,
     };
     use std::collections::HashMap;
 
@@ -262,26 +262,26 @@ mod tests {
     }
 
     fn create_remote_sudo_task() -> Task {
-        let config = TaskConfig {
-            description: "Test task 1".to_string(),
-            error_message: "Task 1 failed".to_string(),
-            task_type: TaskType::RemoteSudo {
+        Task::from_remote_sudo(
+            "task1",
+            &RemoteSudoTaskConfig {
                 command: "echo test".to_string(),
+                description: Some("Test task 1".to_string()),
+                error_message: Some("Task 1 failed".to_string()),
             },
-        };
-        Task::from(&config)
+        )
     }
 
     fn create_sftp_copy_task() -> Task {
-        let config = TaskConfig {
-            description: "Test task 2".to_string(),
-            error_message: "Task 2 failed".to_string(),
-            task_type: TaskType::SftpCopy {
-                source_path: "/test/source".to_string(),
-                destination_path: "/test/dest".to_string(),
+        Task::from_sftp_copy(
+            "task2",
+            &SftpCopyTaskConfig {
+                source: "/test/source".to_string(),
+                destination: "/test/dest".to_string(),
+                description: Some("Test task 2".to_string()),
+                error_message: Some("Task 2 failed".to_string()),
             },
-        };
-        Task::from(&config)
+        )
     }
 
     fn create_remote_sudo_step() -> OnFailStep {
@@ -320,7 +320,6 @@ mod tests {
 
     #[test]
     fn test_on_fail_steps_execute_non_empty_success() {
-        // Given
         use crate::{
             session::{Channel, SessionType, Sftp, SshError, Write},
             utils::{ArcMutex, Wrap},
@@ -343,6 +342,7 @@ mod tests {
             }
         }
 
+        // Given
         let on_fail_steps = OnFailSteps::from(vec![create_remote_sudo_step()]);
         let session = Session {
             inner: SessionType::Test {

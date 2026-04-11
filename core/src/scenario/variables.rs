@@ -14,6 +14,7 @@ use crate::{
     trace::ScenarioEvent,
     utils::{HasPlaceholders, HasText, IsBlank, IsNotEmpty},
 };
+use regex::Regex;
 use std::{collections::HashMap, ops::Deref};
 use tracing::debug;
 
@@ -67,10 +68,40 @@ impl Variables {
         &mut self.defined
     }
 
+    /// Replaces `{env:VAR_NAME}` placeholders with the corresponding environment variable values.
+    /// Returns an error immediately if any referenced environment variable is not set.
+    fn resolve_env_placeholders(input: &str) -> Result<String, PlaceholderResolutionError> {
+        let env_regex =
+            Regex::new(r"\{env:([^}]+)\}").expect("env_regex should be a valid regex");
+
+        let mut output = input.to_string();
+
+        for captures in env_regex.captures_iter(input) {
+            let full_match = captures.get(0).unwrap().as_str();
+            let var_name = captures.get(1).unwrap().as_str();
+
+            let value = std::env::var(var_name).map_err(|_| {
+                PlaceholderResolutionError::CannotResolveEnvVariable(var_name.to_string())
+            })?;
+
+            output = output.replace(full_match, &value);
+        }
+
+        Ok(output)
+    }
+
     /// Replaces `{variable_name}` placeholders in the input string, supporting nested resolution.
+    /// Also resolves `{env:VAR_NAME}` placeholders from environment variables.
     pub fn resolve_placeholders(&self, input: &str) -> Result<String, PlaceholderResolutionError> {
         if !input.has_placeholders() {
             return Ok(input.to_string());
+        }
+
+        // Pre-pass: resolve {env:VAR_NAME} placeholders from environment
+        let mut output = Self::resolve_env_placeholders(input)?;
+
+        if !output.has_placeholders() {
+            return Ok(output);
         }
 
         let mut variables = self
@@ -88,8 +119,6 @@ impl Variables {
             .filter(|(_, value)| value.has_text())
             .map(|(key, value)| (*key, *value))
             .collect::<HashMap<&str, &str>>();
-
-        let mut output = input.to_string();
 
         loop {
             let previous = output.clone();
@@ -498,5 +527,83 @@ mod tests {
         assert!(result.is_ok());
         let resolved = result.unwrap();
         assert_eq!(resolved.get("hostname"), Some(&"example.com".to_string()));
+    }
+
+    #[test]
+    fn test_resolve_env_variable_success() {
+        // Given
+        std::env::set_var("SCENARIO_RS_TEST_VAR", "env_value");
+        let variables = Variables::default();
+
+        // When
+        let result = variables.resolve_placeholders("prefix-{env:SCENARIO_RS_TEST_VAR}-suffix");
+
+        // Then
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "prefix-env_value-suffix");
+
+        std::env::remove_var("SCENARIO_RS_TEST_VAR");
+    }
+
+    #[test]
+    fn test_resolve_env_variable_missing() {
+        // Given
+        std::env::remove_var("SCENARIO_RS_MISSING_VAR");
+        let variables = Variables::default();
+
+        // When
+        let result = variables.resolve_placeholders("value-{env:SCENARIO_RS_MISSING_VAR}");
+
+        // Then
+        assert!(result.is_err());
+        if let Err(PlaceholderResolutionError::CannotResolveEnvVariable(name)) = result {
+            assert_eq!(name, "SCENARIO_RS_MISSING_VAR");
+        } else {
+            panic!("Expected CannotResolveEnvVariable error");
+        }
+    }
+
+    #[test]
+    fn test_resolve_env_variable_combined_with_regular() {
+        // Given
+        std::env::set_var("SCENARIO_RS_TEST_USER", "deploy_user");
+        let mut variables = Variables::default();
+        variables
+            .defined_mut()
+            .insert("service_name".to_string(), "my-app".to_string());
+
+        // When
+        let result =
+            variables.resolve_placeholders("/backup/{service_name}/{env:SCENARIO_RS_TEST_USER}");
+
+        // Then
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "/backup/my-app/deploy_user");
+
+        std::env::remove_var("SCENARIO_RS_TEST_USER");
+    }
+
+    #[test]
+    fn test_resolved_with_env_variables_in_defined() {
+        // Given
+        std::env::set_var("SCENARIO_RS_TEST_HOST", "prod.example.com");
+        let mut variables = Variables::default();
+        variables.defined_mut().insert(
+            "url".to_string(),
+            "https://{env:SCENARIO_RS_TEST_HOST}/api".to_string(),
+        );
+
+        // When
+        let result = variables.resolved();
+
+        // Then
+        assert!(result.is_ok());
+        let resolved = result.unwrap();
+        assert_eq!(
+            resolved.get("url"),
+            Some(&"https://prod.example.com/api".to_string())
+        );
+
+        std::env::remove_var("SCENARIO_RS_TEST_HOST");
     }
 }

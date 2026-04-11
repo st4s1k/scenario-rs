@@ -29,8 +29,8 @@ pub enum ScenarioConfigError {
     #[error("Missing required host in server configuration")]
     MissingHost,
 
-    #[error("Missing required execute configuration")]
-    MissingExecute,
+    #[error("Missing required steps configuration")]
+    MissingSteps,
 
     #[error("Missing required tasks configuration")]
     MissingTasks,
@@ -44,21 +44,21 @@ pub enum ScenarioError {
     #[error("Cannot create Scenario from config:\n{0}")]
     CannotCreateScenarioFromConfig(#[source] ScenarioConfigError),
 
-    #[error("Cannot create Execute from config:\n{0}")]
-    CannotCreateExecuteFromConfig(#[source] ExecuteError),
-}
+    #[error("Duplicate task name across categories:\n{0}")]
+    DuplicateTaskName(String),
 
-#[derive(Error, Debug)]
-pub enum ExecuteError {
-    #[error("Cannot create Steps from config:\n{0}")]
-    CannotCreateStepsFromConfig(StepsError),
+    #[error("Invalid step context for step '{0}': must specify exactly one of 'task' or 'sequence'")]
+    InvalidStepContext(String),
+
+    #[error("Unknown sequence reference '{0}' in step '{1}'")]
+    UnknownSequence(String, String),
+
+    #[error("Unknown task reference '{0}'")]
+    UnknownTaskReference(String),
 }
 
 #[derive(Error, Debug)]
 pub enum StepsError {
-    #[error("Cannot create Step from config:\n{0}")]
-    CannotCreateStepFromConfig(StepError),
-
     #[error("Cannot execute step:\n{0}")]
     CannotExecuteStep(#[source] StepError),
 }
@@ -70,12 +70,6 @@ pub enum StepError {
 
     #[error("Cannot execute SftpCopy command:\n{1}:\n{0}")]
     CannotExecuteSftpCopyCommand(#[source] SftpCopyError, String),
-
-    #[error("Cannot create OnFailSteps from config:\n{0}")]
-    CannotCreateOnFailStepsFromConfig(#[source] OnFailError),
-
-    #[error("Cannot create Task from config:\n{0}")]
-    CannotCreateTaskFromConfig(String),
 
     #[error("Cannot execute on-fail steps:\n{0}")]
     CannotExecuteOnFailSteps(#[source] OnFailError),
@@ -151,12 +145,15 @@ pub enum PlaceholderResolutionError {
 
     #[error("Cannot resolve placeholders in this template:\n{0}")]
     CannotResolvePlaceholders(String),
+
+    #[error("Environment variable not found: {0}")]
+    CannotResolveEnvVariable(String),
 }
 
 #[cfg(test)]
 mod tests {
     use crate::scenario::errors::{
-        ExecuteError, OnFailError, PlaceholderResolutionError, RemoteSudoError,
+        OnFailError, PlaceholderResolutionError, RemoteSudoError,
         ScenarioConfigError, ScenarioError, SftpCopyError, StepError, StepsError,
     };
     use std::io;
@@ -206,23 +203,6 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_error_display() {
-        // Given
-        let step_error = StepError::CannotCreateTaskFromConfig("task_id".to_string());
-        let steps_error = StepsError::CannotCreateStepFromConfig(step_error);
-        let execute_error = ExecuteError::CannotCreateStepsFromConfig(steps_error);
-
-        // When
-        let error_message = format!("{}", execute_error);
-
-        // Then
-        assert!(error_message.contains("Cannot create Steps from config"));
-        assert!(error_message.contains("Cannot create Step from config"));
-        assert!(error_message.contains("Cannot create Task from config"));
-        assert!(error_message.contains("task_id"));
-    }
-
-    #[test]
     fn test_steps_error_display() {
         // Given
         let placeholder_error =
@@ -231,7 +211,7 @@ mod tests {
             RemoteSudoError::CannotResolveCommandPlaceholders(placeholder_error);
         let step_error =
             StepError::CannotExecuteRemoteSudoCommand(remote_sudo_error, "Install App".to_string());
-        let steps_error = StepsError::CannotCreateStepFromConfig(step_error);
+        let steps_error = StepsError::CannotExecuteStep(step_error);
 
         // When
         let error_message = format!("{}", steps_error);
@@ -245,14 +225,15 @@ mod tests {
     #[test]
     fn test_step_error_display() {
         // Given
-        let step_error = StepError::CannotCreateTaskFromConfig("invalid_id".to_string());
+        let on_fail_error = OnFailError::InvalidOnFailStep("bad_task".to_string());
+        let step_error = StepError::CannotExecuteOnFailSteps(on_fail_error);
 
         // When
         let error_message = format!("{}", step_error);
 
         // Then
-        assert!(error_message.contains("Cannot create Task from config"));
-        assert!(error_message.contains("invalid_id"));
+        assert!(error_message.contains("Cannot execute on-fail steps"));
+        assert!(error_message.contains("bad_task"));
     }
 
     #[test]
@@ -308,5 +289,19 @@ mod tests {
         assert!(error_message.contains("Cannot resolve placeholders in variables"));
         assert!(error_message.contains("var1"));
         assert!(error_message.contains("var2"));
+    }
+
+    #[test]
+    fn test_placeholder_resolution_env_variable_error_display() {
+        // Given
+        let error =
+            PlaceholderResolutionError::CannotResolveEnvVariable("MY_SECRET".to_string());
+
+        // When
+        let error_message = format!("{}", error);
+
+        // Then
+        assert!(error_message.contains("Environment variable not found"));
+        assert!(error_message.contains("MY_SECRET"));
     }
 }

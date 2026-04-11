@@ -4,9 +4,8 @@
 //! in a scenario, including regular tasks and fallback steps for error handling.
 
 use crate::{
-    config::step::StepConfig,
     scenario::{
-        errors::StepError, on_fail_steps::OnFailSteps, task::Task, tasks::Tasks, variables::Variables,
+        errors::StepError, on_fail_steps::OnFailSteps, task::Task, variables::Variables,
     },
     session::Session,
     state::{ExecutionStateManager, TaskTracker},
@@ -23,25 +22,14 @@ pub struct Step {
     pub on_fail_steps: OnFailSteps,
 }
 
-impl TryFrom<(usize, &Tasks, &StepConfig)> for Step {
-    type Error = StepError;
-
-    fn try_from(
-        (index, tasks, step_config): (usize, &Tasks, &StepConfig),
-    ) -> Result<Self, Self::Error> {
-        let on_fail_steps = match step_config.on_fail.as_ref() {
-            Some(config) => OnFailSteps::try_from((tasks, config))
-                .map_err(StepError::CannotCreateOnFailStepsFromConfig)?,
-            None => OnFailSteps::default(),
-        };
-
-        Ok(Step {
+impl Step {
+    /// Creates a new step with the given index, task, and on-fail recovery steps.
+    pub fn new(index: usize, task: Task, on_fail_steps: OnFailSteps) -> Self {
+        Step {
             index,
-            task: tasks.get(&step_config.task).cloned().ok_or_else(|| {
-                StepError::CannotCreateTaskFromConfig(step_config.task.to_string())
-            })?,
+            task,
             on_fail_steps,
-        })
+        }
     }
 }
 
@@ -142,16 +130,11 @@ impl Step {
 #[cfg(test)]
 mod tests {
     use crate::{
-        config::{
-            on_fail::OnFailStepsConfig,
-            step::StepConfig,
-            task::{TaskConfig, TaskType},
-        },
-        scenario::{errors::StepError, step::Step, task::Task, tasks::Tasks, variables::Variables},
+        config::task::{RemoteSudoTaskConfig, SftpCopyTaskConfig},
+        scenario::{errors::StepError, on_fail_steps::OnFailSteps, on_fail_step::OnFailStep, step::Step, task::Task, variables::Variables},
         session::{Channel, Session, SessionType, Sftp, SshError},
         utils::{ArcMutex, Wrap},
     };
-    use std::collections::HashMap;
 
     fn init_tracing() {
         let _ = tracing_subscriber::fmt()
@@ -161,10 +144,63 @@ mod tests {
     }
 
     #[test]
+    fn test_step_new() {
+        // Given
+        let task = create_remote_sudo_task();
+
+        // When
+        let step = Step::new(0, task, OnFailSteps::default());
+
+        // Then
+        assert_eq!(step.index(), 0);
+        assert_eq!(step.task().description(), "Test task 1");
+        assert!(step.on_fail_steps().is_empty());
+    }
+
+    #[test]
+    fn test_step_new_with_on_fail() {
+        // Given
+        let task = create_remote_sudo_task();
+        let on_fail = OnFailSteps::from(vec![OnFailStep::from((0, create_sftp_copy_task()))]);
+
+        // When
+        let step = Step::new(3, task, on_fail);
+
+        // Then
+        assert_eq!(step.index(), 3);
+        assert_eq!(step.on_fail_steps().len(), 1);
+    }
+
+    #[test]
+    fn test_step_accessors() {
+        // Given
+        let on_fail = OnFailSteps::from(vec![OnFailStep::from((0, create_sftp_copy_task()))]);
+        let step = Step::new(5, create_remote_sudo_task(), on_fail);
+
+        // Then
+        assert_eq!(step.index(), 5);
+        assert_eq!(step.task().description(), "Test task 1");
+        assert_eq!(step.on_fail_steps().len(), 1);
+    }
+
+    #[test]
+    fn test_step_clone() {
+        // Given
+        let on_fail = OnFailSteps::from(vec![OnFailStep::from((0, create_sftp_copy_task()))]);
+        let original = Step::new(0, create_remote_sudo_task(), on_fail);
+
+        // When
+        let cloned = original.clone();
+
+        // Then
+        assert_eq!(cloned.task().description(), original.task().description());
+        assert_eq!(cloned.on_fail_steps().len(), original.on_fail_steps().len());
+    }
+
+    #[test]
     fn test_step_execute_success() {
         init_tracing();
 
-        // Given
         struct TestChannel;
         impl Channel for TestChannel {
             fn exec(&mut self, _: &str) -> Result<(), SshError> { Ok(()) }
@@ -182,12 +218,8 @@ mod tests {
             }
         }
 
-        let tasks = create_test_tasks();
-        let config = StepConfig {
-            task: "task1".to_string(),
-            on_fail: None,
-        };
-        let step = Step::try_from((0, &tasks, &config)).unwrap();
+        // Given
+        let step = Step::new(0, create_remote_sudo_task(), OnFailSteps::default());
         let session = Session {
             inner: SessionType::Test {
                 channel: ArcMutex::wrap(TestChannel),
@@ -207,7 +239,6 @@ mod tests {
     fn test_step_execute_success_with_state_manager() {
         init_tracing();
 
-        // Given
         use crate::state::{
             types::{ExecutionState, ExecutionStatus, StepExecState, StepStatus},
             ExecutionStateManager,
@@ -231,12 +262,8 @@ mod tests {
             }
         }
 
-        let tasks = create_test_tasks();
-        let config = StepConfig {
-            task: "task1".to_string(),
-            on_fail: None,
-        };
-        let step = Step::try_from((0, &tasks, &config)).unwrap();
+        // Given
+        let step = Step::new(0, create_remote_sudo_task(), OnFailSteps::default());
         let session = Session {
             inner: SessionType::Test {
                 channel: ArcMutex::wrap(TestChannel),
@@ -270,155 +297,8 @@ mod tests {
     }
 
     #[test]
-    fn test_step_try_from_success_no_on_fail() {
-        // Given
-        let tasks = create_test_tasks();
-        let config = StepConfig {
-            task: "task1".to_string(),
-            on_fail: None,
-        };
-
-        // When
-        let result = Step::try_from((0, &tasks, &config));
-
-        // Then
-        assert!(result.is_ok());
-        let step = result.unwrap();
-        assert_eq!(step.task().description(), "Test task 1");
-        assert!(step.on_fail_steps().is_empty());
-    }
-
-    #[test]
-    fn test_step_try_from_success_with_on_fail() {
-        // Given
-        let tasks = create_test_tasks();
-        let config = StepConfig {
-            task: "task1".to_string(),
-            on_fail: Some(OnFailStepsConfig::from(vec!["task2".to_string()])),
-        };
-
-        // When
-        let result = Step::try_from((0, &tasks, &config));
-
-        // Then
-        assert!(result.is_ok());
-        let step = result.unwrap();
-        assert_eq!(step.task().description(), "Test task 1");
-        assert_eq!(step.on_fail_steps().len(), 1);
-    }
-
-    #[test]
-    fn test_step_try_from_error_invalid_task() {
-        // Given
-        let tasks = create_test_tasks();
-        let config = StepConfig {
-            task: "non_existent_task".to_string(),
-            on_fail: None,
-        };
-
-        // When
-        let result = Step::try_from((0, &tasks, &config));
-
-        // Then
-        assert!(result.is_err());
-        if let Err(StepError::CannotCreateTaskFromConfig(task_id)) = result {
-            assert_eq!(task_id, "non_existent_task");
-        } else {
-            panic!("Expected CannotCreateTaskFromConfig error");
-        }
-    }
-
-    #[test]
-    fn test_step_try_from_error_invalid_on_fail_task() {
-        // Given
-        let tasks = create_test_tasks();
-        let config = StepConfig {
-            task: "task1".to_string(),
-            on_fail: Some(OnFailStepsConfig::from(vec![
-                "non_existent_task".to_string()
-            ])),
-        };
-
-        // When
-        let result = Step::try_from((0, &tasks, &config));
-
-        // Then
-        assert!(result.is_err());
-        matches!(result, Err(StepError::CannotCreateOnFailStepsFromConfig(_)));
-    }
-
-    #[test]
-    fn test_step_accessors() {
-        // Given
-        let tasks = create_test_tasks();
-        let config = StepConfig {
-            task: "task1".to_string(),
-            on_fail: Some(OnFailStepsConfig::from(vec!["task2".to_string()])),
-        };
-
-        // When
-        let step = Step::try_from((5, &tasks, &config)).unwrap();
-
-        // Then
-        assert_eq!(step.index(), 5);
-        assert_eq!(step.task().description(), "Test task 1");
-        assert_eq!(step.on_fail_steps().len(), 1);
-    }
-
-    #[test]
-    fn test_step_clone() {
-        // Given
-        let tasks = create_test_tasks();
-        let config = StepConfig {
-            task: "task1".to_string(),
-            on_fail: Some(OnFailStepsConfig::from(vec!["task2".to_string()])),
-        };
-        let original = Step::try_from((0, &tasks, &config)).unwrap();
-
-        // When
-        let cloned = original.clone();
-
-        // Then
-        assert_eq!(cloned.task().description(), original.task().description());
-        assert_eq!(cloned.on_fail_steps().len(), original.on_fail_steps().len());
-    }
-
-    fn create_test_tasks() -> Tasks {
-        let mut task_map = HashMap::new();
-        task_map.insert("task1".to_string(), create_remote_sudo_task());
-        task_map.insert("task2".to_string(), create_sftp_copy_task());
-        Tasks::from(task_map)
-    }
-
-    fn create_remote_sudo_task() -> Task {
-        let config = TaskConfig {
-            description: "Test task 1".to_string(),
-            error_message: "Task 1 failed".to_string(),
-            task_type: TaskType::RemoteSudo {
-                command: "echo test".to_string(),
-            },
-        };
-        Task::from(&config)
-    }
-
-    fn create_sftp_copy_task() -> Task {
-        let config = TaskConfig {
-            description: "Test task 2".to_string(),
-            error_message: "Task 2 failed".to_string(),
-            task_type: TaskType::SftpCopy {
-                source_path: "/test/source".to_string(),
-                destination_path: "/test/dest".to_string(),
-            },
-        };
-        Task::from(&config)
-    }
-
-    #[test]
     fn test_step_execute_remote_sudo_failure() {
         init_tracing();
-
-        // Given
-        use crate::scenario::on_fail_steps::OnFailSteps;
 
         struct FailChannel;
         impl Channel for FailChannel {
@@ -439,11 +319,8 @@ mod tests {
             }
         }
 
-        let step = Step {
-            index: 0,
-            task: create_remote_sudo_task(),
-            on_fail_steps: OnFailSteps::default(),
-        };
+        // Given
+        let step = Step::new(0, create_remote_sudo_task(), OnFailSteps::default());
         let session = Session {
             inner: SessionType::Test {
                 channel: ArcMutex::wrap(FailChannel),
@@ -467,10 +344,6 @@ mod tests {
         init_tracing();
 
         // Given
-        use crate::scenario::{
-            on_fail_step::OnFailStep, on_fail_steps::OnFailSteps,
-        };
-
         let on_fail_task = create_sftp_copy_task();
         let step = Step {
             index: 0,
@@ -493,11 +366,7 @@ mod tests {
     fn test_step_execute_on_fail_steps_also_fail() {
         init_tracing();
 
-        // Given
-        use crate::scenario::{
-            on_fail_step::OnFailStep, on_fail_steps::OnFailSteps,
-            sftp_copy::SftpCopy, task::Task,
-        };
+        use crate::scenario::sftp_copy::SftpCopy;
 
         struct FailChannel;
         impl Channel for FailChannel {
@@ -518,6 +387,7 @@ mod tests {
             }
         }
 
+        // Given
         let failing_on_fail_task = Task::SftpCopy {
             sftp_copy: SftpCopy {
                 source_path: "{non-existent-var}".to_string(),
@@ -547,5 +417,28 @@ mod tests {
             result,
             Err(StepError::CannotExecuteOnFailSteps(_))
         ));
+    }
+
+    fn create_remote_sudo_task() -> Task {
+        Task::from_remote_sudo(
+            "task1",
+            &RemoteSudoTaskConfig {
+                command: "echo test".to_string(),
+                description: Some("Test task 1".to_string()),
+                error_message: Some("Task 1 failed".to_string()),
+            },
+        )
+    }
+
+    fn create_sftp_copy_task() -> Task {
+        Task::from_sftp_copy(
+            "task2",
+            &SftpCopyTaskConfig {
+                source: "/test/source".to_string(),
+                destination: "/test/dest".to_string(),
+                description: Some("Test task 2".to_string()),
+                error_message: Some("Task 2 failed".to_string()),
+            },
+        )
     }
 }

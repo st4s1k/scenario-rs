@@ -1,23 +1,23 @@
+#:schema ../../../scenario-schema.json
+
 # Test: Step fails, on-fail steps ALSO fail
 # UI: Step red (fail) → nested on-fail section with red steps (both error expandables visible)
 
 parent = "./server.toml"
 
-[execute]
-steps = [
-    { task = "deploy_with_bad_var", on-fail = [
-        "rollback_with_bad_var",
-    ] },
-]
+[steps.deploy]
+task = "deploy_with_bad_var"
+on-fail = "rollback_fail"
 
-[tasks.deploy_with_bad_var]
-type = "RemoteSudo"
-description = "Deploying (will fail)"
+[sequences]
+rollback_fail = ["rollback_with_bad_var"]
+
+[tasks.remote_sudo.deploy_with_bad_var]
 command = "cp {missing_source} /opt/myapp/"
+description = "Deploying (will fail)"
 error_message = "Deployment failed"
 
-[tasks.rollback_with_bad_var]
-type = "RemoteSudo"
-description = "Rolling back (will also fail)"
+[tasks.remote_sudo.rollback_with_bad_var]
 command = "cp {missing_backup} /opt/myapp/"
+description = "Rolling back (will also fail)"
 error_message = "Rollback also failed"

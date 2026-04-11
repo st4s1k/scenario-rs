@@ -4,8 +4,14 @@
 //! in a scenario, handling failures and executing fallback steps when needed.
 
 use crate::{
-    config::steps::StepsConfig,
-    scenario::{errors::StepsError, step::Step, tasks::Tasks, variables::Variables},
+    config::{on_fail::OnFailStepsConfig, sequences::SequencesConfig, steps::StepsConfig},
+    scenario::{
+        errors::{ScenarioError, StepsError},
+        on_fail_steps::OnFailSteps,
+        step::Step,
+        tasks::Tasks,
+        variables::Variables,
+    },
     session::Session,
     state::ExecutionStateManager,
     trace::ScenarioEvent,
@@ -31,18 +37,89 @@ impl DerefMut for Steps {
     }
 }
 
-impl TryFrom<(&Tasks, &StepsConfig)> for Steps {
-    type Error = StepsError;
-
-    fn try_from((tasks, config): (&Tasks, &StepsConfig)) -> Result<Self, Self::Error> {
+impl Steps {
+    /// Build Steps from the new config types: ordered StepsConfig + SequencesConfig + Tasks.
+    pub fn from_config(
+        tasks: &Tasks,
+        steps_config: &StepsConfig,
+        sequences_config: &SequencesConfig,
+    ) -> Result<Self, ScenarioError> {
         let mut steps = Vec::new();
-        for (index, step_config) in config.deref().iter().enumerate() {
-            steps.push(
-                Step::try_from((index, tasks, step_config))
-                    .map_err(StepsError::CannotCreateStepFromConfig)?,
-            );
+        let mut index = 0;
+
+        for (step_name, step_context) in steps_config.iter() {
+            match (&step_context.task, &step_context.sequence) {
+                (Some(task_name), None) => {
+                    // Single task step
+                    let task = tasks
+                        .get(task_name)
+                        .cloned()
+                        .ok_or_else(|| ScenarioError::UnknownTaskReference(task_name.clone()))?;
+
+                    let on_fail_steps = Self::resolve_on_fail(
+                        tasks,
+                        sequences_config,
+                        step_context.on_fail.as_deref(),
+                        step_name,
+                    )?;
+
+                    steps.push(Step::new(index, task, on_fail_steps));
+                    index += 1;
+                }
+                (None, Some(seq_name)) => {
+                    // Sequence step: expand to multiple steps
+                    let task_names = sequences_config.get(seq_name).ok_or_else(|| {
+                        ScenarioError::UnknownSequence(seq_name.clone(), step_name.clone())
+                    })?;
+
+                    let on_fail_steps = Self::resolve_on_fail(
+                        tasks,
+                        sequences_config,
+                        step_context.on_fail.as_deref(),
+                        step_name,
+                    )?;
+
+                    for task_name in task_names {
+                        let task = tasks.get(task_name).cloned().ok_or_else(|| {
+                            ScenarioError::UnknownTaskReference(task_name.clone())
+                        })?;
+                        steps.push(Step::new(index, task, on_fail_steps.clone()));
+                        index += 1;
+                    }
+                }
+                _ => {
+                    return Err(ScenarioError::InvalidStepContext(step_name.clone()));
+                }
+            }
         }
+
         Ok(Steps(steps))
+    }
+
+    /// Resolve an on-fail sequence reference into runtime OnFailSteps.
+    fn resolve_on_fail(
+        tasks: &Tasks,
+        sequences_config: &SequencesConfig,
+        on_fail_ref: Option<&str>,
+        step_name: &str,
+    ) -> Result<OnFailSteps, ScenarioError> {
+        match on_fail_ref {
+            Some(seq_name) => {
+                let task_names = sequences_config.get(seq_name).ok_or_else(|| {
+                    ScenarioError::UnknownSequence(seq_name.to_string(), step_name.to_string())
+                })?;
+                // Validate all task names exist
+                for task_name in task_names {
+                    if !tasks.contains_key(task_name) {
+                        return Err(ScenarioError::UnknownTaskReference(task_name.clone()));
+                    }
+                }
+                let on_fail_config = OnFailStepsConfig::from(task_names.clone());
+                OnFailSteps::try_from((tasks, &on_fail_config))
+                    .map_err(|e| ScenarioError::UnknownTaskReference(e.to_string()))
+            }
+            None => Ok(OnFailSteps::default()),
+        }
     }
 }
 
@@ -91,79 +168,271 @@ impl Steps {
 mod tests {
     use crate::{
         config::{
-            on_fail::OnFailStepsConfig,
-            step::StepConfig,
+            sequences::SequencesConfig,
+            step::StepContext,
             steps::StepsConfig,
-            task::{TaskConfig, TaskType},
+            task::{RemoteSudoTaskConfig, SftpCopyTaskConfig},
+            tasks::TasksConfig,
         },
         scenario::{
-            steps::{Steps, StepsError},
+            errors::ScenarioError,
+            on_fail_steps::OnFailSteps,
+            step::Step,
+            steps::Steps,
             task::Task,
             tasks::Tasks,
         },
     };
+    use indexmap::IndexMap;
     use std::collections::HashMap;
 
-    #[test]
-    fn test_steps_try_from_success() {
-        // Given
-        let tasks = create_test_tasks();
-        let config = create_valid_steps_config();
+    fn create_test_tasks() -> Tasks {
+        let config = TasksConfig {
+            remote_sudo: Some(HashMap::from([
+                (
+                    "task1".to_string(),
+                    RemoteSudoTaskConfig {
+                        command: "echo test1".to_string(),
+                        description: Some("Test task 1".to_string()),
+                        error_message: None,
+                    },
+                ),
+                (
+                    "task3".to_string(),
+                    RemoteSudoTaskConfig {
+                        command: "echo test3".to_string(),
+                        description: Some("Test task 3".to_string()),
+                        error_message: None,
+                    },
+                ),
+            ])),
+            sftp_copy: Some(HashMap::from([(
+                "task2".to_string(),
+                SftpCopyTaskConfig {
+                    source: "/test/source".to_string(),
+                    destination: "/test/dest".to_string(),
+                    description: Some("Test task 2".to_string()),
+                    error_message: None,
+                },
+            )])),
+        };
+        Tasks::try_from(&config).unwrap()
+    }
 
-        // When
-        let result = Steps::try_from((&tasks, &config));
-
-        // Then
-        assert!(result.is_ok());
-        let steps = result.unwrap();
-        assert_eq!(steps.len(), 2);
+    fn create_steps_config(entries: Vec<(&str, StepContext)>) -> StepsConfig {
+        let map: IndexMap<String, StepContext> = entries
+            .into_iter()
+            .map(|(name, ctx)| (name.to_string(), ctx))
+            .collect();
+        StepsConfig::from(map)
     }
 
     #[test]
-    fn test_steps_try_from_with_on_fail() {
+    fn test_steps_from_config_single_tasks() {
         // Given
         let tasks = create_test_tasks();
-        let config = create_steps_config_with_on_fail();
+        let steps_config = create_steps_config(vec![
+            (
+                "step_one",
+                StepContext {
+                    task: Some("task1".to_string()),
+                    sequence: None,
+                    on_fail: None,
+                },
+            ),
+            (
+                "step_two",
+                StepContext {
+                    task: Some("task2".to_string()),
+                    sequence: None,
+                    on_fail: None,
+                },
+            ),
+        ]);
+        let sequences = SequencesConfig::default();
 
         // When
-        let result = Steps::try_from((&tasks, &config));
+        let steps = Steps::from_config(&tasks, &steps_config, &sequences).unwrap();
 
         // Then
-        assert!(result.is_ok());
-        let steps = result.unwrap();
         assert_eq!(steps.len(), 2);
+        assert_eq!(steps[0].task().description(), "Test task 1");
+        assert_eq!(steps[1].task().description(), "Test task 2");
+        assert_eq!(steps[0].index(), 0);
+        assert_eq!(steps[1].index(), 1);
+    }
+
+    #[test]
+    fn test_steps_from_config_sequence_expansion() {
+        // Given
+        let tasks = create_test_tasks();
+        let steps_config = create_steps_config(vec![(
+            "deploy",
+            StepContext {
+                task: None,
+                sequence: Some("deploy_seq".to_string()),
+                on_fail: None,
+            },
+        )]);
+        let sequences = SequencesConfig::from(HashMap::from([(
+            "deploy_seq".to_string(),
+            vec!["task1".to_string(), "task2".to_string()],
+        )]));
+
+        // When
+        let steps = Steps::from_config(&tasks, &steps_config, &sequences).unwrap();
+
+        // Then
+        assert_eq!(steps.len(), 2);
+        assert_eq!(steps[0].index(), 0);
+        assert_eq!(steps[1].index(), 1);
+        assert_eq!(steps[0].task().description(), "Test task 1");
+        assert_eq!(steps[1].task().description(), "Test task 2");
+    }
+
+    #[test]
+    fn test_steps_from_config_with_on_fail() {
+        // Given
+        let tasks = create_test_tasks();
+        let steps_config = create_steps_config(vec![(
+            "risky_step",
+            StepContext {
+                task: Some("task1".to_string()),
+                sequence: None,
+                on_fail: Some("cleanup".to_string()),
+            },
+        )]);
+        let sequences = SequencesConfig::from(HashMap::from([(
+            "cleanup".to_string(),
+            vec!["task3".to_string()],
+        )]));
+
+        // When
+        let steps = Steps::from_config(&tasks, &steps_config, &sequences).unwrap();
+
+        // Then
+        assert_eq!(steps.len(), 1);
         assert!(!steps[0].on_fail_steps.is_empty());
     }
 
     #[test]
-    fn test_steps_try_from_error() {
+    fn test_steps_from_config_unknown_task() {
         // Given
         let tasks = create_test_tasks();
-        let config = create_invalid_steps_config();
+        let steps_config = create_steps_config(vec![(
+            "bad_step",
+            StepContext {
+                task: Some("nonexistent".to_string()),
+                sequence: None,
+                on_fail: None,
+            },
+        )]);
+        let sequences = SequencesConfig::default();
 
         // When
-        let result = Steps::try_from((&tasks, &config));
+        let result = Steps::from_config(&tasks, &steps_config, &sequences);
 
         // Then
-        assert!(result.is_err());
-        if let Err(StepsError::CannotCreateStepFromConfig(_)) = result {
-        } else {
-            panic!("Expected CannotCreateStepFromConfig error");
-        }
+        assert!(matches!(result, Err(ScenarioError::UnknownTaskReference(_))));
     }
 
     #[test]
-    fn test_steps_try_from_empty_config() {
+    fn test_steps_from_config_unknown_sequence() {
         // Given
         let tasks = create_test_tasks();
-        let config = StepsConfig::from(vec![]);
+        let steps_config = create_steps_config(vec![(
+            "bad_step",
+            StepContext {
+                task: None,
+                sequence: Some("nonexistent".to_string()),
+                on_fail: None,
+            },
+        )]);
+        let sequences = SequencesConfig::default();
 
         // When
-        let result = Steps::try_from((&tasks, &config));
+        let result = Steps::from_config(&tasks, &steps_config, &sequences);
 
         // Then
-        assert!(result.is_ok());
-        assert!(result.unwrap().is_empty());
+        assert!(matches!(result, Err(ScenarioError::UnknownSequence(_, _))));
+    }
+
+    #[test]
+    fn test_steps_from_config_invalid_context() {
+        // Given
+        let tasks = create_test_tasks();
+        // Neither task nor sequence set
+        let steps_config = create_steps_config(vec![(
+            "bad_step",
+            StepContext {
+                task: None,
+                sequence: None,
+                on_fail: None,
+            },
+        )]);
+        let sequences = SequencesConfig::default();
+
+        // When
+        let result = Steps::from_config(&tasks, &steps_config, &sequences);
+
+        // Then
+        assert!(matches!(result, Err(ScenarioError::InvalidStepContext(_))));
+    }
+
+    #[test]
+    fn test_steps_from_config_both_task_and_sequence() {
+        // Given
+        let tasks = create_test_tasks();
+        let steps_config = create_steps_config(vec![(
+            "bad_step",
+            StepContext {
+                task: Some("task1".to_string()),
+                sequence: Some("some_seq".to_string()),
+                on_fail: None,
+            },
+        )]);
+        let sequences = SequencesConfig::default();
+
+        // When
+        let result = Steps::from_config(&tasks, &steps_config, &sequences);
+
+        // Then
+        assert!(matches!(result, Err(ScenarioError::InvalidStepContext(_))));
+    }
+
+    #[test]
+    fn test_steps_from_config_unknown_on_fail_sequence() {
+        // Given
+        let tasks = create_test_tasks();
+        let steps_config = create_steps_config(vec![(
+            "step",
+            StepContext {
+                task: Some("task1".to_string()),
+                sequence: None,
+                on_fail: Some("nonexistent_cleanup".to_string()),
+            },
+        )]);
+        let sequences = SequencesConfig::default();
+
+        // When
+        let result = Steps::from_config(&tasks, &steps_config, &sequences);
+
+        // Then
+        assert!(matches!(result, Err(ScenarioError::UnknownSequence(_, _))));
+    }
+
+    #[test]
+    fn test_steps_from_config_empty() {
+        // Given
+        let tasks = create_test_tasks();
+        let steps_config = StepsConfig::default();
+        let sequences = SequencesConfig::default();
+
+        // When
+        let steps = Steps::from_config(&tasks, &steps_config, &sequences).unwrap();
+
+        // Then
+        assert!(steps.is_empty());
     }
 
     #[test]
@@ -176,13 +445,52 @@ mod tests {
     }
 
     #[test]
+    fn test_steps_from_vec() {
+        // Given
+        let task = Task::from_remote_sudo(
+            "t",
+            &RemoteSudoTaskConfig {
+                command: "echo hi".to_string(),
+                description: None,
+                error_message: None,
+            },
+        );
+
+        // When
+        let steps = Steps::from(vec![Step::new(0, task, OnFailSteps::default())]);
+
+        // Then
+        assert_eq!(steps.len(), 1);
+    }
+
+    #[test]
     fn test_steps_deref() {
         // Given
         let tasks = create_test_tasks();
-        let config = create_valid_steps_config();
-        let steps = Steps::try_from((&tasks, &config)).unwrap();
+        let steps_config = create_steps_config(vec![
+            (
+                "a",
+                StepContext {
+                    task: Some("task1".to_string()),
+                    sequence: None,
+                    on_fail: None,
+                },
+            ),
+            (
+                "b",
+                StepContext {
+                    task: Some("task2".to_string()),
+                    sequence: None,
+                    on_fail: None,
+                },
+            ),
+        ]);
+        let sequences = SequencesConfig::default();
 
-        // When & Then
+        // When
+        let steps = Steps::from_config(&tasks, &steps_config, &sequences).unwrap();
+
+        // Then
         assert_eq!(steps.len(), 2);
         assert_eq!(steps[0].task().description(), "Test task 1");
         assert_eq!(steps[1].task().description(), "Test task 2");
@@ -192,23 +500,60 @@ mod tests {
     fn test_steps_deref_mut() {
         // Given
         let tasks = create_test_tasks();
-        let config = create_valid_steps_config();
-        let mut steps = Steps::try_from((&tasks, &config)).unwrap();
+        let steps_config = create_steps_config(vec![
+            (
+                "a",
+                StepContext {
+                    task: Some("task1".to_string()),
+                    sequence: None,
+                    on_fail: None,
+                },
+            ),
+            (
+                "b",
+                StepContext {
+                    task: Some("task2".to_string()),
+                    sequence: None,
+                    on_fail: None,
+                },
+            ),
+        ]);
+        let sequences = SequencesConfig::default();
+
+        let mut steps = Steps::from_config(&tasks, &steps_config, &sequences).unwrap();
 
         // When
         steps.pop();
 
         // Then
         assert_eq!(steps.len(), 1);
-        assert_eq!(steps[0].task().description(), "Test task 1");
     }
 
     #[test]
     fn test_steps_clone() {
         // Given
         let tasks = create_test_tasks();
-        let config = create_valid_steps_config();
-        let original = Steps::try_from((&tasks, &config)).unwrap();
+        let steps_config = create_steps_config(vec![
+            (
+                "a",
+                StepContext {
+                    task: Some("task1".to_string()),
+                    sequence: None,
+                    on_fail: None,
+                },
+            ),
+            (
+                "b",
+                StepContext {
+                    task: Some("task2".to_string()),
+                    sequence: None,
+                    on_fail: None,
+                },
+            ),
+        ]);
+        let sequences = SequencesConfig::default();
+
+        let original = Steps::from_config(&tasks, &steps_config, &sequences).unwrap();
 
         // When
         let cloned = original.clone();
@@ -219,99 +564,12 @@ mod tests {
             cloned[0].task().description(),
             original[0].task().description()
         );
-        assert_eq!(
-            cloned[1].task().description(),
-            original[1].task().description()
-        );
-    }
-
-    fn create_test_tasks() -> Tasks {
-        let mut task_map = HashMap::new();
-        task_map.insert("task1".to_string(), create_remote_sudo_task());
-        task_map.insert("task2".to_string(), create_sftp_copy_task());
-        task_map.insert("task3".to_string(), create_remote_sudo_task());
-        Tasks::from(task_map)
-    }
-
-    fn create_remote_sudo_task() -> Task {
-        let config = TaskConfig {
-            description: "Test task 1".to_string(),
-            error_message: "Task 1 failed".to_string(),
-            task_type: TaskType::RemoteSudo {
-                command: "echo test".to_string(),
-            },
-        };
-        Task::from(&config)
-    }
-
-    fn create_sftp_copy_task() -> Task {
-        let config = TaskConfig {
-            description: "Test task 2".to_string(),
-            error_message: "Task 2 failed".to_string(),
-            task_type: TaskType::SftpCopy {
-                source_path: "/test/source".to_string(),
-                destination_path: "/test/dest".to_string(),
-            },
-        };
-        Task::from(&config)
-    }
-
-    fn create_valid_steps_config() -> StepsConfig {
-        StepsConfig::from(vec![
-            StepConfig {
-                task: "task1".to_string(),
-                on_fail: None,
-            },
-            StepConfig {
-                task: "task2".to_string(),
-                on_fail: None,
-            },
-        ])
-    }
-
-    fn create_steps_config_with_on_fail() -> StepsConfig {
-        StepsConfig::from(vec![
-            StepConfig {
-                task: "task1".to_string(),
-                on_fail: Some(OnFailStepsConfig::from(vec!["task3".to_string()])),
-            },
-            StepConfig {
-                task: "task2".to_string(),
-                on_fail: None,
-            },
-        ])
-    }
-
-    fn create_invalid_steps_config() -> StepsConfig {
-        StepsConfig::from(vec![StepConfig {
-            task: "nonexistent".to_string(),
-            on_fail: None,
-        }])
-    }
-
-    #[test]
-    fn test_steps_from_vec() {
-        // Given
-        use crate::scenario::{on_fail_steps::OnFailSteps, step::Step};
-
-        let steps = vec![Step {
-            index: 0,
-            task: create_remote_sudo_task(),
-            on_fail_steps: OnFailSteps::default(),
-        }];
-
-        // When
-        let result = Steps::from(steps);
-
-        // Then
-        assert_eq!(result.len(), 1);
     }
 
     #[test]
     fn test_steps_execute_non_empty_success() {
-        // Given
         use crate::{
-            scenario::{on_fail_steps::OnFailSteps, step::Step, variables::Variables},
+            scenario::variables::Variables,
             session::{Channel, Session, SessionType, Sftp, SshError, Write},
             utils::{ArcMutex, Wrap},
         };
@@ -333,11 +591,16 @@ mod tests {
             }
         }
 
-        let steps = Steps::from(vec![Step {
-            index: 0,
-            task: create_remote_sudo_task(),
-            on_fail_steps: OnFailSteps::default(),
-        }]);
+        // Given
+        let task = Task::from_remote_sudo(
+            "t",
+            &RemoteSudoTaskConfig {
+                command: "echo hi".to_string(),
+                description: None,
+                error_message: None,
+            },
+        );
+        let steps = Steps::from(vec![Step::new(0, task, OnFailSteps::default())]);
         let session = Session {
             inner: SessionType::Test {
                 channel: ArcMutex::wrap(TestChannel),

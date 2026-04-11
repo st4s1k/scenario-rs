@@ -35,15 +35,22 @@ password = "your-password" # optional, will use SSH agent if not provided
 
 [server]
 host = "your-server.example.com" # required
-port = "22" # optional, default is 22
+port = 22 # optional, default is 22
 
-[execute]
-# Define the execution order of tasks
-steps = [
-  { task = "deploy_app" },
-  { task = "extract_app" },
-  { task = "copy_config", on-fail = ["rollback_deployment"] }  # With error recovery
-]
+# Define the execution order of steps (order is preserved)
+[steps.deploy_app]
+task = "deploy_app"
+
+[steps.extract_app]
+task = "extract_app"
+
+[steps.copy_config]
+task = "copy_config"
+on-fail = "rollback_steps"  # Reference to a sequence for error recovery
+
+# Define reusable sequences of tasks
+[sequences]
+rollback_steps = ["rollback_deployment"]
 
 # Variables that must be provided by the user
 [variables.required]
@@ -57,31 +64,28 @@ app_name = "myapp"
 app_version = "1.0.0"
 remote_app_path = "/opt/{app_name}"
 
-# Define tasks that can be referenced in execution steps
-[tasks.deploy_app]
-type = "RemoteSudo"
-description = "Deploy application"
+# Define remote sudo tasks
+[tasks.remote_sudo.deploy_app]
 command = "mkdir -p {remote_app_path} && cp /tmp/{basename:app_archive} {remote_app_path}/"
+description = "Deploy application"
 error_message = "Failed to deploy application"
 
-[tasks.extract_app]
-type = "RemoteSudo"
-description = "Extract application archive"
+[tasks.remote_sudo.extract_app]
 command = "tar -xzf {remote_app_path}/{basename:app_archive} -C {remote_app_path}"
+description = "Extract application archive"
 error_message = "Failed to extract application"
 
-[tasks.copy_config]
-type = "SftpCopy"
-description = "Copy configuration file"
-source_path = "config/{deployment_env}.conf"
-destination_path = "{remote_app_path}/config.conf"
-error_message = "Failed to copy configuration"
-
-[tasks.rollback_deployment]
-type = "RemoteSudo"
-description = "Rollback failed deployment"
+[tasks.remote_sudo.rollback_deployment]
 command = "rm -rf {remote_app_path}/*"
+description = "Rollback failed deployment"
 error_message = "Failed to rollback deployment"
+
+# Define SFTP copy tasks
+[tasks.sftp_copy.copy_config]
+source = "config/{deployment_env}.conf"
+destination = "{remote_app_path}/config.conf"
+description = "Copy configuration file"
+error_message = "Failed to copy configuration"
 ```
 
 ### Variable Types
@@ -103,13 +107,19 @@ username = "default-user"
 
 [server]
 host = "default-host"
-port = "22"
+port = 22
 
 [variables.required]
 timestamp = { type = "Timestamp", label = "Deployment Time", format = "%Y-%m-%d", read_only = true }
 
 [variables.defined]
 app_name = "default-app"
+
+[steps.deploy]
+task = "deploy"
+
+[tasks.remote_sudo.deploy]
+command = "echo deploying {app_name}"
 ```
 
 #### Child file (specific.toml)
@@ -270,6 +280,7 @@ Run `just` to list all available recipes.
 |---|---|
 | `just` | List all available recipes |
 | `just check` | Run `cargo check` on the workspace |
+| `just schema` | Generate JSON Schema for scenario config |
 | `just build` | Build the workspace (debug) |
 | `just build-release` | Build the workspace (release) |
 | `just test` | Run Rust tests with coverage (requires [cargo-tarpaulin](https://github.com/xd009642/tarpaulin)) |

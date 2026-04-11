@@ -28,6 +28,11 @@ bump-version new_version:
 check:
     cargo check
 
+# Generate JSON Schema for the scenario config format
+[doc("Generate JSON Schema for scenario config")]
+schema:
+    @cargo run --example generate_schema -p scenario-rs-core
+
 # Build the workspace (debug)
 [doc("Build the workspace (debug)")]
 build:

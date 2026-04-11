@@ -1,134 +1,72 @@
-use crate::config::on_fail::OnFailStepsConfig;
+use schemars::JsonSchema;
 use serde::Deserialize;
 
-/// A single step: a task reference with optional on-fail fallback tasks.
-#[derive(Clone, Debug, Deserialize, Default, PartialEq, Eq)]
-pub struct StepConfig {
-    pub task: String,
+/// A step context: references either a single task or a sequence, with optional on-fail fallback.
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct StepContext {
+    /// Reference to a task name (mutually exclusive with `sequence`).
+    pub task: Option<String>,
+    /// Reference to a sequence name (mutually exclusive with `task`).
+    pub sequence: Option<String>,
+    /// Sequence name to execute as fallback on failure.
     #[serde(rename = "on-fail")]
-    pub on_fail: Option<OnFailStepsConfig>,
+    pub on_fail: Option<String>,
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{on_fail::OnFailStepsConfig, step::StepConfig};
-    use toml;
+    use super::*;
 
     #[test]
-    fn test_step_config_creation() {
-        // Given
-        let step = StepConfig {
-            task: "deploy_app".to_string(),
-            on_fail: None,
-        };
+    fn test_step_context_task_deserialization() {
+        let toml_str = r#"
+            task = "deploy_app"
+            on-fail = "cleanup"
+        "#;
+        let step: StepContext = toml::from_str(toml_str).unwrap();
+        assert_eq!(step.task.as_deref(), Some("deploy_app"));
+        assert!(step.sequence.is_none());
+        assert_eq!(step.on_fail.as_deref(), Some("cleanup"));
+    }
 
-        // Then
-        assert_eq!(step.task, "deploy_app");
+    #[test]
+    fn test_step_context_sequence_deserialization() {
+        let toml_str = r#"
+            sequence = "full_deploy"
+        "#;
+        let step: StepContext = toml::from_str(toml_str).unwrap();
+        assert!(step.task.is_none());
+        assert_eq!(step.sequence.as_deref(), Some("full_deploy"));
         assert!(step.on_fail.is_none());
     }
 
     #[test]
-    fn test_step_config_with_on_fail() {
-        // Given
-        let on_fail = OnFailStepsConfig::from(vec!["cleanup".to_string(), "notify".to_string()]);
-
-        let step = StepConfig {
-            task: "deploy_app".to_string(),
-            on_fail: Some(on_fail),
-        };
-
-        // Then
-        assert_eq!(step.task, "deploy_app");
-        assert!(step.on_fail.is_some());
-        let on_fail = step.on_fail.unwrap();
-        assert_eq!(on_fail.len(), 2);
-        assert_eq!(on_fail[0], "cleanup");
-        assert_eq!(on_fail[1], "notify");
-    }
-
-    #[test]
-    fn test_step_config_default() {
-        // Given
-        let step = StepConfig::default();
-
-        // Then
-        assert_eq!(step.task, "");
+    fn test_step_context_minimal() {
+        let toml_str = r#"task = "simple""#;
+        let step: StepContext = toml::from_str(toml_str).unwrap();
+        assert_eq!(step.task.as_deref(), Some("simple"));
+        assert!(step.sequence.is_none());
         assert!(step.on_fail.is_none());
     }
 
     #[test]
-    fn test_step_config_equality() {
-        // Given
-        let step1 = StepConfig {
-            task: "deploy_app".to_string(),
+    fn test_step_context_equality() {
+        let step1 = StepContext {
+            task: Some("deploy".to_string()),
+            sequence: None,
             on_fail: None,
         };
-
-        let step2 = StepConfig {
-            task: "deploy_app".to_string(),
+        let step2 = StepContext {
+            task: Some("deploy".to_string()),
+            sequence: None,
             on_fail: None,
         };
-
-        let step3 = StepConfig {
-            task: "different_task".to_string(),
+        let step3 = StepContext {
+            task: None,
+            sequence: Some("deploy".to_string()),
             on_fail: None,
         };
-
-        // Then
         assert_eq!(step1, step2);
         assert_ne!(step1, step3);
-    }
-
-    #[test]
-    fn test_step_config_deserialization() {
-        // Given
-        let toml_str = r#"
-            task = "deploy_app"
-            on-fail = ["cleanup", "notify"]
-        "#;
-
-        // When
-        let step: StepConfig = toml::from_str(toml_str).unwrap();
-
-        // Then
-        assert_eq!(step.task, "deploy_app");
-        assert!(step.on_fail.is_some());
-        let on_fail = step.on_fail.unwrap();
-        assert_eq!(on_fail.len(), 2);
-        assert_eq!(on_fail[0], "cleanup");
-        assert_eq!(on_fail[1], "notify");
-    }
-
-    #[test]
-    fn test_step_config_without_on_fail_deserialization() {
-        // Given
-        let toml_str = r#"
-            task = "deploy_app"
-        "#;
-
-        // When
-        let step: StepConfig = toml::from_str(toml_str).unwrap();
-
-        // Then
-        assert_eq!(step.task, "deploy_app");
-        assert!(step.on_fail.is_none());
-    }
-
-    #[test]
-    fn test_step_config_clone() {
-        // Given
-        let on_fail = OnFailStepsConfig::from(vec!["cleanup".to_string()]);
-        let original = StepConfig {
-            task: "deploy_app".to_string(),
-            on_fail: Some(on_fail),
-        };
-
-        // When
-        let clone = original.clone();
-
-        // Then
-        assert_eq!(clone, original);
-        assert_eq!(clone.task, "deploy_app");
-        assert_eq!(clone.on_fail.unwrap()[0], "cleanup");
     }
 }

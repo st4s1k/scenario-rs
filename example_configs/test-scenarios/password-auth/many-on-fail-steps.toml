@@ -1,44 +1,38 @@
+#:schema ../../../scenario-schema.json
+
 # Test: Step fails with many on-fail recovery steps
 # UI: Failed step (red) → deeply nested on-fail list with 4 steps
 
 parent = "./server.toml"
 
-[execute]
-steps = [
-    { task = "deploy_fails", on-fail = [
-        "stop_service",
-        "restore_backup",
-        "cleanup_temp",
-        "start_service",
-    ] },
-]
+[steps.deploy]
+task = "deploy_fails"
+on-fail = "recovery"
 
-[tasks.deploy_fails]
-type = "RemoteSudo"
-description = "Deploying new version (will fail)"
+[sequences]
+recovery = ["stop_service", "restore_backup", "cleanup_temp", "start_service"]
+
+[tasks.remote_sudo.deploy_fails]
 command = "mv {missing_artifact} /opt/app/"
+description = "Deploying new version (will fail)"
 error_message = "Deployment failed"
 
-[tasks.stop_service]
-type = "RemoteSudo"
-description = "On-Fail: Stopping service"
+[tasks.remote_sudo.stop_service]
 command = "echo 'Service stopped'"
+description = "On-Fail: Stopping service"
 error_message = "Failed to stop service during recovery"
 
-[tasks.restore_backup]
-type = "RemoteSudo"
-description = "On-Fail: Restoring from backup"
+[tasks.remote_sudo.restore_backup]
 command = "echo 'Backup restored'"
+description = "On-Fail: Restoring from backup"
 error_message = "Failed to restore backup"
 
-[tasks.cleanup_temp]
-type = "RemoteSudo"
-description = "On-Fail: Cleaning up temporary files"
+[tasks.remote_sudo.cleanup_temp]
 command = "echo 'Temp files cleaned'"
+description = "On-Fail: Cleaning up temporary files"
 error_message = "Failed to clean up temp files"
 
-[tasks.start_service]
-type = "RemoteSudo"
-description = "On-Fail: Restarting service"
+[tasks.remote_sudo.start_service]
 command = "echo 'Service restarted'"
+description = "On-Fail: Restarting service"
 error_message = "Failed to restart service during recovery"

@@ -1,229 +1,132 @@
-use crate::config::task::TaskConfig;
+use crate::config::task::{RemoteSudoTaskConfig, SftpCopyTaskConfig};
+use schemars::JsonSchema;
 use serde::Deserialize;
-use std::{
-    collections::HashMap,
-    ops::{Deref, DerefMut},
-};
+use std::collections::HashMap;
 
-/// Map of task names to their configurations.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
-pub struct TasksConfig(HashMap<String, TaskConfig>);
-
-impl Deref for TasksConfig {
-    type Target = HashMap<String, TaskConfig>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+/// Categorized task library: tasks organized by type.
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+pub struct TasksConfig {
+    pub remote_sudo: Option<HashMap<String, RemoteSudoTaskConfig>>,
+    pub sftp_copy: Option<HashMap<String, SftpCopyTaskConfig>>,
 }
 
-impl DerefMut for TasksConfig {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl From<HashMap<String, TaskConfig>> for TasksConfig {
-    fn from(tasks: HashMap<String, TaskConfig>) -> Self {
-        TasksConfig(tasks)
+impl TasksConfig {
+    /// Merges another TasksConfig into this one. Entries from `other` override
+    /// entries with the same name within each category.
+    pub fn merge(&self, other: &TasksConfig) -> TasksConfig {
+        TasksConfig {
+            remote_sudo: match (&self.remote_sudo, &other.remote_sudo) {
+                (Some(base), Some(overrides)) => {
+                    let mut merged = base.clone();
+                    merged.extend(overrides.iter().map(|(k, v)| (k.clone(), v.clone())));
+                    Some(merged)
+                }
+                (None, Some(tasks)) => Some(tasks.clone()),
+                (Some(tasks), None) => Some(tasks.clone()),
+                (None, None) => None,
+            },
+            sftp_copy: match (&self.sftp_copy, &other.sftp_copy) {
+                (Some(base), Some(overrides)) => {
+                    let mut merged = base.clone();
+                    merged.extend(overrides.iter().map(|(k, v)| (k.clone(), v.clone())));
+                    Some(merged)
+                }
+                (None, Some(tasks)) => Some(tasks.clone()),
+                (Some(tasks), None) => Some(tasks.clone()),
+                (None, None) => None,
+            },
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{
-        task::{TaskConfig, TaskType},
-        tasks::TasksConfig,
-    };
-    use std::collections::HashMap;
+    use super::*;
+    use crate::config::task::{RemoteSudoTaskConfig, SftpCopyTaskConfig};
 
     #[test]
     fn test_tasks_config_default() {
-        // Given & When
         let tasks = TasksConfig::default();
-
-        // Then
-        assert!(tasks.is_empty(), "Default TasksConfig should be empty");
+        assert!(tasks.remote_sudo.is_none());
+        assert!(tasks.sftp_copy.is_none());
     }
 
     #[test]
-    fn test_tasks_config_from_hashmap() {
-        // Given
-        let mut map = HashMap::new();
-        map.insert(
-            "task1".to_string(),
-            TaskConfig {
-                description: "Test task".to_string(),
-                error_message: "Test failed".to_string(),
-                task_type: TaskType::RemoteSudo {
-                    command: "echo test".to_string(),
-                },
-            },
-        );
+    fn test_tasks_config_deserialization() {
+        let toml_str = r#"
+            [remote_sudo.update]
+            command = "apt-get update"
 
-        // When
-        let tasks = TasksConfig::from(map);
+            [remote_sudo.restart]
+            command = "systemctl restart app"
 
-        // Then
-        assert_eq!(tasks.len(), 1);
-        assert!(tasks.contains_key("task1"));
+            [sftp_copy.deploy_config]
+            source = "/local/config.json"
+            destination = "/remote/config.json"
+        "#;
+        let tasks: TasksConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(tasks.remote_sudo.as_ref().unwrap().len(), 2);
+        assert_eq!(tasks.sftp_copy.as_ref().unwrap().len(), 1);
     }
 
     #[test]
-    fn test_tasks_config_deref() {
-        // Given
-        let mut map = HashMap::new();
-        map.insert(
-            "task1".to_string(),
-            TaskConfig {
-                description: "Test task".to_string(),
-                error_message: "Test failed".to_string(),
-                task_type: TaskType::RemoteSudo {
-                    command: "echo test".to_string(),
+    fn test_tasks_config_merge() {
+        let base = TasksConfig {
+            remote_sudo: Some(HashMap::from([(
+                "task1".into(),
+                RemoteSudoTaskConfig {
+                    command: "echo 1".into(),
+                    ..Default::default()
                 },
-            },
-        );
-        let tasks = TasksConfig::from(map);
-
-        // When & Then
-        assert_eq!(tasks.len(), 1);
-        assert!(tasks.contains_key("task1"));
-        let task = tasks.get("task1").unwrap();
-        assert_eq!(task.description, "Test task");
+            )])),
+            sftp_copy: None,
+        };
+        let other = TasksConfig {
+            remote_sudo: Some(HashMap::from([(
+                "task2".into(),
+                RemoteSudoTaskConfig {
+                    command: "echo 2".into(),
+                    ..Default::default()
+                },
+            )])),
+            sftp_copy: Some(HashMap::from([(
+                "copy1".into(),
+                SftpCopyTaskConfig {
+                    source: "a".into(),
+                    destination: "b".into(),
+                    ..Default::default()
+                },
+            )])),
+        };
+        let merged = base.merge(&other);
+        assert_eq!(merged.remote_sudo.as_ref().unwrap().len(), 2);
+        assert_eq!(merged.sftp_copy.as_ref().unwrap().len(), 1);
     }
 
     #[test]
-    fn test_tasks_config_deref_mut() {
-        // Given
-        let mut map = HashMap::new();
-        map.insert(
-            "task1".to_string(),
-            TaskConfig {
-                description: "Test task".to_string(),
-                error_message: "Test failed".to_string(),
-                task_type: TaskType::RemoteSudo {
-                    command: "echo test".to_string(),
+    fn test_tasks_config_merge_override() {
+        let base = TasksConfig {
+            remote_sudo: Some(HashMap::from([(
+                "task1".into(),
+                RemoteSudoTaskConfig {
+                    command: "original".into(),
+                    ..Default::default()
                 },
-            },
-        );
-        let mut tasks = TasksConfig::from(map);
-
-        // When
-        tasks.insert(
-            "task2".to_string(),
-            TaskConfig {
-                description: "Another task".to_string(),
-                error_message: "Another failed".to_string(),
-                task_type: TaskType::SftpCopy {
-                    source_path: "/source".to_string(),
-                    destination_path: "/dest".to_string(),
+            )])),
+            sftp_copy: None,
+        };
+        let other = TasksConfig {
+            remote_sudo: Some(HashMap::from([(
+                "task1".into(),
+                RemoteSudoTaskConfig {
+                    command: "overridden".into(),
+                    ..Default::default()
                 },
-            },
-        );
-        tasks.remove("task1");
-
-        // Then
-        assert_eq!(tasks.len(), 1);
-        assert!(tasks.contains_key("task2"));
-        assert!(!tasks.contains_key("task1"));
-    }
-
-    #[test]
-    fn test_tasks_config_clone() {
-        // Given
-        let mut map = HashMap::new();
-        map.insert(
-            "task1".to_string(),
-            TaskConfig {
-                description: "Test task".to_string(),
-                error_message: "Test failed".to_string(),
-                task_type: TaskType::RemoteSudo {
-                    command: "echo test".to_string(),
-                },
-            },
-        );
-        let original = TasksConfig::from(map);
-
-        // When
-        let cloned = original.clone();
-
-        // Then
-        assert_eq!(cloned.len(), original.len());
-        assert_eq!(cloned, original);
-
-        let original_task = original.get("task1").unwrap();
-        let cloned_task = cloned.get("task1").unwrap();
-        assert_eq!(cloned_task.description, original_task.description);
-    }
-
-    #[test]
-    fn test_tasks_config_debug() {
-        // Given
-        let mut map = HashMap::new();
-        map.insert(
-            "debug_task".to_string(),
-            TaskConfig {
-                description: "Debug task".to_string(),
-                error_message: "Debug failed".to_string(),
-                task_type: TaskType::RemoteSudo {
-                    command: "echo debug".to_string(),
-                },
-            },
-        );
-        let tasks = TasksConfig::from(map);
-
-        // When
-        let debug_string = format!("{:?}", tasks);
-
-        // Then
-        assert!(debug_string.contains("debug_task"));
-        assert!(debug_string.contains("Debug task"));
-    }
-
-    #[test]
-    fn test_tasks_config_partial_eq() {
-        // Given
-        let mut map1 = HashMap::new();
-        map1.insert(
-            "task1".to_string(),
-            TaskConfig {
-                description: "Test task".to_string(),
-                error_message: "Test failed".to_string(),
-                task_type: TaskType::RemoteSudo {
-                    command: "echo test".to_string(),
-                },
-            },
-        );
-        let tasks1 = TasksConfig::from(map1);
-
-        let mut map2 = HashMap::new();
-        map2.insert(
-            "task1".to_string(),
-            TaskConfig {
-                description: "Test task".to_string(),
-                error_message: "Test failed".to_string(),
-                task_type: TaskType::RemoteSudo {
-                    command: "echo test".to_string(),
-                },
-            },
-        );
-        let tasks2 = TasksConfig::from(map2);
-
-        let mut map3 = HashMap::new();
-        map3.insert(
-            "task2".to_string(),
-            TaskConfig {
-                description: "Different task".to_string(),
-                error_message: "Different failed".to_string(),
-                task_type: TaskType::RemoteSudo {
-                    command: "echo different".to_string(),
-                },
-            },
-        );
-        let tasks3 = TasksConfig::from(map3);
-
-        // When & Then
-        assert_eq!(tasks1, tasks2);
-        assert_ne!(tasks1, tasks3);
+            )])),
+            sftp_copy: None,
+        };
+        let merged = base.merge(&other);
+        let task = merged.remote_sudo.as_ref().unwrap().get("task1").unwrap();
+        assert_eq!(task.command, "overridden");
     }
 }

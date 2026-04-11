@@ -1,8 +1,9 @@
+use schemars::JsonSchema;
 use serde::Deserialize;
 use std::ops::{Deref, DerefMut};
 
 /// Task names to execute as fallback when a step fails.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 pub struct OnFailStepsConfig(Vec<String>);
 
 impl Deref for OnFailStepsConfig {

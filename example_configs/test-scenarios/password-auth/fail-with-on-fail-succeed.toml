@@ -1,38 +1,37 @@
+#:schema ../../../scenario-schema.json
+
 # Test: Step fails with unresolved variable, on-fail steps succeed
 # UI: Step 1 green (pass), Step 2 red (fail) → nested on-fail section with green steps
 # The on-fail steps use resolved variables so they succeed
 
 parent = "./server.toml"
 
-[execute]
-steps = [
-    { task = "stop_service" },
-    { task = "deploy_with_bad_var", on-fail = [
-        "rollback_deploy",
-        "start_service",
-    ] },
-]
+[steps.stop]
+task = "stop_service"
 
-[tasks.stop_service]
-type = "RemoteSudo"
-description = "Stopping the service"
+[steps.deploy]
+task = "deploy_with_bad_var"
+on-fail = "rollback_and_start"
+
+[sequences]
+rollback_and_start = ["rollback_deploy", "start_service"]
+
+[tasks.remote_sudo.stop_service]
 command = "echo 'Service stopped'"
+description = "Stopping the service"
 error_message = "Failed to stop service"
 
-[tasks.deploy_with_bad_var]
-type = "RemoteSudo"
-description = "Deploying (will fail - unresolved variable)"
+[tasks.remote_sudo.deploy_with_bad_var]
 command = "cp {missing_deploy_artifact} /opt/myapp/"
+description = "Deploying (will fail - unresolved variable)"
 error_message = "Deployment failed"
 
-[tasks.rollback_deploy]
-type = "RemoteSudo"
-description = "Rolling back deployment"
+[tasks.remote_sudo.rollback_deploy]
 command = "echo 'Rollback complete'"
+description = "Rolling back deployment"
 error_message = "Rollback failed"
 
-[tasks.start_service]
-type = "RemoteSudo"
-description = "Starting the service"
+[tasks.remote_sudo.start_service]
 command = "echo 'Service started'"
+description = "Starting the service"
 error_message = "Failed to start service"

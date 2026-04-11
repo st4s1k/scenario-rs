@@ -1,29 +1,29 @@
+#:schema ../../../scenario-schema.json
+
 # Test: SftpCopy then RemoteSudo, both succeed
 # UI: Progress bar for upload, then command output block
 
 parent = "./server.toml"
 
-[execute]
-steps = [
-    { task = "upload_config" },
-    { task = "apply_config" },
-]
+[steps.upload]
+task = "upload_config"
 
-[variables.required]
-config_file = { type = "Path", label = "Config File" }
+[steps.apply]
+task = "apply_config"
+
+[variables.required.config_file]
+type = "Path"
+label = "Config File"
 
 [variables.defined]
 remote_config_dir = "/etc/myapp"
 
-[tasks.upload_config]
-type = "SftpCopy"
+[tasks.sftp_copy.upload_config]
+source = "{config_file}"
+destination = "{remote_config_dir}/{basename:config_file}"
 description = "Uploading configuration file"
-source_path = "{config_file}"
-destination_path = "{remote_config_dir}/{basename:config_file}"
 error_message = "Failed to upload configuration file"
 
-[tasks.apply_config]
-type = "RemoteSudo"
-description = "Applying configuration"
+[tasks.remote_sudo.apply_config]
 command = "echo 'Configuration applied'"
-error_message = "Failed to apply configuration"
+description = "Applying configuration"

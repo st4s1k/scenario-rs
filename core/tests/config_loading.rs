@@ -15,15 +15,19 @@ fn test_scenario(name: &str) -> PathBuf {
 
 #[test]
 fn load_example_scenario() {
-    // Given & When & Then
+    // Given & When
     let config = ScenarioConfig::try_from(example_config("example-scenario.toml"));
+
+    // Then
     assert!(config.is_ok(), "failed to load example-scenario.toml: {:?}", config.err());
 }
 
 #[test]
 fn load_deploy_scenario() {
-    // Given & When & Then
+    // Given & When
     let config = ScenarioConfig::try_from(example_config("deploy-scenario.toml"));
+
+    // Then
     assert!(config.is_ok(), "failed to load deploy-scenario.toml: {:?}", config.err());
 }
 
@@ -53,50 +57,64 @@ fn load_second_child_with_parent_inheritance() {
 
 #[test]
 fn load_test_scenario_all_succeed() {
-    // Given & When & Then
+    // Given & When
     let config = ScenarioConfig::try_from(test_scenario("password-auth/all-succeed.toml"));
+
+    // Then
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
 #[test]
 fn load_test_scenario_sftp_then_sudo() {
-    // Given & When & Then
+    // Given & When
     let config = ScenarioConfig::try_from(test_scenario("password-auth/sftp-then-sudo.toml"));
+
+    // Then
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
 #[test]
 fn load_test_scenario_only_sftp() {
-    // Given & When & Then
+    // Given & When
     let config = ScenarioConfig::try_from(test_scenario("password-auth/only-sftp-steps.toml"));
+
+    // Then
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
 #[test]
 fn load_test_scenario_only_sudo() {
-    // Given & When & Then
+    // Given & When
     let config = ScenarioConfig::try_from(test_scenario("password-auth/only-sudo-steps.toml"));
+
+    // Then
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
 #[test]
 fn load_test_scenario_empty_steps() {
-    // Given & When & Then
+    // Given & When
     let config = ScenarioConfig::try_from(test_scenario("password-auth/empty-steps.toml"));
+
+    // Then
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
 #[test]
 fn load_test_scenario_with_on_fail() {
-    // Given & When & Then
+    // Given & When
     let config = ScenarioConfig::try_from(test_scenario("password-auth/fail-with-on-fail-succeed.toml"));
+
+    // Then
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
 #[test]
 fn load_test_scenario_many_on_fail() {
-    // Given & When & Then
+    // Given & When
     let config = ScenarioConfig::try_from(test_scenario("password-auth/many-on-fail-steps.toml"));
+
+    // Then
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
@@ -115,8 +133,10 @@ fn load_key_auth_scenario_only_sudo() {
 
 #[test]
 fn load_key_auth_scenario_sftp_then_sudo() {
-    // Given & When & Then
+    // Given & When
     let config = ScenarioConfig::try_from(test_scenario("key-auth/sftp-then-sudo.toml"));
+
+    // Then
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
@@ -135,15 +155,19 @@ fn load_agent_auth_scenario_only_sudo() {
 
 #[test]
 fn load_agent_auth_scenario_sftp_then_sudo() {
-    // Given & When & Then
+    // Given & When
     let config = ScenarioConfig::try_from(test_scenario("agent-auth/sftp-then-sudo.toml"));
+
+    // Then
     assert!(config.is_ok(), "failed: {:?}", config.err());
 }
 
 #[test]
 fn missing_file_returns_cannot_open_config() {
-    // Given & When & Then
+    // Given & When
     let result = ScenarioConfig::try_from(PathBuf::from("nonexistent.toml"));
+
+    // Then
     assert!(
         matches!(result, Err(ScenarioConfigError::CannotOpenConfig(_))),
         "expected CannotOpenConfig, got: {:?}",
@@ -184,14 +208,11 @@ fn missing_credentials_returns_error() {
 [server]
 host = "localhost"
 
-[execute]
-steps = [{ task = "t" }]
+[steps.s1]
+task = "t"
 
-[tasks.t]
-type = "RemoteSudo"
-description = "d"
+[tasks.remote_sudo.t]
 command = "echo hi"
-error_message = "e"
 "#,
     )
     .unwrap();
@@ -221,14 +242,11 @@ fn missing_server_returns_error() {
 [credentials]
 username = "user"
 
-[execute]
-steps = [{ task = "t" }]
+[steps.s1]
+task = "t"
 
-[tasks.t]
-type = "RemoteSudo"
-description = "d"
+[tasks.remote_sudo.t]
 command = "echo hi"
-error_message = "e"
 "#,
     )
     .unwrap();
@@ -247,11 +265,11 @@ error_message = "e"
 }
 
 #[test]
-fn missing_execute_returns_error() {
+fn missing_steps_returns_error() {
     // Given
-    let dir = std::env::temp_dir().join("scenario_rs_test_missing_execute");
+    let dir = std::env::temp_dir().join("scenario_rs_test_missing_steps");
     std::fs::create_dir_all(&dir).unwrap();
-    let path = dir.join("no-exec.toml");
+    let path = dir.join("no-steps.toml");
     std::fs::write(
         &path,
         r#"
@@ -261,11 +279,8 @@ username = "user"
 [server]
 host = "localhost"
 
-[tasks.t]
-type = "RemoteSudo"
-description = "d"
+[tasks.remote_sudo.t]
 command = "echo hi"
-error_message = "e"
 "#,
     )
     .unwrap();
@@ -275,8 +290,8 @@ error_message = "e"
 
     // Then
     assert!(
-        matches!(result, Err(ScenarioConfigError::MissingExecute)),
-        "expected MissingExecute, got: {:?}",
+        matches!(result, Err(ScenarioConfigError::MissingSteps)),
+        "expected MissingSteps, got: {:?}",
         result
     );
     let _ = std::fs::remove_file(&path);
@@ -298,8 +313,8 @@ username = "user"
 [server]
 host = "localhost"
 
-[execute]
-steps = [{ task = "t" }]
+[steps.s1]
+task = "t"
 "#,
     )
     .unwrap();
@@ -391,14 +406,11 @@ port = 2222
         r#"
 parent = "./server-key.toml"
 
-[execute]
-steps = [{ task = "t" }]
+[steps.s1]
+task = "t"
 
-[tasks.t]
-type = "RemoteSudo"
-description = "d"
+[tasks.remote_sudo.t]
 command = "echo hi"
-error_message = "e"
 "#,
     )
     .unwrap();
@@ -434,8 +446,7 @@ private_key = "./keys/id_ed25519"
 [server]
 host = "localhost"
 
-[execute]
-steps = []
+[steps]
 
 [tasks]
 "#,
@@ -480,8 +491,7 @@ private_key = "{abs_key}"
 [server]
 host = "localhost"
 
-[execute]
-steps = []
+[steps]
 
 [tasks]
 "#
@@ -517,8 +527,7 @@ private_key = "./parent_key"
 [server]
 host = "localhost"
 
-[execute]
-steps = []
+[steps]
 
 [tasks]
 "#,

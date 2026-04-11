@@ -14,12 +14,19 @@
 //! - **Variable interpolation**: Values can reference variables resolved at runtime.
 
 pub mod credentials;
-pub mod execute;
 pub mod on_fail;
 pub mod scenario;
+pub mod sequences;
 pub mod server;
 pub mod step;
 pub mod steps;
 pub mod task;
 pub mod tasks;
 pub mod variables;
+
+/// Returns the JSON Schema for the scenario configuration format.
+pub fn json_schema() -> schemars::Schema {
+    schemars::generate::SchemaSettings::openapi3()
+        .into_generator()
+        .into_root_schema_for::<scenario::PartialScenarioConfig>()
+}

@@ -1,29 +1,30 @@
+#:schema ../../../scenario-schema.json
+
 # Test: SftpCopy + RemoteSudo with private key auth
 # Verifies key-based authentication works with file uploads
 
 parent = "./server.toml"
 
-[execute]
-steps = [
-    { task = "upload_file" },
-    { task = "run_command" },
-]
+[steps.upload]
+task = "upload_file"
 
-[variables.required]
-local_file = { type = "Path", label = "Local File Path" }
+[steps.verify]
+task = "run_command"
+
+[variables.required.local_file]
+type = "Path"
+label = "Local File Path"
 
 [variables.defined]
 remote_path = "/home/{username}/uploads"
 
-[tasks.upload_file]
-type = "SftpCopy"
+[tasks.sftp_copy.upload_file]
+source = "{local_file}"
+destination = "{remote_path}/{basename:local_file}"
 description = "Uploading file via key auth"
-source_path = "{local_file}"
-destination_path = "{remote_path}/{basename:local_file}"
 error_message = "Failed to upload file"
 
-[tasks.run_command]
-type = "RemoteSudo"
-description = "Verifying upload"
+[tasks.remote_sudo.run_command]
 command = "ls -la /home/test_user/uploads/"
+description = "Verifying upload"
 error_message = "Verification failed"

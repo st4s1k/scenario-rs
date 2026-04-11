@@ -1,37 +1,38 @@
+#:schema ../../../scenario-schema.json
+
 # Test: All Steps Succeed
 # UI: All steps show green indicators and auto-collapse.
 # Flow: SftpCopy (progress bar) → RemoteSudo (command output) → RemoteSudo (command output)
 
 parent = "./server.toml"
 
-[execute]
-steps = [
-    { task = "upload_file" },
-    { task = "run_command_one" },
-    { task = "run_command_two" },
-]
+[steps.upload]
+task = "upload_file"
 
-[variables.required]
-local_file = { type = "Path", label = "Local File Path" }
+[steps.cmd_one]
+task = "run_command_one"
+
+[steps.cmd_two]
+task = "run_command_two"
+
+[variables.required.local_file]
+type = "Path"
+label = "Local File Path"
 
 [variables.defined]
 remote_path = "/home/{username}/uploads"
 
-[tasks.upload_file]
-type = "SftpCopy"
+[tasks.sftp_copy.upload_file]
+source = "{local_file}"
+destination = "{remote_path}/{basename:local_file}"
 description = "Uploading file to server"
-source_path = "{local_file}"
-destination_path = "{remote_path}/{basename:local_file}"
 error_message = "Failed to upload file"
 
-[tasks.run_command_one]
-type = "RemoteSudo"
-description = "Running first command"
+[tasks.remote_sudo.run_command_one]
 command = "echo 'Step 1 complete'"
+description = "Running first command"
 error_message = "First command failed"
 
-[tasks.run_command_two]
-type = "RemoteSudo"
-description = "Running second command"
+[tasks.remote_sudo.run_command_two]
 command = "echo 'Step 2 complete'"
-error_message = "Second command failed"
+description = "Running second command"

@@ -1,8 +1,9 @@
 use crate::scenario::errors::ScenarioConfigError;
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 /// Partial credentials supporting inheritance/merging.
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Clone, Debug, Default, JsonSchema)]
 pub struct PartialCredentialsConfig {
     pub username: Option<String>,
     pub password: Option<String>,
@@ -22,7 +23,7 @@ impl PartialCredentialsConfig {
 
 /// Complete credentials config.
 /// Auth priority: password > private_key > SSH agent.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 pub struct CredentialsConfig {
     pub username: String,
     pub password: Option<String>,

@@ -4,13 +4,14 @@ use crate::{
     config::variables::{defined::DefinedVariablesConfig, required::RequiredVariablesConfig},
     scenario::errors::ScenarioConfigError,
 };
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 pub mod defined;
 pub mod required;
 
 /// Complete variables config: required + defined.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 pub struct VariablesConfig {
     #[serde(default)]
     pub required: RequiredVariablesConfig,
@@ -19,7 +20,7 @@ pub struct VariablesConfig {
 }
 
 /// Partial variables config supporting inheritance/merging.
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Clone, Debug, Default, JsonSchema)]
 pub struct PartialVariablesConfig {
     pub required: Option<RequiredVariablesConfig>,
     pub defined: Option<DefinedVariablesConfig>,

@@ -1,195 +1,91 @@
+use schemars::JsonSchema;
 use serde::Deserialize;
 
-/// A single task operation in a scenario (command execution or file copy).
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
-pub struct TaskConfig {
-    pub description: String,
-    pub error_message: String,
-    #[serde(flatten)]
-    pub task_type: TaskType,
+/// Configuration for a remote sudo command task.
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+pub struct RemoteSudoTaskConfig {
+    pub command: String,
+    pub description: Option<String>,
+    pub error_message: Option<String>,
 }
 
-/// The different task operations available.
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(tag = "type")]
-pub enum TaskType {
-    RemoteSudo {
-        command: String,
-    },
-    SftpCopy {
-        source_path: String,
-        destination_path: String,
-    },
-}
-
-impl Default for TaskType {
-    fn default() -> Self {
-        TaskType::RemoteSudo {
-            command: String::new(),
-        }
-    }
+/// Configuration for an SFTP file copy task.
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+pub struct SftpCopyTaskConfig {
+    pub source: String,
+    pub destination: String,
+    pub description: Option<String>,
+    pub error_message: Option<String>,
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::config::task::{TaskConfig, TaskType};
-    use toml;
+    use super::*;
 
     #[test]
-    fn test_task_type_default_is_remote_sudo() {
-        // Given & When
-        let task_type = TaskType::default();
-
-        // Then
-        assert_eq!(
-            task_type,
-            TaskType::RemoteSudo {
-                command: String::new()
-            }
-        );
+    fn test_remote_sudo_task_config_default() {
+        let config = RemoteSudoTaskConfig::default();
+        assert_eq!(config.command, "");
+        assert!(config.description.is_none());
+        assert!(config.error_message.is_none());
     }
 
     #[test]
-    fn test_task_config_default() {
-        // Given & When
-        let config = TaskConfig::default();
-
-        // Then
-        assert_eq!(config.description, "");
-        assert_eq!(config.error_message, "");
-        assert_eq!(
-            config.task_type,
-            TaskType::RemoteSudo {
-                command: String::new()
-            }
-        );
+    fn test_sftp_copy_task_config_default() {
+        let config = SftpCopyTaskConfig::default();
+        assert_eq!(config.source, "");
+        assert_eq!(config.destination, "");
+        assert!(config.description.is_none());
+        assert!(config.error_message.is_none());
     }
 
     #[test]
-    fn test_task_config_remote_sudo_deserialization() {
-        // Given
-        let toml_str = create_remote_sudo_toml();
-
-        // When
-        let task: TaskConfig = toml::from_str(&toml_str).unwrap();
-
-        // Then
-        assert_eq!(task.description, "Update system packages");
-        assert_eq!(task.error_message, "Failed to update system packages");
-
-        match task.task_type {
-            TaskType::RemoteSudo { command } => {
-                assert_eq!(command, "apt-get update && apt-get upgrade -y");
-            }
-            _ => panic!("Expected RemoteSudo task type"),
-        }
-    }
-
-    #[test]
-    fn test_task_config_sftp_copy_deserialization() {
-        // Given
-        let toml_str = create_sftp_copy_toml();
-
-        // When
-        let task: TaskConfig = toml::from_str(&toml_str).unwrap();
-
-        // Then
-        assert_eq!(task.description, "Deploy configuration file");
-        assert_eq!(task.error_message, "Failed to deploy configuration file");
-
-        match task.task_type {
-            TaskType::SftpCopy {
-                source_path,
-                destination_path,
-            } => {
-                assert_eq!(source_path, "/local/config.json");
-                assert_eq!(destination_path, "/remote/config.json");
-            }
-            _ => panic!("Expected SftpCopy task type"),
-        }
-    }
-
-    #[test]
-    fn test_task_config_with_empty_fields() {
-        // Given
+    fn test_remote_sudo_deserialization() {
         let toml_str = r#"
-            description = ""
-            error_message = ""
-            type = "RemoteSudo"
-            command = ""
+            command = "apt-get update"
+            description = "Update packages"
+            error_message = "Update failed"
         "#;
-
-        // When
-        let task: TaskConfig = toml::from_str(toml_str).unwrap();
-
-        // Then
-        assert_eq!(task.description, "");
-        assert_eq!(task.error_message, "");
-
-        match task.task_type {
-            TaskType::RemoteSudo { command } => {
-                assert_eq!(command, "");
-            }
-            _ => panic!("Expected RemoteSudo task type"),
-        }
+        let config: RemoteSudoTaskConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.command, "apt-get update");
+        assert_eq!(config.description.as_deref(), Some("Update packages"));
+        assert_eq!(config.error_message.as_deref(), Some("Update failed"));
     }
 
     #[test]
-    fn test_task_type_discriminant_sensitivity() {
-        // Given
-        let valid_toml = r#"
-            description = "Test task"
-            error_message = "Test error"
-            type = "RemoteSudo"
-            command = "echo test"
-        "#;
-
-        let invalid_case_toml = r#"
-            description = "Test task"
-            error_message = "Test error"
-            type = "remotesudo"
-            command = "echo test"
-        "#;
-
-        // When & Then
-        assert!(toml::from_str::<TaskConfig>(valid_toml).is_ok());
-        assert!(toml::from_str::<TaskConfig>(invalid_case_toml).is_err());
+    fn test_remote_sudo_minimal_deserialization() {
+        let toml_str = r#"command = "echo hello""#;
+        let config: RemoteSudoTaskConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.command, "echo hello");
+        assert!(config.description.is_none());
+        assert!(config.error_message.is_none());
     }
 
     #[test]
-    fn test_task_type_missing_fields() {
-        // Given
-        let missing_command_toml = r#"
-            description = "Test task"
-            error_message = "Test error"
-            type = "RemoteSudo"
+    fn test_sftp_copy_deserialization() {
+        let toml_str = r#"
+            source = "/local/file.txt"
+            destination = "/remote/file.txt"
+            description = "Deploy config"
+            error_message = "Deploy failed"
         "#;
-
-        // When
-        let result = toml::from_str::<TaskConfig>(missing_command_toml);
-
-        // Then
-        assert!(result.is_err());
+        let config: SftpCopyTaskConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.source, "/local/file.txt");
+        assert_eq!(config.destination, "/remote/file.txt");
+        assert_eq!(config.description.as_deref(), Some("Deploy config"));
+        assert_eq!(config.error_message.as_deref(), Some("Deploy failed"));
     }
 
-    fn create_remote_sudo_toml() -> String {
-        r#"
-            description = "Update system packages"
-            error_message = "Failed to update system packages"
-            type = "RemoteSudo"
-            command = "apt-get update && apt-get upgrade -y"
-        "#
-        .to_string()
-    }
-
-    fn create_sftp_copy_toml() -> String {
-        r#"
-            description = "Deploy configuration file"
-            error_message = "Failed to deploy configuration file"
-            type = "SftpCopy"
-            source_path = "/local/config.json"
-            destination_path = "/remote/config.json"
-        "#
-        .to_string()
+    #[test]
+    fn test_sftp_copy_minimal_deserialization() {
+        let toml_str = r#"
+            source = "/local/file.txt"
+            destination = "/remote/file.txt"
+        "#;
+        let config: SftpCopyTaskConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.source, "/local/file.txt");
+        assert_eq!(config.destination, "/remote/file.txt");
+        assert!(config.description.is_none());
+        assert!(config.error_message.is_none());
     }
 }

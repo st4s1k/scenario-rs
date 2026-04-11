@@ -1,5 +1,5 @@
 use crate::{
-    config::task::{TaskConfig, TaskType},
+    config::task::{RemoteSudoTaskConfig, SftpCopyTaskConfig},
     scenario::{remote_sudo::RemoteSudo, sftp_copy::SftpCopy},
 };
 
@@ -18,32 +18,42 @@ pub enum Task {
     },
 }
 
-impl From<&TaskConfig> for Task {
-    fn from(config: &TaskConfig) -> Self {
-        match &config.task_type {
-            TaskType::RemoteSudo { command } => Task::RemoteSudo {
-                description: config.description.clone(),
-                error_message: config.error_message.clone(),
-                remote_sudo: RemoteSudo {
-                    command: command.clone(),
-                },
-            },
-            TaskType::SftpCopy {
-                source_path,
-                destination_path,
-            } => Task::SftpCopy {
-                description: config.description.clone(),
-                error_message: config.error_message.clone(),
-                sftp_copy: SftpCopy {
-                    source_path: source_path.clone(),
-                    destination_path: destination_path.clone(),
-                },
+impl Task {
+    /// Creates a RemoteSudo task from a config entry, using the task name as default description.
+    pub fn from_remote_sudo(name: &str, config: &RemoteSudoTaskConfig) -> Self {
+        Task::RemoteSudo {
+            description: config
+                .description
+                .clone()
+                .unwrap_or_else(|| name.to_string()),
+            error_message: config
+                .error_message
+                .clone()
+                .unwrap_or_else(|| "Remote command failed".to_string()),
+            remote_sudo: RemoteSudo {
+                command: config.command.clone(),
             },
         }
     }
-}
 
-impl Task {
+    /// Creates an SftpCopy task from a config entry, using the task name as default description.
+    pub fn from_sftp_copy(name: &str, config: &SftpCopyTaskConfig) -> Self {
+        Task::SftpCopy {
+            description: config
+                .description
+                .clone()
+                .unwrap_or_else(|| name.to_string()),
+            error_message: config
+                .error_message
+                .clone()
+                .unwrap_or_else(|| "File transfer failed".to_string()),
+            sftp_copy: SftpCopy {
+                source_path: config.source.clone(),
+                destination_path: config.destination.clone(),
+            },
+        }
+    }
+
     /// Returns the human-readable description of the task.
     pub fn description(&self) -> &str {
         match self {
@@ -64,17 +74,21 @@ impl Task {
 #[cfg(test)]
 mod tests {
     use crate::{
-        config::task::{TaskConfig, TaskType},
+        config::task::{RemoteSudoTaskConfig, SftpCopyTaskConfig},
         scenario::task::Task,
     };
 
     #[test]
     fn test_task_from_remote_sudo_config() {
         // Given
-        let config = create_remote_sudo_config();
+        let config = RemoteSudoTaskConfig {
+            command: "echo test".to_string(),
+            description: Some("Remote sudo task".to_string()),
+            error_message: Some("Remote command failed".to_string()),
+        };
 
         // When
-        let task = Task::from(&config);
+        let task = Task::from_remote_sudo("test_task", &config);
 
         // Then
         match task {
@@ -92,12 +106,34 @@ mod tests {
     }
 
     #[test]
-    fn test_task_from_sftp_copy_config() {
+    fn test_task_from_remote_sudo_defaults() {
         // Given
-        let config = create_sftp_copy_config();
+        let config = RemoteSudoTaskConfig {
+            command: "echo test".to_string(),
+            description: None,
+            error_message: None,
+        };
 
         // When
-        let task = Task::from(&config);
+        let task = Task::from_remote_sudo("my_task", &config);
+
+        // Then
+        assert_eq!(task.description(), "my_task");
+        assert_eq!(task.error_message(), "Remote command failed");
+    }
+
+    #[test]
+    fn test_task_from_sftp_copy_config() {
+        // Given
+        let config = SftpCopyTaskConfig {
+            source: "/source/path".to_string(),
+            destination: "/dest/path".to_string(),
+            description: Some("SFTP copy task".to_string()),
+            error_message: Some("File transfer failed".to_string()),
+        };
+
+        // When
+        let task = Task::from_sftp_copy("copy_task", &config);
 
         // Then
         match task {
@@ -116,57 +152,32 @@ mod tests {
     }
 
     #[test]
-    fn test_task_description_remote_sudo() {
+    fn test_task_from_sftp_copy_defaults() {
         // Given
-        let task = Task::from(&create_remote_sudo_config());
+        let config = SftpCopyTaskConfig {
+            source: "/src".to_string(),
+            destination: "/dst".to_string(),
+            description: None,
+            error_message: None,
+        };
 
         // When
-        let description = task.description();
+        let task = Task::from_sftp_copy("copy_task", &config);
 
         // Then
-        assert_eq!(description, "Remote sudo task");
-    }
-
-    #[test]
-    fn test_task_description_sftp_copy() {
-        // Given
-        let task = Task::from(&create_sftp_copy_config());
-
-        // When
-        let description = task.description();
-
-        // Then
-        assert_eq!(description, "SFTP copy task");
-    }
-
-    #[test]
-    fn test_task_error_message_remote_sudo() {
-        // Given
-        let task = Task::from(&create_remote_sudo_config());
-
-        // When
-        let error_message = task.error_message();
-
-        // Then
-        assert_eq!(error_message, "Remote command failed");
-    }
-
-    #[test]
-    fn test_task_error_message_sftp_copy() {
-        // Given
-        let task = Task::from(&create_sftp_copy_config());
-
-        // When
-        let error_message = task.error_message();
-
-        // Then
-        assert_eq!(error_message, "File transfer failed");
+        assert_eq!(task.description(), "copy_task");
+        assert_eq!(task.error_message(), "File transfer failed");
     }
 
     #[test]
     fn test_task_clone() {
         // Given
-        let original = Task::from(&create_remote_sudo_config());
+        let config = RemoteSudoTaskConfig {
+            command: "echo test".to_string(),
+            description: Some("Test".to_string()),
+            error_message: Some("Error".to_string()),
+        };
+        let original = Task::from_remote_sudo("t", &config);
 
         // When
         let cloned = original.clone();
@@ -179,7 +190,12 @@ mod tests {
     #[test]
     fn test_task_debug() {
         // Given
-        let task = Task::from(&create_remote_sudo_config());
+        let config = RemoteSudoTaskConfig {
+            command: "echo test".to_string(),
+            description: Some("Remote sudo task".to_string()),
+            error_message: None,
+        };
+        let task = Task::from_remote_sudo("t", &config);
 
         // When
         let debug_str = format!("{:?}", task);
@@ -187,26 +203,5 @@ mod tests {
         // Then
         assert!(debug_str.contains("RemoteSudo"));
         assert!(debug_str.contains("Remote sudo task"));
-    }
-
-    fn create_remote_sudo_config() -> TaskConfig {
-        TaskConfig {
-            description: "Remote sudo task".to_string(),
-            error_message: "Remote command failed".to_string(),
-            task_type: TaskType::RemoteSudo {
-                command: "echo test".to_string(),
-            },
-        }
-    }
-
-    fn create_sftp_copy_config() -> TaskConfig {
-        TaskConfig {
-            description: "SFTP copy task".to_string(),
-            error_message: "File transfer failed".to_string(),
-            task_type: TaskType::SftpCopy {
-                source_path: "/source/path".to_string(),
-                destination_path: "/dest/path".to_string(),
-            },
-        }
     }
 }

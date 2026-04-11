@@ -1,43 +1,46 @@
+#:schema ../../../scenario-schema.json
+
 # Test: Multiple steps, failure in the middle
 # UI: Steps 1-2 green (pass), Step 3 red (fail), Steps 4-5 stay pending (grey)
 
 parent = "./server.toml"
 
-[execute]
-steps = [
-    { task = "step_one" },
-    { task = "step_two" },
-    { task = "step_three_fails" },
-    { task = "step_four_unreachable" },
-    { task = "step_five_unreachable" },
-]
+[steps.step_one]
+task = "step_one"
 
-[tasks.step_one]
-type = "RemoteSudo"
-description = "Step 1 - Preparing environment"
+[steps.step_two]
+task = "step_two"
+
+[steps.step_three]
+task = "step_three_fails"
+
+[steps.step_four]
+task = "step_four_unreachable"
+
+[steps.step_five]
+task = "step_five_unreachable"
+
+[tasks.remote_sudo.step_one]
 command = "echo 'Preparing...'"
+description = "Step 1 - Preparing environment"
 error_message = "Step 1 failed"
 
-[tasks.step_two]
-type = "RemoteSudo"
-description = "Step 2 - Installing dependencies"
+[tasks.remote_sudo.step_two]
 command = "echo 'Installing...'"
+description = "Step 2 - Installing dependencies"
 error_message = "Step 2 failed"
 
-[tasks.step_three_fails]
-type = "RemoteSudo"
-description = "Step 3 - Deploying (will fail)"
+[tasks.remote_sudo.step_three_fails]
 command = "deploy {unresolved_path}"
+description = "Step 3 - Deploying (will fail)"
 error_message = "Step 3 deployment failed"
 
-[tasks.step_four_unreachable]
-type = "RemoteSudo"
-description = "Step 4 - Configuring (never reached)"
+[tasks.remote_sudo.step_four_unreachable]
 command = "echo 'Configuring...'"
+description = "Step 4 - Configuring (never reached)"
 error_message = "Step 4 failed"
 
-[tasks.step_five_unreachable]
-type = "RemoteSudo"
-description = "Step 5 - Verifying (never reached)"
+[tasks.remote_sudo.step_five_unreachable]
 command = "echo 'Verifying...'"
+description = "Step 5 - Verifying (never reached)"
 error_message = "Step 5 failed"

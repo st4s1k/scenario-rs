@@ -1,3 +1,5 @@
+#:schema ../../../scenario-schema.json
+
 # Shared test server config — SSH agent auth scenarios inherit from this.
 # Requires ssh-agent running with the test key loaded:
 #   eval $(ssh-agent)

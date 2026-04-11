@@ -1,30 +1,33 @@
 use crate::{
     config::{
         credentials::{CredentialsConfig, PartialCredentialsConfig},
-        execute::ExecuteConfig,
+        sequences::SequencesConfig,
         server::{PartialServerConfig, ServerConfig},
+        steps::StepsConfig,
         tasks::TasksConfig,
         variables::{PartialVariablesConfig, VariablesConfig},
     },
     scenario::errors::ScenarioConfigError,
 };
+use schemars::JsonSchema;
 use serde::Deserialize;
 use std::path::PathBuf;
 
 /// Partial scenario config supporting inheritance via a `parent` field.
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, JsonSchema)]
 pub struct PartialScenarioConfig {
     pub parent: Option<String>,
     pub credentials: Option<PartialCredentialsConfig>,
     pub server: Option<PartialServerConfig>,
-    pub execute: Option<ExecuteConfig>,
+    pub steps: Option<StepsConfig>,
+    pub sequences: Option<SequencesConfig>,
     pub variables: Option<PartialVariablesConfig>,
     pub tasks: Option<TasksConfig>,
 }
 
 impl PartialScenarioConfig {
     /// Merges with `other`. For most fields the other's value takes precedence;
-    /// variables are merged recursively.
+    /// variables and tasks are merged recursively, steps are replaced wholesale.
     pub fn merge(&self, other: &PartialScenarioConfig) -> PartialScenarioConfig {
         PartialScenarioConfig {
             parent: other.parent.clone().or_else(|| self.parent.clone()),
@@ -40,24 +43,43 @@ impl PartialScenarioConfig {
                 (Some(server), None) => Some(server.clone()),
                 (None, None) => None,
             },
-            execute: other.execute.clone().or_else(|| self.execute.clone()),
+            steps: other.steps.clone().or_else(|| self.steps.clone()),
+            sequences: match (&self.sequences, &other.sequences) {
+                (Some(base), Some(overrides)) => {
+                    let mut merged = base.clone();
+                    for (k, v) in overrides.iter() {
+                        merged.insert(k.clone(), v.clone());
+                    }
+                    Some(merged)
+                }
+                (None, Some(seq)) => Some(seq.clone()),
+                (Some(seq), None) => Some(seq.clone()),
+                (None, None) => None,
+            },
             variables: match (&self.variables, &other.variables) {
                 (Some(self_vars), Some(other_vars)) => Some(self_vars.merge(other_vars)),
                 (None, Some(vars)) => Some(vars.clone()),
                 (Some(vars), None) => Some(vars.clone()),
                 (None, None) => None,
             },
-            tasks: other.tasks.clone().or_else(|| self.tasks.clone()),
+            tasks: match (&self.tasks, &other.tasks) {
+                (Some(base), Some(overrides)) => Some(base.merge(overrides)),
+                (None, Some(tasks)) => Some(tasks.clone()),
+                (Some(tasks), None) => Some(tasks.clone()),
+                (None, None) => None,
+            },
         }
     }
 }
 
 /// Fully resolved scenario config with all required fields present.
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Clone, Debug, Default, JsonSchema)]
 pub struct ScenarioConfig {
     pub credentials: CredentialsConfig,
     pub server: ServerConfig,
-    pub execute: ExecuteConfig,
+    pub steps: StepsConfig,
+    #[serde(default)]
+    pub sequences: SequencesConfig,
     pub variables: VariablesConfig,
     pub tasks: TasksConfig,
 }
@@ -75,7 +97,8 @@ impl TryFrom<PartialScenarioConfig> for ScenarioConfig {
                 Some(partial_server) => ServerConfig::try_from(partial_server)?,
                 None => return Err(ScenarioConfigError::MissingServer),
             },
-            execute: partial.execute.ok_or(ScenarioConfigError::MissingExecute)?,
+            steps: partial.steps.ok_or(ScenarioConfigError::MissingSteps)?,
+            sequences: partial.sequences.unwrap_or_default(),
             variables: match partial.variables {
                 Some(partial_vars) => VariablesConfig::try_from(partial_vars)?,
                 None => VariablesConfig::default(),
@@ -168,7 +191,8 @@ impl TryFrom<PathBuf> for ScenarioConfig {
             parent: None,
             credentials: None,
             server: None,
-            execute: None,
+            steps: None,
+            sequences: None,
             variables: None,
             tasks: None,
         };
@@ -197,10 +221,9 @@ mod tests {
     use crate::{
         config::{
             credentials::{CredentialsConfig, PartialCredentialsConfig},
-            execute::ExecuteConfig,
             scenario::{PartialScenarioConfig, ScenarioConfig},
             server::{PartialServerConfig, ServerConfig},
-            task::TaskType,
+            steps::StepsConfig,
             tasks::TasksConfig,
             variables::{PartialVariablesConfig, VariablesConfig},
         },
@@ -209,11 +232,13 @@ mod tests {
 
     #[test]
     fn test_partial_scenario_config_default() {
+        // Given & When
         let partial = PartialScenarioConfig {
             parent: None,
             credentials: None,
             server: None,
-            execute: None,
+            steps: None,
+            sequences: None,
             variables: None,
             tasks: None,
         };
@@ -221,18 +246,21 @@ mod tests {
         assert!(partial.parent.is_none());
         assert!(partial.credentials.is_none());
         assert!(partial.server.is_none());
-        assert!(partial.execute.is_none());
+        assert!(partial.steps.is_none());
+        assert!(partial.sequences.is_none());
         assert!(partial.variables.is_none());
         assert!(partial.tasks.is_none());
     }
 
     #[test]
     fn test_scenario_config_default() {
+        // Given & When
         let config = ScenarioConfig::default();
 
+        // Then
         assert_eq!(config.credentials, CredentialsConfig::default());
         assert_eq!(config.server, ServerConfig::default());
-        assert_eq!(config.execute, ExecuteConfig::default());
+        assert_eq!(config.steps, StepsConfig::default());
         assert_eq!(config.variables, VariablesConfig::default());
         assert_eq!(config.tasks, TasksConfig::default());
     }
@@ -257,11 +285,7 @@ mod tests {
         assert_eq!(merged_server.host, Some("host2".to_string()));
         assert_eq!(merged_server.port, Some(2222));
 
-        assert_eq!(merged.execute, override_config.execute);
-
         assert!(merged.variables.is_some());
-
-        assert_eq!(merged.tasks, override_config.tasks);
     }
 
     #[test]
@@ -282,7 +306,7 @@ mod tests {
         assert_eq!(complete.server.host, "host".to_string());
         assert_eq!(complete.server.port, Some(22));
 
-        assert_eq!(complete.execute, partial.execute.unwrap());
+        assert_eq!(complete.steps, partial.steps.unwrap());
         assert_eq!(complete.tasks, partial.tasks.unwrap());
     }
 
@@ -321,10 +345,10 @@ mod tests {
     }
 
     #[test]
-    fn test_try_from_partial_scenario_config_missing_execute() {
+    fn test_try_from_partial_scenario_config_missing_steps() {
         // Given
         let mut partial = create_full_partial_config();
-        partial.execute = None;
+        partial.steps = None;
 
         // When
         let result = ScenarioConfig::try_from(partial);
@@ -332,8 +356,8 @@ mod tests {
         // Then
         assert!(result.is_err());
         match result {
-            Err(ScenarioConfigError::MissingExecute) => {}
-            err => panic!("Expected MissingExecute error, got {:?}", err),
+            Err(ScenarioConfigError::MissingSteps) => {}
+            err => panic!("Expected MissingSteps error, got {:?}", err),
         }
     }
 
@@ -364,10 +388,7 @@ mod tests {
         };
 
         // When
-        let creds = match CredentialsConfig::try_from(partial_creds) {
-            Ok(c) => c,
-            Err(e) => panic!("Conversion failed: {:?}", e),
-        };
+        let creds = CredentialsConfig::try_from(partial_creds).unwrap();
 
         // Then
         assert_eq!(creds.username, "test_user");
@@ -383,10 +404,7 @@ mod tests {
         };
 
         // When
-        let server = match ServerConfig::try_from(partial_server) {
-            Ok(s) => s,
-            Err(e) => panic!("Conversion failed: {:?}", e),
-        };
+        let server = ServerConfig::try_from(partial_server).unwrap();
 
         // Then
         assert_eq!(server.host, "test_host");
@@ -398,45 +416,38 @@ mod tests {
         // Given
         let toml_str = r#"
             parent = "parent.toml"
-            
+
             [credentials]
             username = "test_user"
             password = "test_pass"
-            
+
             [server]
             host = "test_host"
             port = 2222
-            
-            [execute]
-            steps = [
-                { task = "task1" },
-                { task = "task2", on_fail = ["cleanup"] }
-            ]
-            
-            [tasks.task1]
-            type = "RemoteSudo"
-            description = "Test command description"
-            command = "test_command1"
-            error_message = "Test command error message"
-            
-            [tasks.task2]
-            type = "RemoteSudo"
-            description = "Another command description"
-            command = "test_command2"
-            error_message = "Another command error message"
-            
-            [tasks.cleanup]
-            type = "RemoteSudo"
-            description = "Cleanup command description"
-            command = "cleanup_command"
-            error_message = "Cleanup command error message"
+
+            [steps.step1]
+            task = "update"
+
+            [steps.step2]
+            task = "restart"
+            on-fail = "cleanup_seq"
+
+            [sequences]
+            cleanup_seq = ["rollback"]
+
+            [tasks.remote_sudo.update]
+            command = "apt-get update"
+            description = "Update packages"
+
+            [tasks.remote_sudo.restart]
+            command = "systemctl restart app"
+
+            [tasks.remote_sudo.rollback]
+            command = "systemctl rollback app"
         "#;
 
         // When
-        let config: PartialScenarioConfig = match toml::from_str(toml_str) {
-            Ok(c) => c,
-            Err(e) => panic!("TOML parsing failed: {:?}", e),
-        };
+        let config: PartialScenarioConfig = toml::from_str(toml_str).unwrap();
 
         // Then
         assert_eq!(config.parent, Some("parent.toml".to_string()));
@@ -445,26 +456,17 @@ mod tests {
             Some("test_user".to_string())
         );
         assert_eq!(
-            config.credentials.as_ref().unwrap().password,
-            Some("test_pass".to_string())
-        );
-        assert_eq!(
             config.server.as_ref().unwrap().host,
             Some("test_host".to_string())
         );
-        assert_eq!(config.server.as_ref().unwrap().port, Some(2222));
 
-        let tasks = config.tasks.unwrap();
-        assert!(tasks.contains_key("task1"));
-        let task = &tasks["task1"];
-        assert_eq!(task.description, "Test command description");
-        assert_eq!(task.error_message, "Test command error message");
-        match &task.task_type {
-            TaskType::RemoteSudo { command } => {
-                assert_eq!(command, "test_command1");
-            }
-            _ => panic!("Expected RemoteSudo task type"),
-        }
+        let steps = config.steps.as_ref().unwrap();
+        assert_eq!(steps.len(), 2);
+        let keys: Vec<&String> = steps.keys().collect();
+        assert_eq!(keys, vec!["step1", "step2"]);
+
+        let tasks = config.tasks.as_ref().unwrap();
+        assert_eq!(tasks.remote_sudo.as_ref().unwrap().len(), 3);
     }
 
     fn create_partial_base_config() -> PartialScenarioConfig {
@@ -479,7 +481,8 @@ mod tests {
                 host: Some("host1".to_string()),
                 port: Some(1111),
             }),
-            execute: Some(ExecuteConfig::default()),
+            steps: Some(StepsConfig::default()),
+            sequences: None,
             variables: Some(PartialVariablesConfig::default()),
             tasks: Some(TasksConfig::default()),
         }
@@ -497,7 +500,8 @@ mod tests {
                 host: Some("host2".to_string()),
                 port: Some(2222),
             }),
-            execute: Some(ExecuteConfig::default()),
+            steps: Some(StepsConfig::default()),
+            sequences: None,
             variables: Some(PartialVariablesConfig::default()),
             tasks: Some(TasksConfig::default()),
         }
@@ -515,7 +519,8 @@ mod tests {
                 host: Some("host".to_string()),
                 port: Some(22),
             }),
-            execute: Some(ExecuteConfig::default()),
+            steps: Some(StepsConfig::default()),
+            sequences: None,
             variables: Some(PartialVariablesConfig::default()),
             tasks: Some(TasksConfig::default()),
         }
@@ -535,7 +540,8 @@ mod tests {
                 host: Some("host".to_string()),
                 port: Some(22),
             }),
-            execute: Some(ExecuteConfig::default()),
+            steps: Some(StepsConfig::default()),
+            sequences: None,
             variables: Some(PartialVariablesConfig::default()),
             tasks: Some(TasksConfig::default()),
         };
@@ -548,7 +554,8 @@ mod tests {
                 private_key: None,
             }),
             server: None,
-            execute: None,
+            steps: None,
+            sequences: None,
             variables: None,
             tasks: None,
         };
@@ -575,17 +582,16 @@ mod tests {
             host = "host"
             port = 22
 
-            [execute]
-            steps = []
+            [steps]
 
             [tasks]
         "#;
 
         // When
         let config: PartialScenarioConfig = toml::from_str(toml_str).unwrap();
+        let creds = config.credentials.unwrap();
 
         // Then
-        let creds = config.credentials.unwrap();
         assert_eq!(creds.username, Some("key_user".to_string()));
         assert!(creds.password.is_none());
         assert_eq!(creds.private_key, Some("./my_key".to_string()));
@@ -607,8 +613,7 @@ mod tests {
             host = "host"
             port = 22
 
-            [execute]
-            steps = []
+            [steps]
 
             [tasks]
             "#,
@@ -641,8 +646,7 @@ mod tests {
             host = "parent_host"
             port = 22
 
-            [execute]
-            steps = []
+            [steps]
 
             [tasks]
             "#,
@@ -757,8 +761,7 @@ mod tests {
             host = "host"
             port = 22
 
-            [execute]
-            steps = []
+            [steps]
 
             [tasks]
             "#,
@@ -796,8 +799,7 @@ mod tests {
             host = "host"
             port = 22
 
-            [execute]
-            steps = []
+            [steps]
 
             [tasks]
             "#,

@@ -1,3 +1,5 @@
+#:schema ../../../scenario-schema.json
+
 # Shared test server config — key-based auth scenarios inherit from this.
 
 [credentials]

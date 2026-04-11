@@ -1,13 +1,13 @@
+#:schema ../../../scenario-schema.json
+
 # Test: Empty steps list
 # UI: "No steps to display" empty state
 
 parent = "./server.toml"
 
-[execute]
-steps = []
+[steps]
 
-[tasks.unused_task]
-type = "RemoteSudo"
-description = "This task is never referenced"
+[tasks.remote_sudo.unused_task]
 command = "echo 'unused'"
+description = "This task is never referenced"
 error_message = "Unused"

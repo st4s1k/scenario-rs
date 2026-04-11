@@ -1,8 +1,9 @@
 use crate::scenario::errors::ScenarioConfigError;
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 /// Partial server config supporting inheritance/merging.
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Clone, Debug, Default, JsonSchema)]
 pub struct PartialServerConfig {
     pub host: Option<String>,
     pub port: Option<u16>,
@@ -19,7 +20,7 @@ impl PartialServerConfig {
 }
 
 /// Complete server connection config. Port defaults to 22 if `None`.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 pub struct ServerConfig {
     pub host: String,
     pub port: Option<u16>,

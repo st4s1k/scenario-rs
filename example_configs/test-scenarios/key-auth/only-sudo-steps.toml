@@ -1,29 +1,30 @@
+#:schema ../../../scenario-schema.json
+
 # Test: RemoteSudo steps with private key auth
 # Verifies key-based authentication works end-to-end
 
 parent = "./server.toml"
 
-[execute]
-steps = [
-    { task = "check_disk" },
-    { task = "check_memory" },
-    { task = "check_services" },
-]
+[steps.disk]
+task = "check_disk"
 
-[tasks.check_disk]
-type = "RemoteSudo"
-description = "Checking disk usage"
+[steps.memory]
+task = "check_memory"
+
+[steps.services]
+task = "check_services"
+
+[tasks.remote_sudo.check_disk]
 command = "df -h"
+description = "Checking disk usage"
 error_message = "Disk check failed"
 
-[tasks.check_memory]
-type = "RemoteSudo"
-description = "Checking memory usage"
+[tasks.remote_sudo.check_memory]
 command = "free -m"
+description = "Checking memory usage"
 error_message = "Memory check failed"
 
-[tasks.check_services]
-type = "RemoteSudo"
-description = "Checking running services"
+[tasks.remote_sudo.check_services]
 command = "ps aux | head -10"
+description = "Checking running services"
 error_message = "Service check failed"

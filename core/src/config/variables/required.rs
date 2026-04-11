@@ -1,5 +1,6 @@
 //! Configuration for required variables that must be provided at runtime.
 
+use schemars::JsonSchema;
 use serde::Deserialize;
 use std::{
     collections::HashMap,
@@ -7,7 +8,7 @@ use std::{
 };
 
 /// Map of variable names to their required variable configs.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 pub struct RequiredVariablesConfig(HashMap<String, RequiredVariableConfig>);
 
 impl Deref for RequiredVariablesConfig {
@@ -42,7 +43,7 @@ impl RequiredVariablesConfig {
 }
 
 /// Metadata for a single required variable.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 pub struct RequiredVariableConfig {
     #[serde(flatten)]
     pub var_type: VariableTypeConfig,
@@ -53,7 +54,7 @@ pub struct RequiredVariableConfig {
 }
 
 /// Available types for required variables.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 #[serde(tag = "type")]
 pub enum VariableTypeConfig {
     #[default]
