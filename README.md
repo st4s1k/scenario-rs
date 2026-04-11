@@ -325,7 +325,7 @@ scenario-rs-cli -c ./example_configs/example-scenario.toml -l debug
 
 ## GUI Demo
 
-[![demo](demo/demo_video.mp4)](https://github.com/user-attachments/assets/035dcca9-293b-41ea-a6ec-bfb94d922e63)
+[![demo](demo/demo_video.mp4)](https://github.com/user-attachments/assets/160e2eb0-d8d4-4aaf-8ea0-ac4ee35eb876)
 
 ## Screenshots
 
