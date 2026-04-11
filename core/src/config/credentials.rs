@@ -1,12 +1,15 @@
 use crate::scenario::errors::ScenarioConfigError;
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Partial credentials supporting inheritance/merging.
-#[derive(Deserialize, Clone, Debug, Default, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default, JsonSchema)]
 pub struct PartialCredentialsConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub password: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub private_key: Option<String>,
 }
 

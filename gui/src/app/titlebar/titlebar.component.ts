@@ -31,6 +31,10 @@ export class TitlebarComponent {
     invoke('save_state');
   }
 
+  saveConfig(): void {
+    invoke('save_config');
+  }
+
   clearState(): void {
     invoke('clear_state');
   }

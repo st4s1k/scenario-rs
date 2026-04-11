@@ -106,3 +106,29 @@ pub fn set_dry_run(dry_run: bool, state: State<'_, Mutex<ScenarioAppState>>) {
     let mut state = state.safe_lock();
     state.dry_run = dry_run;
 }
+
+#[tauri::command(async)]
+pub fn update_task(
+    task_name: String,
+    task: TaskDTO,
+    state: State<'_, Mutex<ScenarioAppState>>,
+) -> Result<(), String> {
+    let mut state = state.safe_lock();
+    state.update_task(task_name, task)
+}
+
+#[tauri::command(async)]
+pub fn update_defined_variable(
+    name: String,
+    value: String,
+    state: State<'_, Mutex<ScenarioAppState>>,
+) -> Result<(), String> {
+    let mut state = state.safe_lock();
+    state.update_defined_variable(name, value)
+}
+
+#[tauri::command(async)]
+pub fn save_config(state: State<'_, Mutex<ScenarioAppState>>) -> Result<(), String> {
+    let state = state.safe_lock();
+    state.save_config()
+}

@@ -97,5 +97,6 @@
       </expandable>
     </div>
   </div>
-  <sidebar [resolvedVariables]="resolvedVariables" [tasks]="tasks" [steps]="steps"></sidebar>
+  <sidebar [resolvedVariables]="resolvedVariables" [tasks]="tasks" [steps]="steps"
+    (taskChanged)="onTaskChanged($event)" (variableChanged)="onVariableChanged($event)"></sidebar>
 </div>

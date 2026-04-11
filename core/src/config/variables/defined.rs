@@ -1,14 +1,14 @@
 //! Configuration for predefined variables with values set in config files.
 
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
 };
 
 /// Map of variable names to predefined values.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 pub struct DefinedVariablesConfig(HashMap<String, String>);
 
 impl Deref for DefinedVariablesConfig {

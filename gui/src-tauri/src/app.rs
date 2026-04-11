@@ -1,5 +1,7 @@
 use crate::trace::{self, AppEvent, FrontendEventHandler};
 use scenario_rs::{
+    config::scenario::{PartialScenarioConfig, ScenarioConfig},
+    config::task::{RemoteSudoTaskConfig, SftpCopyTaskConfig},
     scenario::on_fail_step::OnFailStep,
     scenario::{
         step::Step,
@@ -20,7 +22,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     ffi::OsStr,
     ops::Deref,
-    path::Path,
+    path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::Receiver,
@@ -129,6 +131,7 @@ impl From<&ScenarioAppStateCore> for ScenarioAppStateConfig {
 pub struct ScenarioAppStateCore {
     pub(crate) config_path: String,
     pub(crate) scenario: Option<Scenario>,
+    pub(crate) leaf_config: Option<PartialScenarioConfig>,
     pub(crate) is_executing: Arc<AtomicBool>,
     pub(crate) dry_run: bool,
     pub(crate) execution_state_manager: Option<Arc<ExecutionStateManager>>,
@@ -339,14 +342,24 @@ impl ScenarioAppStateCore {
     #[instrument(skip_all)]
     pub fn load_config(&mut self, config_path: &str) {
         self.config_path = config_path.to_string();
-        self.scenario = match Scenario::try_from(config_path) {
-            Ok(scenario) => {
-                info!("Configuration loaded from {}", config_path);
-                Some(scenario)
+        match ScenarioConfig::load_with_leaf(PathBuf::from(config_path)) {
+            Ok((config, leaf)) => {
+                self.leaf_config = Some(leaf);
+                match Scenario::try_from(config) {
+                    Ok(scenario) => {
+                        info!("Configuration loaded from {}", config_path);
+                        self.scenario = Some(scenario);
+                    }
+                    Err(error) => {
+                        error!("Failed to build scenario: {}", error);
+                        self.scenario = None;
+                    }
+                }
             }
             Err(error) => {
                 error!("Failed to load configuration: {}", error);
-                None
+                self.scenario = None;
+                self.leaf_config = None;
             }
         };
 
@@ -461,6 +474,99 @@ impl ScenarioAppStateCore {
 
         info!("State cleared");
     }
+
+    /// Updates a task in both the runtime scenario and the leaf config.
+    #[instrument(skip_all)]
+    pub fn update_task(&mut self, task_name: String, task_dto: TaskDTO) -> Result<(), String> {
+        let scenario = self.scenario.as_mut().ok_or("No scenario loaded")?;
+        let leaf = self.leaf_config.as_mut().ok_or("No leaf config loaded")?;
+
+        // Update the runtime scenario
+        match task_dto.task_type.as_str() {
+            "RemoteSudo" => {
+                let command = task_dto.command.clone().unwrap_or_default();
+                let task = Task::RemoteSudo {
+                    description: task_dto.description.clone(),
+                    error_message: task_dto.error_message.clone(),
+                    remote_sudo: scenario_rs::scenario::remote_sudo::RemoteSudo::new(command.clone()),
+                };
+                scenario.tasks_mut().insert(task_name.clone(), task);
+
+                // Update leaf config
+                let remote_sudo = leaf.tasks.get_or_insert_with(Default::default)
+                    .remote_sudo.get_or_insert_with(Default::default);
+                remote_sudo.insert(task_name, RemoteSudoTaskConfig {
+                    command,
+                    description: Some(task_dto.description).filter(|s| !s.is_empty()),
+                    error_message: Some(task_dto.error_message).filter(|s| !s.is_empty()),
+                });
+            }
+            "SftpCopy" => {
+                let source = task_dto.source_path.clone().unwrap_or_default();
+                let destination = task_dto.destination_path.clone().unwrap_or_default();
+                let task = Task::SftpCopy {
+                    description: task_dto.description.clone(),
+                    error_message: task_dto.error_message.clone(),
+                    sftp_copy: scenario_rs::scenario::sftp_copy::SftpCopy {
+                        source_path: source.clone(),
+                        destination_path: destination.clone(),
+                    },
+                };
+                scenario.tasks_mut().insert(task_name.clone(), task);
+
+                // Update leaf config
+                let sftp_copy = leaf.tasks.get_or_insert_with(Default::default)
+                    .sftp_copy.get_or_insert_with(Default::default);
+                sftp_copy.insert(task_name, SftpCopyTaskConfig {
+                    source,
+                    destination,
+                    description: Some(task_dto.description).filter(|s| !s.is_empty()),
+                    error_message: Some(task_dto.error_message).filter(|s| !s.is_empty()),
+                });
+            }
+            _ => return Err(format!("Unknown task type: {}", task_dto.task_type)),
+        }
+
+        info!("Task updated");
+        Ok(())
+    }
+
+    /// Updates a defined variable in both the runtime scenario and the leaf config.
+    #[instrument(skip_all)]
+    pub fn update_defined_variable(&mut self, name: String, value: String) -> Result<(), String> {
+        let scenario = self.scenario.as_mut().ok_or("No scenario loaded")?;
+        let leaf = self.leaf_config.as_mut().ok_or("No leaf config loaded")?;
+
+        // Update runtime
+        scenario.variables_mut().defined_mut().insert(name.clone(), value.clone());
+
+        // Update leaf config
+        let variables = leaf.variables.get_or_insert_with(Default::default);
+        let defined = variables.defined.get_or_insert_with(Default::default);
+        defined.insert(name, value);
+
+        info!("Defined variable updated");
+        Ok(())
+    }
+
+    /// Serializes the leaf config to TOML and writes it to the config file.
+    #[instrument(skip_all)]
+    pub fn save_config(&self) -> Result<(), String> {
+        let leaf = self.leaf_config.as_ref().ok_or("No leaf config loaded")?;
+
+        if self.config_path.is_empty() {
+            return Err("No config path set".to_string());
+        }
+
+        let toml_string = toml::to_string_pretty(leaf)
+            .map_err(|e| format!("Failed to serialize config: {}", e))?;
+
+        std::fs::write(&self.config_path, toml_string)
+            .map_err(|e| format!("Failed to write config file: {}", e))?;
+
+        info!("Config saved to {}", self.config_path);
+        Ok(())
+    }
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -470,6 +576,7 @@ impl ScenarioAppState {
             core: ScenarioAppStateCore {
                 config_path: String::new(),
                 scenario: None,
+                leaf_config: None,
                 is_executing: Arc::new(AtomicBool::new(false)),
                 dry_run: false,
                 execution_state_manager: None,
@@ -657,6 +764,7 @@ mod tests {
         ScenarioAppStateCore {
             config_path: String::new(),
             scenario: None,
+            leaf_config: None,
             is_executing: Arc::new(AtomicBool::new(false)),
             dry_run: false,
             execution_state_manager: None,
@@ -668,6 +776,7 @@ mod tests {
         ScenarioAppStateCore {
             config_path: String::new(),
             scenario: None,
+            leaf_config: None,
             is_executing: Arc::new(AtomicBool::new(false)),
             dry_run: false,
             execution_state_manager: None,
@@ -681,6 +790,7 @@ mod tests {
         ScenarioAppStateCore {
             config_path: "../../example_configs/example-scenario.toml".to_string(),
             scenario: Some(scenario),
+            leaf_config: None,
             is_executing: Arc::new(AtomicBool::new(false)),
             dry_run: false,
             execution_state_manager: None,
@@ -696,6 +806,7 @@ mod tests {
         ScenarioAppStateCore {
             config_path: "../../example_configs/example-scenario.toml".to_string(),
             scenario: Some(scenario),
+            leaf_config: None,
             is_executing: Arc::new(AtomicBool::new(false)),
             dry_run: false,
             execution_state_manager: None,
@@ -1409,6 +1520,7 @@ mod tests {
         let mut core = ScenarioAppStateCore {
             config_path: String::new(),
             scenario: None,
+            leaf_config: None,
             is_executing: Arc::new(AtomicBool::new(false)),
             dry_run: false,
             execution_state_manager: None,
@@ -1424,6 +1536,7 @@ mod tests {
         let mut core = ScenarioAppStateCore {
             config_path: String::new(),
             scenario: None,
+            leaf_config: None,
             is_executing: Arc::new(AtomicBool::new(false)),
             dry_run: false,
             execution_state_manager: None,

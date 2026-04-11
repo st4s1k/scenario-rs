@@ -11,7 +11,8 @@
           @for (variable of Object.entries(resolvedVariables); track variable[0]) {
           <div class="variable">
             <label for="sidebar-var-{{variable[0]}}">{{variable[0]}}</label>
-            <input id="sidebar-var-{{variable[0]}}" class="text-field" type="text" [value]="variable[1]" readonly />
+            <input id="sidebar-var-{{variable[0]}}" class="text-field" type="text" [value]="variable[1]"
+              (change)="onVariableChanged(variable[0], $event)" />
           </div>
           }
         </div>
@@ -34,17 +35,20 @@
                 @case ('RemoteSudo') {
                 <div class="task-item">
                   <info-block label="Command" variant="primary">
-                    <input class="text-field" type="text" [value]="task[1].command" readonly />
+                    <input class="text-field" type="text" [value]="task[1].command"
+                      (change)="onTaskFieldChanged(task[0], 'command', $event)" />
                   </info-block>
                 </div>
                 }
                 @case ('SftpCopy') {
                 <div class="task-item">
                   <info-block label="Source" variant="primary">
-                    <input class="text-field" type="text" [value]="task[1].source_path" readonly />
+                    <input class="text-field" type="text" [value]="task[1].source_path"
+                      (change)="onTaskFieldChanged(task[0], 'source_path', $event)" />
                   </info-block>
                   <info-block label="Destination" variant="primary">
-                    <input class="text-field" type="text" [value]="task[1].destination_path" readonly />
+                    <input class="text-field" type="text" [value]="task[1].destination_path"
+                      (change)="onTaskFieldChanged(task[0], 'destination_path', $event)" />
                   </info-block>
                 </div>
                 }

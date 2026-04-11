@@ -1,20 +1,24 @@
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Configuration for a remote sudo command task.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 pub struct RemoteSudoTaskConfig {
     pub command: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub error_message: Option<String>,
 }
 
 /// Configuration for an SFTP file copy task.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 pub struct SftpCopyTaskConfig {
     pub source: String,
     pub destination: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub error_message: Option<String>,
 }
 

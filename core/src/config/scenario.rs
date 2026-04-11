@@ -10,18 +10,25 @@ use crate::{
     scenario::errors::ScenarioConfigError,
 };
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 /// Partial scenario config supporting inheritance via a `parent` field.
-#[derive(Deserialize, Clone, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
 pub struct PartialScenarioConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub parent: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub credentials: Option<PartialCredentialsConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub server: Option<PartialServerConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub steps: Option<StepsConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sequences: Option<SequencesConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub variables: Option<PartialVariablesConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tasks: Option<TasksConfig>,
 }
 
@@ -213,6 +220,51 @@ impl TryFrom<PathBuf> for ScenarioConfig {
         }
 
         Ok(config)
+    }
+}
+
+impl ScenarioConfig {
+    /// Loads a scenario config from a file path, returning both the
+    /// fully resolved config and the leaf (user-edited) partial config.
+    pub fn load_with_leaf(
+        config_path: PathBuf,
+    ) -> Result<(Self, PartialScenarioConfig), ScenarioConfigError> {
+        let config_dir = config_path
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .to_path_buf();
+
+        let mut configs_to_merge = Self::resolve_config_imports(config_path)?;
+
+        // The leaf config is the last element (after reversal, parents come first)
+        let leaf = configs_to_merge.last().cloned().unwrap();
+
+        let empty_config = PartialScenarioConfig {
+            parent: None,
+            credentials: None,
+            server: None,
+            steps: None,
+            sequences: None,
+            variables: None,
+            tasks: None,
+        };
+
+        let merged_partial_config = configs_to_merge
+            .iter()
+            .fold(empty_config, |acc, config| acc.merge(config));
+
+        let mut config = ScenarioConfig::try_from(merged_partial_config)?;
+
+        if let Some(ref key_path) = config.credentials.private_key {
+            let path = std::path::Path::new(key_path);
+            if !path.is_absolute() {
+                let resolved = config_dir.join(path);
+                config.credentials.private_key =
+                    Some(resolved.to_string_lossy().into_owned());
+            }
+        }
+
+        Ok((config, leaf))
     }
 }
 

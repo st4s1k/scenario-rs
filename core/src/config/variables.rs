@@ -5,13 +5,13 @@ use crate::{
     scenario::errors::ScenarioConfigError,
 };
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 pub mod defined;
 pub mod required;
 
 /// Complete variables config: required + defined.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 pub struct VariablesConfig {
     #[serde(default)]
     pub required: RequiredVariablesConfig,
@@ -20,9 +20,11 @@ pub struct VariablesConfig {
 }
 
 /// Partial variables config supporting inheritance/merging.
-#[derive(Deserialize, Clone, Debug, Default, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default, JsonSchema)]
 pub struct PartialVariablesConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub required: Option<RequiredVariablesConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub defined: Option<DefinedVariablesConfig>,
 }
 

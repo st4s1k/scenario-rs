@@ -1,12 +1,14 @@
 use crate::config::task::{RemoteSudoTaskConfig, SftpCopyTaskConfig};
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Categorized task library: tasks organized by type.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 pub struct TasksConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub remote_sudo: Option<HashMap<String, RemoteSudoTaskConfig>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sftp_copy: Option<HashMap<String, SftpCopyTaskConfig>>,
 }
 

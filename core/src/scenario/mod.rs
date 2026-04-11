@@ -66,6 +66,10 @@ impl Scenario {
         &self.tasks
     }
 
+    pub fn tasks_mut(&mut self) -> &mut Tasks {
+        &mut self.tasks
+    }
+
     pub fn steps(&self) -> &Steps {
         &self.steps
     }

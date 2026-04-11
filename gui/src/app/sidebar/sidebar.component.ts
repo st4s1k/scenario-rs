@@ -1,8 +1,8 @@
-import { Component, Input, HostListener, OnChanges, Renderer2, Inject, WritableSignal, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, HostListener, OnChanges, Renderer2, Inject, WritableSignal, signal } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { ExpandableComponent } from '../shared/expandable/expandable.component';
 import { InfoBlockComponent } from '../shared/info-block/info-block.component';
-import { Step, Tasks } from '../models/scenario.model';
+import { Step, Task, Tasks } from '../models/scenario.model';
 import { ExpandableTitleComponent } from '../shared/expandable/expandable-title/expandable-title.component';
 import { ComponentColorVariant } from '../models/enums';
 
@@ -32,6 +32,9 @@ export class SidebarComponent implements OnChanges {
   @Input() resolvedVariables: { [key: string]: string } = {};
   @Input() tasks: Tasks = {};
   @Input() steps: Step[] = [];
+
+  @Output() taskChanged = new EventEmitter<{ name: string; task: Task }>();
+  @Output() variableChanged = new EventEmitter<{ name: string; value: string }>();
 
   activeTab: string = 'variables';
   sidebarWidth = this.titleSize;
@@ -158,5 +161,16 @@ export class SidebarComponent implements OnChanges {
         event.preventDefault();
       }
     }
+  }
+
+  onTaskFieldChanged(taskName: string, field: string, event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    const task = { ...this.tasks[taskName], [field]: value };
+    this.taskChanged.emit({ name: taskName, task });
+  }
+
+  onVariableChanged(name: string, event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.variableChanged.emit({ name, value });
   }
 }

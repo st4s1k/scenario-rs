@@ -6,7 +6,8 @@ use crate::{
     commands::{
         clear_state, execute_scenario, get_config_path, get_dry_run, get_execution_state,
         get_required_variables, get_resolved_variables, get_steps, get_tasks,
-        is_valid_config_path, load_config, save_state, set_dry_run, update_required_variables,
+        is_valid_config_path, load_config, save_config, save_state, set_dry_run,
+        update_defined_variable, update_required_variables, update_task,
     },
     trace::{AppEvent, FrontendLayer},
     utils::SafeLock,
@@ -80,7 +81,10 @@ fn main() {
             is_valid_config_path,
             get_execution_state,
             get_dry_run,
-            set_dry_run
+            set_dry_run,
+            update_task,
+            update_defined_variable,
+            save_config
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

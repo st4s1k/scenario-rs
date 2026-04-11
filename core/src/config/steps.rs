@@ -1,10 +1,10 @@
 use crate::config::step::StepContext;
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
 
 /// Ordered list of steps, preserving TOML `[[steps]]` declaration order.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 pub struct StepsConfig(Vec<StepContext>);
 
 impl Deref for StepsConfig {

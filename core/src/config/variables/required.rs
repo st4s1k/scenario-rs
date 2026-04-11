@@ -1,14 +1,14 @@
 //! Configuration for required variables that must be provided at runtime.
 
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
 };
 
 /// Map of variable names to their required variable configs.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 pub struct RequiredVariablesConfig(HashMap<String, RequiredVariableConfig>);
 
 impl Deref for RequiredVariablesConfig {
@@ -43,7 +43,7 @@ impl RequiredVariablesConfig {
 }
 
 /// Metadata for a single required variable.
-#[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 pub struct RequiredVariableConfig {
     /// User-facing label displayed in the TUI/GUI.
     #[serde(default)]

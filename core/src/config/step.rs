@@ -1,17 +1,19 @@
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// A step context: references either a single task or a sequence, with optional on-fail fallback.
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct StepContext {
     /// Name identifying this step.
     pub name: String,
     /// Reference to a task name (mutually exclusive with `sequence`).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub task: Option<String>,
     /// Reference to a sequence name (mutually exclusive with `task`).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sequence: Option<String>,
     /// Sequence name to execute as fallback on failure.
-    #[serde(rename = "on-fail")]
+    #[serde(rename = "on-fail", skip_serializing_if = "Option::is_none")]
     pub on_fail: Option<String>,
 }
 

@@ -343,4 +343,19 @@ export class AppComponent implements OnDestroy {
     this.executionStateService.reset();
     invoke('execute_scenario');
   }
+
+  async onTaskChanged(event: { name: string; task: Task }): Promise<void> {
+    await invoke('update_task', { taskName: event.name, task: event.task });
+    await this.getTasks();
+    await this.getSteps();
+  }
+
+  async onVariableChanged(event: { name: string; value: string }): Promise<void> {
+    await invoke('update_defined_variable', { name: event.name, value: event.value });
+    await this.getResolvedVariables();
+  }
+
+  async saveConfig(): Promise<void> {
+    await invoke('save_config');
+  }
 }
