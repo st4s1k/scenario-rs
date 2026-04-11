@@ -5,19 +5,24 @@
 
 parent = "./server.toml"
 
-[steps.step_one]
+[[steps]]
+name = "step_one"
 task = "step_one"
 
-[steps.step_two]
+[[steps]]
+name = "step_two"
 task = "step_two"
 
-[steps.step_three]
+[[steps]]
+name = "step_three"
 task = "step_three_fails"
 
-[steps.step_four]
+[[steps]]
+name = "step_four"
 task = "step_four_unreachable"
 
-[steps.step_five]
+[[steps]]
+name = "step_five"
 task = "step_five_unreachable"
 
 [tasks.remote_sudo.step_one]

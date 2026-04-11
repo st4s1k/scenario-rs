@@ -5,10 +5,12 @@
 
 parent = "./server.toml"
 
-[steps.upload]
+[[steps]]
+name = "upload"
 task = "upload_file"
 
-[steps.verify]
+[[steps]]
+name = "verify"
 task = "run_command"
 
 [variables.required.local_file]

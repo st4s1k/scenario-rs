@@ -5,13 +5,16 @@
 
 parent = "./server.toml"
 
-[steps.app]
+[[steps]]
+name = "app"
 task = "upload_app"
 
-[steps.config]
+[[steps]]
+name = "config"
 task = "upload_config"
 
-[steps.scripts]
+[[steps]]
+name = "scripts"
 task = "upload_scripts"
 
 [variables.required.app_jar]

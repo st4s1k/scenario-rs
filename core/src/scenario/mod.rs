@@ -405,18 +405,14 @@ mod tests {
         init_tracing();
 
         use crate::config::step::StepContext;
-        use indexmap::IndexMap;
 
         // Given
-        let mut step_map = IndexMap::new();
-        step_map.insert(
-            "bad_step".to_string(),
-            StepContext {
-                task: Some("nonexistent_task".to_string()),
-                sequence: None,
-                on_fail: None,
-            },
-        );
+        let steps = vec![StepContext {
+            name: "bad_step".to_string(),
+            task: Some("nonexistent_task".to_string()),
+            sequence: None,
+            on_fail: None,
+        }];
 
         let config = ScenarioConfig {
             server: ServerConfig {
@@ -428,7 +424,7 @@ mod tests {
                 password: Some("testpass".to_string()),
                 private_key: None,
             },
-            steps: StepsConfig::from(step_map),
+            steps: StepsConfig::from(steps),
             sequences: SequencesConfig::default(),
             tasks: TasksConfig::default(),
             variables: VariablesConfig::default(),

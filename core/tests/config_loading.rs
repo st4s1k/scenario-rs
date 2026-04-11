@@ -208,7 +208,8 @@ fn missing_credentials_returns_error() {
 [server]
 host = "localhost"
 
-[steps.s1]
+[[steps]]
+name = "s1"
 task = "t"
 
 [tasks.remote_sudo.t]
@@ -242,7 +243,8 @@ fn missing_server_returns_error() {
 [credentials]
 username = "user"
 
-[steps.s1]
+[[steps]]
+name = "s1"
 task = "t"
 
 [tasks.remote_sudo.t]
@@ -313,7 +315,8 @@ username = "user"
 [server]
 host = "localhost"
 
-[steps.s1]
+[[steps]]
+name = "s1"
 task = "t"
 "#,
     )
@@ -406,7 +409,8 @@ port = 2222
         r#"
 parent = "./server-key.toml"
 
-[steps.s1]
+[[steps]]
+name = "s1"
 task = "t"
 
 [tasks.remote_sudo.t]
@@ -439,14 +443,14 @@ fn private_key_relative_path_resolved_to_config_dir() {
     std::fs::write(
         &path,
         r#"
+steps = []
+
 [credentials]
 username = "user"
 private_key = "./keys/id_ed25519"
 
 [server]
 host = "localhost"
-
-[steps]
 
 [tasks]
 "#,
@@ -484,14 +488,14 @@ fn private_key_absolute_path_stays_unchanged() {
         &path,
         format!(
             r#"
+steps = []
+
 [credentials]
 username = "user"
 private_key = "{abs_key}"
 
 [server]
 host = "localhost"
-
-[steps]
 
 [tasks]
 "#
@@ -520,14 +524,14 @@ fn private_key_inherited_from_parent() {
     std::fs::write(
         &parent_path,
         r#"
+steps = []
+
 [credentials]
 username = "user"
 private_key = "./parent_key"
 
 [server]
 host = "localhost"
-
-[steps]
 
 [tasks]
 "#,

@@ -5,7 +5,8 @@
 
 parent = "./server.toml"
 
-[steps.deploy]
+[[steps]]
+name = "deploy"
 task = "deploy_fails"
 on-fail = "recovery"
 

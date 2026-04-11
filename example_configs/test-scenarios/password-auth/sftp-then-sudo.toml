@@ -5,10 +5,12 @@
 
 parent = "./server.toml"
 
-[steps.upload]
+[[steps]]
+name = "upload"
 task = "upload_config"
 
-[steps.apply]
+[[steps]]
+name = "apply"
 task = "apply_config"
 
 [variables.required.config_file]

@@ -47,7 +47,8 @@ impl Steps {
         let mut steps = Vec::new();
         let mut index = 0;
 
-        for (step_name, step_context) in steps_config.iter() {
+        for step_context in steps_config.iter() {
+            let step_name = &step_context.name;
             match (&step_context.task, &step_context.sequence) {
                 (Some(task_name), None) => {
                     // Single task step
@@ -183,7 +184,6 @@ mod tests {
             tasks::Tasks,
         },
     };
-    use indexmap::IndexMap;
     use std::collections::HashMap;
 
     fn create_test_tasks() -> Tasks {
@@ -220,11 +220,14 @@ mod tests {
     }
 
     fn create_steps_config(entries: Vec<(&str, StepContext)>) -> StepsConfig {
-        let map: IndexMap<String, StepContext> = entries
+        let steps: Vec<StepContext> = entries
             .into_iter()
-            .map(|(name, ctx)| (name.to_string(), ctx))
+            .map(|(name, mut ctx)| {
+                ctx.name = name.to_string();
+                ctx
+            })
             .collect();
-        StepsConfig::from(map)
+        StepsConfig::from(steps)
     }
 
     #[test]
@@ -235,6 +238,7 @@ mod tests {
             (
                 "step_one",
                 StepContext {
+                    name: String::new(),
                     task: Some("task1".to_string()),
                     sequence: None,
                     on_fail: None,
@@ -243,6 +247,7 @@ mod tests {
             (
                 "step_two",
                 StepContext {
+                    name: String::new(),
                     task: Some("task2".to_string()),
                     sequence: None,
                     on_fail: None,
@@ -269,6 +274,7 @@ mod tests {
         let steps_config = create_steps_config(vec![(
             "deploy",
             StepContext {
+                name: String::new(),
                 task: None,
                 sequence: Some("deploy_seq".to_string()),
                 on_fail: None,
@@ -297,6 +303,7 @@ mod tests {
         let steps_config = create_steps_config(vec![(
             "risky_step",
             StepContext {
+                name: String::new(),
                 task: Some("task1".to_string()),
                 sequence: None,
                 on_fail: Some("cleanup".to_string()),
@@ -322,6 +329,7 @@ mod tests {
         let steps_config = create_steps_config(vec![(
             "bad_step",
             StepContext {
+                name: String::new(),
                 task: Some("nonexistent".to_string()),
                 sequence: None,
                 on_fail: None,
@@ -343,6 +351,7 @@ mod tests {
         let steps_config = create_steps_config(vec![(
             "bad_step",
             StepContext {
+                name: String::new(),
                 task: None,
                 sequence: Some("nonexistent".to_string()),
                 on_fail: None,
@@ -365,6 +374,7 @@ mod tests {
         let steps_config = create_steps_config(vec![(
             "bad_step",
             StepContext {
+                name: String::new(),
                 task: None,
                 sequence: None,
                 on_fail: None,
@@ -386,6 +396,7 @@ mod tests {
         let steps_config = create_steps_config(vec![(
             "bad_step",
             StepContext {
+                name: String::new(),
                 task: Some("task1".to_string()),
                 sequence: Some("some_seq".to_string()),
                 on_fail: None,
@@ -407,6 +418,7 @@ mod tests {
         let steps_config = create_steps_config(vec![(
             "step",
             StepContext {
+                name: String::new(),
                 task: Some("task1".to_string()),
                 sequence: None,
                 on_fail: Some("nonexistent_cleanup".to_string()),
@@ -471,6 +483,7 @@ mod tests {
             (
                 "a",
                 StepContext {
+                    name: String::new(),
                     task: Some("task1".to_string()),
                     sequence: None,
                     on_fail: None,
@@ -479,6 +492,7 @@ mod tests {
             (
                 "b",
                 StepContext {
+                    name: String::new(),
                     task: Some("task2".to_string()),
                     sequence: None,
                     on_fail: None,
@@ -504,6 +518,7 @@ mod tests {
             (
                 "a",
                 StepContext {
+                    name: String::new(),
                     task: Some("task1".to_string()),
                     sequence: None,
                     on_fail: None,
@@ -512,6 +527,7 @@ mod tests {
             (
                 "b",
                 StepContext {
+                    name: String::new(),
                     task: Some("task2".to_string()),
                     sequence: None,
                     on_fail: None,
@@ -537,6 +553,7 @@ mod tests {
             (
                 "a",
                 StepContext {
+                    name: String::new(),
                     task: Some("task1".to_string()),
                     sequence: None,
                     on_fail: None,
@@ -545,6 +562,7 @@ mod tests {
             (
                 "b",
                 StepContext {
+                    name: String::new(),
                     task: Some("task2".to_string()),
                     sequence: None,
                     on_fail: None,

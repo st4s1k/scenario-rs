@@ -5,7 +5,8 @@
 
 parent = "./server.toml"
 
-[steps.run_bad]
+[[steps]]
+name = "run_bad"
 task = "run_bad_command"
 
 [tasks.remote_sudo.run_bad_command]

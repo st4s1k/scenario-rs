@@ -53,7 +53,7 @@ export class ExecutionProgressComponent implements OnChanges {
       && this.previousIsExecuting === false
       && this.isExecuting === true;
 
-    if (changes['stepExecStates'] || changes['onFailExecStates'] || executionRestarted) {
+    if (executionRestarted) {
       this.uiStates = [];
     }
 

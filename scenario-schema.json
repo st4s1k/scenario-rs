@@ -255,6 +255,10 @@
       "description": "A step context: references either a single task or a sequence, with optional on-fail fallback.",
       "type": "object",
       "properties": {
+        "name": {
+          "description": "Name identifying this step.",
+          "type": "string"
+        },
         "on-fail": {
           "description": "Sequence name to execute as fallback on failure.",
           "type": [
@@ -276,12 +280,15 @@
             "null"
           ]
         }
-      }
+      },
+      "required": [
+        "name"
+      ]
     },
     "StepsConfig": {
-      "description": "Ordered map of step names to their contexts, preserving TOML declaration order.",
-      "type": "object",
-      "additionalProperties": {
+      "description": "Ordered list of steps, preserving TOML `[[steps]]` declaration order.",
+      "type": "array",
+      "items": {
         "$ref": "#/$defs/StepContext"
       }
     },

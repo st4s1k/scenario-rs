@@ -425,10 +425,12 @@ mod tests {
             host = "test_host"
             port = 2222
 
-            [steps.step1]
+            [[steps]]
+            name = "step1"
             task = "update"
 
-            [steps.step2]
+            [[steps]]
+            name = "step2"
             task = "restart"
             on-fail = "cleanup_seq"
 
@@ -462,8 +464,8 @@ mod tests {
 
         let steps = config.steps.as_ref().unwrap();
         assert_eq!(steps.len(), 2);
-        let keys: Vec<&String> = steps.keys().collect();
-        assert_eq!(keys, vec!["step1", "step2"]);
+        let names: Vec<&str> = steps.iter().map(|s| s.name.as_str()).collect();
+        assert_eq!(names, vec!["step1", "step2"]);
 
         let tasks = config.tasks.as_ref().unwrap();
         assert_eq!(tasks.remote_sudo.as_ref().unwrap().len(), 3);
@@ -574,6 +576,8 @@ mod tests {
     fn test_partial_scenario_config_deserialization_with_private_key() {
         // Given
         let toml_str = r#"
+            steps = []
+
             [credentials]
             username = "key_user"
             private_key = "./my_key"
@@ -581,8 +585,6 @@ mod tests {
             [server]
             host = "host"
             port = 22
-
-            [steps]
 
             [tasks]
         "#;
@@ -605,6 +607,8 @@ mod tests {
         std::fs::write(
             &config_path,
             r#"
+            steps = []
+
             [credentials]
             username = "user"
             password = "pass"
@@ -612,8 +616,6 @@ mod tests {
             [server]
             host = "host"
             port = 22
-
-            [steps]
 
             [tasks]
             "#,
@@ -638,6 +640,8 @@ mod tests {
         std::fs::write(
             &parent_path,
             r#"
+            steps = []
+
             [credentials]
             username = "parent_user"
             password = "parent_pass"
@@ -645,8 +649,6 @@ mod tests {
             [server]
             host = "parent_host"
             port = 22
-
-            [steps]
 
             [tasks]
             "#,
@@ -753,6 +755,8 @@ mod tests {
         std::fs::write(
             &parent_path,
             r#"
+            steps = []
+
             [credentials]
             username = "user"
             password = "pass"
@@ -760,8 +764,6 @@ mod tests {
             [server]
             host = "host"
             port = 22
-
-            [steps]
 
             [tasks]
             "#,
@@ -791,6 +793,8 @@ mod tests {
         std::fs::write(
             &config_path,
             r#"
+            steps = []
+
             [credentials]
             username = "user"
             private_key = "./keys/id_rsa"
@@ -798,8 +802,6 @@ mod tests {
             [server]
             host = "host"
             port = 22
-
-            [steps]
 
             [tasks]
             "#,

@@ -1,15 +1,14 @@
 use crate::config::step::StepContext;
-use indexmap::IndexMap;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use std::ops::{Deref, DerefMut};
 
-/// Ordered map of step names to their contexts, preserving TOML declaration order.
+/// Ordered list of steps, preserving TOML `[[steps]]` declaration order.
 #[derive(Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
-pub struct StepsConfig(IndexMap<String, StepContext>);
+pub struct StepsConfig(Vec<StepContext>);
 
 impl Deref for StepsConfig {
-    type Target = IndexMap<String, StepContext>;
+    type Target = Vec<StepContext>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -22,8 +21,8 @@ impl DerefMut for StepsConfig {
     }
 }
 
-impl From<IndexMap<String, StepContext>> for StepsConfig {
-    fn from(steps: IndexMap<String, StepContext>) -> Self {
+impl From<Vec<StepContext>> for StepsConfig {
+    fn from(steps: Vec<StepContext>) -> Self {
         StepsConfig(steps)
     }
 }
@@ -42,44 +41,57 @@ mod tests {
     #[test]
     fn test_steps_config_preserves_order() {
         let toml_str = r#"
-            [first]
+            [[step]]
+            name = "first"
             task = "task_a"
 
-            [second]
+            [[step]]
+            name = "second"
             task = "task_b"
 
-            [third]
+            [[step]]
+            name = "third"
             sequence = "seq_c"
         "#;
-        let steps: StepsConfig = toml::from_str(toml_str).unwrap();
-        let keys: Vec<&String> = steps.keys().collect();
-        assert_eq!(keys, vec!["first", "second", "third"]);
+
+        #[derive(Deserialize)]
+        struct Wrapper {
+            step: StepsConfig,
+        }
+
+        let wrapper: Wrapper = toml::from_str(toml_str).unwrap();
+        let names: Vec<&str> = wrapper.step.iter().map(|s| s.name.as_str()).collect();
+        assert_eq!(names, vec!["first", "second", "third"]);
     }
 
     #[test]
-    fn test_steps_config_from_indexmap() {
-        let mut map = IndexMap::new();
-        map.insert(
-            "step1".to_string(),
-            StepContext {
-                task: Some("task1".to_string()),
-                sequence: None,
-                on_fail: None,
-            },
-        );
-        let steps = StepsConfig::from(map);
+    fn test_steps_config_from_vec() {
+        let steps = StepsConfig::from(vec![StepContext {
+            name: "step1".to_string(),
+            task: Some("task1".to_string()),
+            sequence: None,
+            on_fail: None,
+        }]);
         assert_eq!(steps.len(), 1);
     }
 
     #[test]
     fn test_steps_config_with_on_fail() {
         let toml_str = r#"
-            [deploy]
+            [[step]]
+            name = "deploy"
             task = "deploy_app"
             on-fail = "cleanup_sequence"
         "#;
-        let steps: StepsConfig = toml::from_str(toml_str).unwrap();
-        let step = steps.get("deploy").unwrap();
+
+        #[derive(Deserialize)]
+        struct Wrapper {
+            step: StepsConfig,
+        }
+
+        let wrapper: Wrapper = toml::from_str(toml_str).unwrap();
+        let step = &wrapper.step[0];
+        assert_eq!(step.name, "deploy");
         assert_eq!(step.task.as_deref(), Some("deploy_app"));
         assert_eq!(step.on_fail.as_deref(), Some("cleanup_sequence"));
     }

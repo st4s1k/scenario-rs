@@ -546,7 +546,7 @@ pub mod mock {
 
     impl Write for MockFile {
         fn write_all(&mut self, _buf: &[u8]) -> Result<(), SshError> {
-            std::thread::sleep(std::time::Duration::from_millis(100));
+            std::thread::sleep(std::time::Duration::from_millis(10));
             Ok(())
         }
     }

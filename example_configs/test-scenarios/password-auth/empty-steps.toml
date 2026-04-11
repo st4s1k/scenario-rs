@@ -5,8 +5,7 @@
 
 parent = "./server.toml"
 
-[steps]
-
+steps = []
 [tasks.remote_sudo.unused_task]
 command = "echo 'unused'"
 description = "This task is never referenced"

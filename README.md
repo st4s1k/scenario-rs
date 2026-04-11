@@ -39,13 +39,16 @@ host = "your-server.example.com" # required
 port = 22 # optional, default is 22
 
 # Define the execution order of steps (order is preserved)
-[steps.deploy_app]
+[[steps]]
+name = "deploy_app"
 task = "deploy_app"
 
-[steps.extract_app]
+[[steps]]
+name = "extract_app"
 task = "extract_app"
 
-[steps.copy_config]
+[[steps]]
+name = "copy_config"
 task = "copy_config"
 on-fail = "rollback_steps"  # Reference to a sequence for error recovery
 
@@ -185,7 +188,8 @@ read_only = true
 [variables.defined]
 app_name = "default-app"
 
-[steps.deploy]
+[[steps]]
+name = "deploy"
 task = "deploy"
 
 [tasks.remote_sudo.deploy]

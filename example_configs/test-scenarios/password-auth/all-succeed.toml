@@ -6,13 +6,16 @@
 
 parent = "./server.toml"
 
-[steps.upload]
+[[steps]]
+name = "upload"
 task = "upload_file"
 
-[steps.cmd_one]
+[[steps]]
+name = "cmd_one"
 task = "run_command_one"
 
-[steps.cmd_two]
+[[steps]]
+name = "cmd_two"
 task = "run_command_two"
 
 [variables.required.local_file]

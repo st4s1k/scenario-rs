@@ -6,10 +6,12 @@
 
 parent = "./server.toml"
 
-[steps.stop]
+[[steps]]
+name = "stop"
 task = "stop_service"
 
-[steps.deploy]
+[[steps]]
+name = "deploy"
 task = "deploy_with_bad_var"
 on-fail = "rollback_and_start"
 

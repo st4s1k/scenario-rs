@@ -5,13 +5,16 @@
 
 parent = "./server.toml"
 
-[steps.disk]
+[[steps]]
+name = "disk"
 task = "check_disk"
 
-[steps.memory]
+[[steps]]
+name = "memory"
 task = "check_memory"
 
-[steps.services]
+[[steps]]
+name = "services"
 task = "check_services"
 
 [tasks.remote_sudo.check_disk]

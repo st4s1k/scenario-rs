@@ -10,26 +10,32 @@ host = "parent.example.com" # required
 port = 22 # optional, default is 22
 
 # Steps — executed in declaration order
-[steps.copy_jar]
+[[steps]]
+name = "copy_jar"
 task = "copy_jar_to_server"
 
-[steps.stop]
+[[steps]]
+name = "stop"
 task = "stop_service"
 on-fail = "recovery_start"
 
-[steps.backup]
+[[steps]]
+name = "backup"
 task = "create_backup"
 on-fail = "recovery_start"
 
-[steps.remove_old]
+[[steps]]
+name = "remove_old"
 task = "remove_current_deploy"
 on-fail = "recovery_restore_start"
 
-[steps.deploy]
+[[steps]]
+name = "deploy"
 task = "deploy_new_file"
 on-fail = "recovery_restore_start"
 
-[steps.start]
+[[steps]]
+name = "start"
 task = "start_service"
 on-fail = "recovery_restore_start"
 
