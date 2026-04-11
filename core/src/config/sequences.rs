@@ -52,6 +52,17 @@ mod tests {
     }
 
     #[test]
+    fn test_sequences_config_deref_mut() {
+        let mut seq = SequencesConfig::default();
+        seq.insert(
+            "new_seq".to_string(),
+            vec!["task_x".to_string()],
+        );
+        assert_eq!(seq.len(), 1);
+        assert!(seq.contains_key("new_seq"));
+    }
+
+    #[test]
     fn test_sequences_config_from_hashmap() {
         let mut map = HashMap::new();
         map.insert(

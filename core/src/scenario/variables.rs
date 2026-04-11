@@ -229,6 +229,9 @@ impl Variables {
                     "lowercase" => var_value.to_lowercase(),
                     "base64" => BASE64.encode(var_value),
                     "trim" => var_value.trim().to_string(),
+                    // The modifier regex only matches known modifiers, so this arm
+                    // is structurally required by Rust but never reachable at runtime.
+                    #[cfg(not(tarpaulin_include))]
                     _ => continue,
                 };
                 output = output.replace(full_match, &result);
@@ -1098,5 +1101,31 @@ mod tests {
         let result =
             variables.resolve_placeholders("{basename:file}-{uppercase:svc}");
         assert_eq!(result.unwrap(), "app.tar.gz-MY_SERVICE");
+    }
+
+    #[test]
+    fn test_modifier_abspath_nonexistent_falls_back_to_cwd_join() {
+        // Given — non-existent file, canonicalize will fail
+        let mut variables = Variables::default();
+        variables
+            .defined_mut()
+            .insert("no_file".to_string(), "this_does_not_exist_xyz.txt".to_string());
+
+        // When
+        let result = variables.resolve_placeholders("{abspath:no_file}");
+
+        // Then — fallback joins cwd + path
+        assert!(result.is_ok());
+        let resolved = result.unwrap();
+        assert!(
+            resolved.ends_with("this_does_not_exist_xyz.txt"),
+            "Expected cwd-joined path, got: {}",
+            resolved
+        );
+        assert!(
+            std::path::Path::new(&resolved).is_absolute(),
+            "Expected absolute path, got: {}",
+            resolved
+        );
     }
 }

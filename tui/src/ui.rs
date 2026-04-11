@@ -905,4 +905,34 @@ mod tests {
         // When & Then
         render(&app);
     }
+
+    #[test]
+    fn draw_executing_completed_status() {
+        // Given
+        let mut app = app_at_screen(Screen::Executing);
+        app.execution_state.status = ExecutionStatus::Completed;
+        app.execution_state.steps = vec![make_step(0, "step", StepStatus::Completed)];
+
+        // When & Then
+        render(&app);
+    }
+
+    #[test]
+    fn draw_executing_sftp_progress_low_elapsed() {
+        // Given — elapsed_ms very small so speed string is empty
+        let mut app = app_at_screen(Screen::Executing);
+        app.execution_state.status = ExecutionStatus::Running;
+        let mut step = make_step(0, "copy", StepStatus::Running);
+        step.progress = Some(TaskProgress::SftpCopy {
+            source: "a.txt".into(),
+            destination: "/b.txt".into(),
+            bytes_transferred: 1024,
+            bytes_total: 2048,
+            elapsed_ms: 50, // 0.05s < 0.1 threshold
+        });
+        app.execution_state.steps = vec![step];
+
+        // When & Then
+        render(&app);
+    }
 }

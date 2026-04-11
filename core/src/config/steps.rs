@@ -65,6 +65,23 @@ mod tests {
     }
 
     #[test]
+    fn test_steps_config_deref_mut() {
+        let mut steps = StepsConfig::from(vec![StepContext {
+            name: "step1".to_string(),
+            task: Some("task1".to_string()),
+            sequence: None,
+            on_fail: None,
+        }]);
+        steps.push(StepContext {
+            name: "step2".to_string(),
+            task: Some("task2".to_string()),
+            sequence: None,
+            on_fail: None,
+        });
+        assert_eq!(steps.len(), 2);
+    }
+
+    #[test]
     fn test_steps_config_from_vec() {
         let steps = StepsConfig::from(vec![StepContext {
             name: "step1".to_string(),

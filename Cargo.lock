@@ -4689,6 +4689,7 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-prevent-default",
  "tauri-plugin-shell",
+ "tempfile",
  "toml 1.1.2+spec-1.1.0",
  "tracing",
  "tracing-subscriber",

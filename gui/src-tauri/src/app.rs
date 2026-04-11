@@ -1683,4 +1683,290 @@ mod tests {
         // Then
         assert!(!result);
     }
+
+    #[test]
+    fn test_executing_guard_resets_flag_on_drop() {
+        use std::sync::atomic::Ordering;
+
+        // Given
+        let flag = Arc::new(AtomicBool::new(true));
+        let guard = super::ExecutingGuard(Arc::clone(&flag));
+        assert!(flag.load(Ordering::SeqCst));
+
+        // When
+        drop(guard);
+
+        // Then
+        assert!(!flag.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn test_load_config_with_scenario_build_failure() {
+        // Given — valid TOML that references a non-existent task in steps
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("bad-scenario.toml");
+        std::fs::write(
+            &config_path,
+            r#"
+            [credentials]
+            username = "user"
+
+            [server]
+            host = "host"
+
+            [[steps]]
+            name = "bad_step"
+            task = "nonexistent_task"
+
+            [tasks]
+            "#,
+        )
+        .unwrap();
+        let mut core = test_core_empty();
+
+        // When
+        core.load_config(config_path.to_str().unwrap());
+
+        // Then — TOML loads but Scenario::try_from fails
+        assert!(core.scenario.is_none());
+        assert!(core.leaf_config.is_some());
+    }
+
+    fn test_core_loaded_from_file() -> (ScenarioAppStateCore, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("test-scenario.toml");
+        std::fs::write(
+            &config_path,
+            r#"
+            [credentials]
+            username = "user"
+
+            [server]
+            host = "host"
+
+            [[steps]]
+            name = "step1"
+            task = "my_task"
+
+            [tasks.remote_sudo.my_task]
+            command = "echo hello"
+            "#,
+        )
+        .unwrap();
+        let mut core = test_core_empty();
+        core.load_config(config_path.to_str().unwrap());
+        assert!(core.scenario.is_some());
+        assert!(core.leaf_config.is_some());
+        (core, dir)
+    }
+
+    #[test]
+    fn test_update_task_remote_sudo() {
+        // Given
+        let (mut core, _dir) = test_core_loaded_from_file();
+
+        // When
+        let result = core.update_task(
+            "my_task".to_string(),
+            TaskDTO {
+                description: "Updated desc".to_string(),
+                error_message: "Updated err".to_string(),
+                task_type: "RemoteSudo".to_string(),
+                command: Some("echo updated".to_string()),
+                source_path: None,
+                destination_path: None,
+            },
+        );
+
+        // Then
+        assert!(result.is_ok());
+        let task = core.scenario.as_ref().unwrap().tasks().get("my_task").unwrap();
+        assert_eq!(task.description(), "Updated desc");
+    }
+
+    #[test]
+    fn test_update_task_sftp_copy() {
+        // Given
+        let (mut core, _dir) = test_core_loaded_from_file();
+
+        // When
+        let result = core.update_task(
+            "upload".to_string(),
+            TaskDTO {
+                description: "Upload file".to_string(),
+                error_message: "Failed".to_string(),
+                task_type: "SftpCopy".to_string(),
+                command: None,
+                source_path: Some("/local/path".to_string()),
+                destination_path: Some("/remote/path".to_string()),
+            },
+        );
+
+        // Then
+        assert!(result.is_ok());
+        assert!(core.scenario.as_ref().unwrap().tasks().contains_key("upload"));
+    }
+
+    #[test]
+    fn test_update_task_unknown_type() {
+        // Given
+        let (mut core, _dir) = test_core_loaded_from_file();
+
+        // When
+        let result = core.update_task(
+            "x".to_string(),
+            TaskDTO {
+                description: String::new(),
+                error_message: String::new(),
+                task_type: "UnknownType".to_string(),
+                command: None,
+                source_path: None,
+                destination_path: None,
+            },
+        );
+
+        // Then
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unknown task type"));
+    }
+
+    #[test]
+    fn test_update_task_no_scenario_returns_error() {
+        // Given
+        let mut core = test_core_empty();
+
+        // When
+        let result = core.update_task(
+            "x".to_string(),
+            TaskDTO {
+                description: String::new(),
+                error_message: String::new(),
+                task_type: "RemoteSudo".to_string(),
+                command: Some("echo".to_string()),
+                source_path: None,
+                destination_path: None,
+            },
+        );
+
+        // Then
+        assert!(result.is_err());
+    }
+
+    // ── update_defined_variable ─────────────────────────────────
+
+    #[test]
+    fn test_update_defined_variable_success() {
+        // Given
+        let (mut core, _dir) = test_core_loaded_from_file();
+
+        // When
+        let result = core.update_defined_variable("new_var".to_string(), "new_val".to_string());
+
+        // Then
+        assert!(result.is_ok());
+        assert_eq!(
+            core.scenario.as_ref().unwrap().variables().defined().get("new_var"),
+            Some(&"new_val".to_string())
+        );
+    }
+
+    #[test]
+    fn test_update_defined_variable_no_scenario() {
+        // Given
+        let mut core = test_core_empty();
+
+        // When
+        let result = core.update_defined_variable("x".to_string(), "y".to_string());
+
+        // Then
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_has_unsaved_config_changes_false_when_unchanged() {
+        // Given
+        let (core, _dir) = test_core_loaded_from_file();
+
+        // When & Then
+        assert!(!core.has_unsaved_config_changes());
+    }
+
+    #[test]
+    fn test_has_unsaved_config_changes_true_after_modification() {
+        // Given
+        let (mut core, _dir) = test_core_loaded_from_file();
+
+        // When — modify the leaf config
+        core.update_defined_variable("added_var".to_string(), "value".to_string()).unwrap();
+
+        // Then
+        assert!(core.has_unsaved_config_changes());
+    }
+
+    #[test]
+    fn test_has_unsaved_config_changes_false_without_leaf() {
+        // Given
+        let core = test_core_empty();
+
+        // When & Then
+        assert!(!core.has_unsaved_config_changes());
+    }
+
+    // ── discard_config_changes ─────────────────────────────────
+
+    #[test]
+    fn test_discard_config_changes_reloads_from_disk() {
+        // Given
+        let (mut core, _dir) = test_core_loaded_from_file();
+        core.update_defined_variable("tmp_var".to_string(), "val".to_string()).unwrap();
+        assert!(core.has_unsaved_config_changes());
+
+        // When
+        core.discard_config_changes();
+
+        // Then
+        assert!(!core.has_unsaved_config_changes());
+    }
+
+    #[test]
+    fn test_save_config_success() {
+        // Given
+        let (mut core, _dir) = test_core_loaded_from_file();
+        core.update_defined_variable("save_var".to_string(), "save_val".to_string()).unwrap();
+        assert!(core.has_unsaved_config_changes());
+
+        // When
+        let result = core.save_config();
+
+        // Then
+        assert!(result.is_ok());
+        assert!(!core.has_unsaved_config_changes());
+    }
+
+    #[test]
+    fn test_save_config_no_leaf_returns_error() {
+        // Given
+        let core = test_core_empty();
+
+        // When
+        let result = core.save_config();
+
+        // Then
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("No leaf config loaded"));
+    }
+
+    #[test]
+    fn test_save_config_no_config_path_returns_error() {
+        // Given
+        let mut core = test_core_empty();
+        core.leaf_config = Some(Default::default());
+
+        // When
+        let result = core.save_config();
+
+        // Then
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("No config path set"));
+    }
 }

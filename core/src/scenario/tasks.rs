@@ -167,6 +167,50 @@ mod tests {
         assert!(tasks.get("nonexistent").is_none());
     }
 
+    #[test]
+    fn test_tasks_deref_mut() {
+        // Given
+        let config = create_test_tasks_config();
+        let mut tasks = Tasks::try_from(&config).unwrap();
+
+        // When
+        tasks.remove("restart");
+
+        // Then
+        assert!(!tasks.contains_key("restart"));
+    }
+
+    #[test]
+    fn test_tasks_duplicate_name_in_sftp_copy_only() {
+        // Given — insert a task via remote_sudo, then same name in sftp_copy
+        // This ensures the DuplicateTaskName error is hit in the sftp_copy loop (line 48)
+        let config = TasksConfig {
+            remote_sudo: Some(HashMap::from([(
+                "upload".to_string(),
+                RemoteSudoTaskConfig {
+                    command: "echo upload".to_string(),
+                    description: None,
+                    error_message: None,
+                },
+            )])),
+            sftp_copy: Some(HashMap::from([(
+                "upload".to_string(),
+                SftpCopyTaskConfig {
+                    source: "/src".to_string(),
+                    destination: "/dst".to_string(),
+                    description: None,
+                    error_message: None,
+                },
+            )])),
+        };
+
+        // When
+        let result = Tasks::try_from(&config);
+
+        // Then
+        assert!(result.is_err());
+    }
+
     fn create_test_tasks_config() -> TasksConfig {
         TasksConfig {
             remote_sudo: Some(HashMap::from([(

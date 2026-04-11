@@ -405,6 +405,67 @@ mod tests {
     }
 
     #[test]
+    fn test_scenario_tasks_mut_accessor() {
+        // Given
+        let config = create_test_config();
+        let mut scenario = Scenario::try_from(config).unwrap();
+
+        // When
+        let tasks = scenario.tasks_mut();
+
+        // Then — starts empty, can insert
+        assert!(tasks.is_empty());
+    }
+
+    #[test]
+    fn test_scenario_try_from_config_with_duplicate_task_names() {
+        init_tracing();
+
+        use crate::config::task::{RemoteSudoTaskConfig, SftpCopyTaskConfig};
+
+        // Given — same name "deploy" in both remote_sudo and sftp_copy
+        let config = ScenarioConfig {
+            server: ServerConfig {
+                host: "test.example.com".to_string(),
+                port: Some(22),
+            },
+            credentials: CredentialsConfig {
+                username: "testuser".to_string(),
+                password: Some("testpass".to_string()),
+                private_key: None,
+            },
+            steps: StepsConfig::default(),
+            sequences: SequencesConfig::default(),
+            tasks: TasksConfig {
+                remote_sudo: Some(HashMap::from([(
+                    "deploy".to_string(),
+                    RemoteSudoTaskConfig {
+                        command: "echo deploy".to_string(),
+                        description: None,
+                        error_message: None,
+                    },
+                )])),
+                sftp_copy: Some(HashMap::from([(
+                    "deploy".to_string(),
+                    SftpCopyTaskConfig {
+                        source: "/src".to_string(),
+                        destination: "/dst".to_string(),
+                        description: None,
+                        error_message: None,
+                    },
+                )])),
+            },
+            variables: VariablesConfig::default(),
+        };
+
+        // When
+        let result = Scenario::try_from(config);
+
+        // Then — Tasks::try_from fails with DuplicateTaskName, surfaced via map_err
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_scenario_try_from_config_with_invalid_steps() {
         init_tracing();
 

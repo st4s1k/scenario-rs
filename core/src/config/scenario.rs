@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 /// Partial scenario config supporting inheritance via a `parent` field.
-#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default, JsonSchema)]
 pub struct PartialScenarioConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parent: Option<String>,
@@ -871,5 +871,40 @@ mod tests {
             std::path::Path::new(&key_path).is_absolute(),
             "Relative private key should be resolved to absolute path"
         );
+    }
+
+    #[test]
+    fn test_load_with_leaf_resolves_relative_private_key() {
+        // Given
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("scenario.toml");
+        std::fs::write(
+            &config_path,
+            r#"
+            steps = []
+
+            [credentials]
+            username = "user"
+            private_key = "./keys/id_rsa"
+
+            [server]
+            host = "host"
+            port = 22
+
+            [tasks]
+            "#,
+        )
+        .unwrap();
+
+        // When
+        let (config, leaf) = ScenarioConfig::load_with_leaf(config_path).unwrap();
+
+        // Then
+        let key_path = config.credentials.private_key.unwrap();
+        assert!(
+            std::path::Path::new(&key_path).is_absolute(),
+            "load_with_leaf should resolve relative private key to absolute path"
+        );
+        assert!(leaf.credentials.is_some());
     }
 }

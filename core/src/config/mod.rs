@@ -30,3 +30,15 @@ pub fn json_schema() -> schemars::Schema {
         .into_generator()
         .into_root_schema_for::<scenario::PartialScenarioConfig>()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_json_schema_returns_valid_schema() {
+        let schema = json_schema();
+        let json = serde_json::to_string(&schema).unwrap();
+        assert!(!json.is_empty());
+    }
+}

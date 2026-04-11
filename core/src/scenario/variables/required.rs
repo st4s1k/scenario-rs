@@ -351,12 +351,14 @@ mod tests {
         let var = RequiredVariable::default()
             .with_label("My Label".to_string())
             .with_value("my_val".to_string())
-            .with_read_only(true);
+            .with_read_only(true)
+            .with_file_picker(true);
 
         // Then
         assert_eq!(var.label(), "My Label");
         assert_eq!(var.value(), "my_val");
         assert!(var.read_only());
+        assert!(var.file_picker());
     }
 
     #[test]

@@ -367,6 +367,33 @@ mod tests {
     }
 
     #[test]
+    fn test_steps_from_config_sequence_with_unknown_task() {
+        // Given — sequence references a task that doesn't exist
+        let tasks = create_test_tasks();
+        let steps_config = create_steps_config(vec![(
+            "bad_step",
+            StepContext {
+                name: String::new(),
+                task: None,
+                sequence: Some("my_seq".to_string()),
+                on_fail: None,
+            },
+        )]);
+        let mut seqs = HashMap::new();
+        seqs.insert(
+            "my_seq".to_string(),
+            vec!["task1".to_string(), "nonexistent_task".to_string()],
+        );
+        let sequences = SequencesConfig::from(seqs);
+
+        // When
+        let result = Steps::from_config(&tasks, &steps_config, &sequences);
+
+        // Then
+        assert!(matches!(result, Err(ScenarioError::UnknownTaskReference(_))));
+    }
+
+    #[test]
     fn test_steps_from_config_invalid_context() {
         // Given
         let tasks = create_test_tasks();
