@@ -262,10 +262,62 @@ impl Session {
                     }
                 }
                 (None, None) => {
-                    let err = "SSH agent authentication is not yet supported with russh. \
-                               Provide a password or private_key in the configuration.";
-                    debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = err);
-                    return Err(SshError::new(err));
+                    #[cfg(unix)]
+                    {
+                        use russh::keys::agent::client::AgentClient;
+
+                        let mut agent = AgentClient::connect_env()
+                            .await
+                            .map_err(|e| {
+                                debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %e);
+                                SshError::new(format!(
+                                    "Failed to connect to SSH agent (is SSH_AUTH_SOCK set?): {e}"
+                                ))
+                            })?;
+
+                        let identities = agent.request_identities().await.map_err(|e| {
+                            debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %e);
+                            SshError::new(format!("Failed to list SSH agent identities: {e}"))
+                        })?;
+
+                        if identities.is_empty() {
+                            let err = "SSH agent has no identities loaded";
+                            debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = err);
+                            return Err(SshError::new(err));
+                        }
+
+                        let mut authenticated = false;
+                        for identity in &identities {
+                            let key = identity.public_key().into_owned();
+                            match session
+                                .authenticate_publickey_with(username, key, None, &mut agent)
+                                .await
+                            {
+                                Ok(auth) if auth.success() => {
+                                    authenticated = true;
+                                    break;
+                                }
+                                Ok(_) => continue,
+                                Err(_) => continue,
+                            }
+                        }
+
+                        if !authenticated {
+                            let err = format!(
+                                "SSH agent authentication failed: none of the {} agent key(s) were accepted",
+                                identities.len()
+                            );
+                            debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = %err);
+                            return Err(SshError::new(err));
+                        }
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        let err = "SSH agent authentication is not supported on this platform. \
+                                   Provide a password or private_key in the configuration.";
+                        debug!(scenario.event = ScenarioEvent::Error.as_str(), scenario.error = err);
+                        return Err(SshError::new(err));
+                    }
                 }
             }
 

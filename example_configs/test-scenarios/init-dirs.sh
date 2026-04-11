@@ -5,15 +5,18 @@ mkdir -p /home/test_user/deploy/config
 mkdir -p /home/test_user/deploy/scripts
 mkdir -p /etc/myapp
 
+chown test_user:test_user /home/test_user
 chown -R test_user:test_user /home/test_user/uploads /home/test_user/deploy
 chmod 777 /etc/myapp
 
-# Install public key for key-based auth testing
-mkdir -p /home/test_user/.ssh
-cp /test_key.pub /home/test_user/.ssh/authorized_keys
-chown -R test_user:test_user /home/test_user/.ssh
-chmod 700 /home/test_user/.ssh
-chmod 600 /home/test_user/.ssh/authorized_keys
+# Install public key for key-based auth testing.
+# LinuxServer's openssh-server uses /config as the user's home directory
+# for sshd, so authorized_keys must live at /config/.ssh/ for pubkey auth.
+mkdir -p /config/.ssh
+cp /test_key.pub /config/.ssh/authorized_keys
+chown -R test_user:test_user /config/.ssh
+chmod 700 /config/.ssh
+chmod 600 /config/.ssh/authorized_keys
 
 # Add KEX algorithms compatible with libssh2 (used by ssh2 Rust crate).
 # OpenSSH 10+ drops older algorithms by default; libssh2 needs them.

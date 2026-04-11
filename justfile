@@ -95,6 +95,11 @@ test:
 ng-test: npm-install
     cd {{gui_dir}} && npx ng test --watch=false --code-coverage
 
+# Run integration test scenarios (manages Docker automatically)
+[doc("Run integration tests (auto-manages Docker; --keep to leave running, --no-docker to skip)")]
+test-scenarios *args:
+    bash example_configs/test-scenarios/run-all.sh {{args}}
+
 # Run all tests (Rust + Angular)
 [doc("Run all tests (Rust + Angular)")]
 test-all: test ng-test

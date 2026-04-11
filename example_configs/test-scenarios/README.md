@@ -1,10 +1,28 @@
 # Test Scenarios
 
-Test scenario configs for manually testing the GUI execution flow against a real SSH server.
+Integration test scenarios that run against a real SSH server in Docker.
 
-## Setup
+## Running Tests
 
-Start the SSH server (requires `docker restart` so the KEX config takes effect):
+Everything is automated — Docker, build, and test execution:
+
+```bash
+just test-scenarios
+```
+
+| Flag | Effect |
+|------|--------|
+| *(none)* | Start Docker, run tests, stop Docker |
+| `--keep` | Start Docker, run tests, leave Docker running |
+| `--no-docker` | Skip Docker management (container must already be running) |
+
+If the container is already running it is detected and reused (not restarted, not stopped).
+
+Agent auth scenarios run automatically on Linux/macOS (the script starts `ssh-agent` and loads the test key). On Windows they are skipped because the compiled binary requires Unix domain sockets.
+
+## Setup (manual, if needed)
+
+Start the SSH server manually (requires `docker restart` so the KEX config takes effect):
 
 ```bash
 cd example_configs/test-scenarios
@@ -62,12 +80,14 @@ All inherit from `key-auth/server.toml` (credentials: `test_user` + private key 
 
 All inherit from `agent-auth/server.toml` (credentials: `test_user`, no password or key — uses SSH agent).
 
-Requires `ssh-agent` with the test key loaded:
+The test runner handles `ssh-agent` setup/teardown automatically on Unix. To run manually:
 
 ```bash
 eval $(ssh-agent)
 ssh-add example_configs/test-scenarios/key-auth/test_key
 ```
+
+> **Note:** Agent auth requires a Unix-target binary (`#[cfg(unix)]`). On Windows the binary cannot connect to `ssh-agent` even from Git Bash.
 
 | File | What it tests |
 |------|---------------|
@@ -82,4 +102,5 @@ Scenarios that use SftpCopy require selecting local files to upload via the vari
 
 ```bash
 docker compose down
+# or: just test-scenarios already handles this automatically
 ```
