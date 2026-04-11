@@ -7,49 +7,49 @@ describe('TitlebarComponent', () => {
 
   beforeEach(() => {
     tauri = setupTauriMock({
-      'get_debug_mode': false,
-      'set_debug_mode': undefined,
+      'get_dry_run': false,
+      'set_dry_run': undefined,
     });
     component = new TitlebarComponent();
   });
 
   describe('ngOnInit', () => {
-    it('should fetch debug mode on init', async () => {
+    it('should fetch dry run mode on init', async () => {
       // Given
-      tauri.setResponse('get_debug_mode', true);
+      tauri.setResponse('get_dry_run', true);
 
       // When
       await component.ngOnInit();
 
       // Then
-      tauri.expectInvoked('get_debug_mode');
-      expect(component.debugMode()).toBe(true);
+      tauri.expectInvoked('get_dry_run');
+      expect(component.dryRun()).toBe(true);
     });
   });
 
-  describe('toggleDebugMode', () => {
-    it('should toggle debug mode from false to true', () => {
+  describe('toggleDryRun', () => {
+    it('should toggle dry run from false to true', () => {
       // Given
-      component.debugMode.set(false);
+      component.dryRun.set(false);
 
       // When
-      component.toggleDebugMode();
+      component.toggleDryRun();
 
       // Then
-      expect(component.debugMode()).toBe(true);
-      tauri.expectInvoked('set_debug_mode', { debugMode: true });
+      expect(component.dryRun()).toBe(true);
+      tauri.expectInvoked('set_dry_run', { dryRun: true });
     });
 
-    it('should toggle debug mode from true to false', () => {
+    it('should toggle dry run from true to false', () => {
       // Given
-      component.debugMode.set(true);
+      component.dryRun.set(true);
 
       // When
-      component.toggleDebugMode();
+      component.toggleDryRun();
 
       // Then
-      expect(component.debugMode()).toBe(false);
-      tauri.expectInvoked('set_debug_mode', { debugMode: false });
+      expect(component.dryRun()).toBe(false);
+      tauri.expectInvoked('set_dry_run', { dryRun: false });
     });
   });
 

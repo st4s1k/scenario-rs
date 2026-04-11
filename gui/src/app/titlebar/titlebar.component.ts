@@ -14,17 +14,17 @@ const appWindow = getCurrentWebviewWindow()
 })
 export class TitlebarComponent {
 
-  debugMode = signal(false);
+  dryRun = signal(false);
 
   async ngOnInit(): Promise<void> {
-    const debugMode = await invoke<boolean>('get_debug_mode');
-    this.debugMode.set(debugMode);
+    const dryRun = await invoke<boolean>('get_dry_run');
+    this.dryRun.set(dryRun);
   }
 
-  toggleDebugMode(): void {
-    const newValue = !this.debugMode();
-    this.debugMode.set(newValue);
-    invoke('set_debug_mode', { debugMode: newValue });
+  toggleDryRun(): void {
+    const newValue = !this.dryRun();
+    this.dryRun.set(newValue);
+    invoke('set_dry_run', { dryRun: newValue });
   }
 
   save(): void {

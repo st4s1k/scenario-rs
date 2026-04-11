@@ -272,7 +272,7 @@ scenario-rs-tui [--config-path <path-to-config.toml>]
 | File Browser | `Esc` | Cancel |
 | Variables | `Tab/↑/↓` | Navigate fields |
 | Variables | `Ctrl+B` | Open file picker (Path fields) |
-| Variables | `Ctrl+D` | Toggle debug mode |
+| Variables | `Ctrl+D` | Toggle dry run |
 | Variables | `Enter` | Start execution |
 | Variables | `Esc` | Quit |
 | Executing | `↑/↓` | Select step |

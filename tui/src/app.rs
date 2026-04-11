@@ -41,7 +41,7 @@ pub struct App {
     pub should_quit: bool,
     pub file_browser: FileBrowser,
     pub config_error: Option<String>,
-    pub debug_mode: bool,
+    pub dry_run: bool,
 }
 
 impl App {
@@ -67,7 +67,7 @@ impl App {
             should_quit: false,
             file_browser: FileBrowser::from_cwd(Some("toml".to_string())),
             config_error: None,
-            debug_mode: false,
+            dry_run: false,
         }
     }
 
@@ -205,10 +205,10 @@ impl App {
 
     #[cfg(not(tarpaulin_include))]
     pub fn start_execution(&mut self) {
-        let debug_mode = self.debug_mode;
+        let dry_run = self.dry_run;
         if let Some((scenario, state_manager)) = self.prepare_execution() {
             thread::spawn(move || {
-                scenario.execute(Some(&state_manager), debug_mode);
+                scenario.execute(Some(&state_manager), dry_run);
             });
         }
     }
@@ -320,8 +320,8 @@ impl App {
         self.screen = Screen::PickConfig;
     }
 
-    pub fn toggle_debug_mode(&mut self) {
-        self.debug_mode = !self.debug_mode;
+    pub fn toggle_dry_run(&mut self) {
+        self.dry_run = !self.dry_run;
     }
 }
 
@@ -1561,37 +1561,37 @@ mod tests {
     }
 
     #[test]
-    fn toggle_debug_mode_flips_flag() {
+    fn toggle_dry_run_flips_flag() {
         // Given
         let mut app = App::without_scenario();
 
         // When
-        app.toggle_debug_mode();
+        app.toggle_dry_run();
 
         // Then
-        assert!(app.debug_mode);
+        assert!(app.dry_run);
 
         // When
-        app.toggle_debug_mode();
+        app.toggle_dry_run();
 
         // Then
-        assert!(!app.debug_mode);
+        assert!(!app.dry_run);
     }
 
     #[test]
-    fn debug_mode_preserved_across_restart() {
+    fn dry_run_preserved_across_restart() {
         // Given
         let path = PathBuf::from(
             concat!(env!("CARGO_MANIFEST_DIR"), "/../example_configs/example-scenario.toml"),
         );
         let scenario = Scenario::try_from(path).unwrap();
         let mut app = App::with_scenario(scenario);
-        app.debug_mode = true;
+        app.dry_run = true;
 
         // When
         app.restart();
 
         // Then
-        assert!(app.debug_mode);
+        assert!(app.dry_run);
     }
 }

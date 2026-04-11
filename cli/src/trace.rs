@@ -211,7 +211,7 @@ impl ScenarioEventLayer {
             }
             ScenarioEvent::CreateSessionStarted
             | ScenarioEvent::CreateSessionCompleted
-            | ScenarioEvent::CreatedMockSession
+            | ScenarioEvent::CreatedDryRunSession
             | ScenarioEvent::SessionCreated
             | ScenarioEvent::StepsStarted
             | ScenarioEvent::StepCompleted
@@ -602,7 +602,7 @@ mod tests {
         // When & Then
         info!(scenario.event = ScenarioEvent::CreateSessionStarted.as_str());
         info!(scenario.event = ScenarioEvent::CreateSessionCompleted.as_str());
-        info!(scenario.event = ScenarioEvent::CreatedMockSession.as_str());
+        info!(scenario.event = ScenarioEvent::CreatedDryRunSession.as_str());
         info!(scenario.event = ScenarioEvent::SessionCreated.as_str());
         info!(scenario.event = ScenarioEvent::StepsStarted.as_str());
         info!(scenario.event = ScenarioEvent::StepCompleted.as_str());
@@ -829,7 +829,7 @@ mod tests {
         for event in [
             ScenarioEvent::CreateSessionStarted,
             ScenarioEvent::CreateSessionCompleted,
-            ScenarioEvent::CreatedMockSession,
+            ScenarioEvent::CreatedDryRunSession,
             ScenarioEvent::SessionCreated,
             ScenarioEvent::StepsStarted,
             ScenarioEvent::StepCompleted,

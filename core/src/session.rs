@@ -105,14 +105,14 @@ pub enum SessionType {
 }
 
 impl Session {
-    /// Returns a mock session when `debug_mode` is true, a real SSH connection otherwise.
+    /// Returns a dry-run session when `dry_run` is true, a real SSH connection otherwise.
     pub fn new(
         server: &Server,
         credentials: &Credentials,
-        debug_mode: bool,
+        dry_run: bool,
     ) -> Result<Self, SshError> {
-        if debug_mode {
-            Self::create_mock_session(server, credentials)
+        if dry_run {
+            Self::create_dry_run_session(server, credentials)
         } else {
             Self::create_session(server, credentials)
         }
@@ -332,7 +332,7 @@ impl Session {
     }
 
     #[instrument(
-        name = "create_mock_session",
+        name = "create_dry_run_session",
         skip_all,
         fields(
             session.host = server.host,
@@ -340,12 +340,12 @@ impl Session {
             session.username = credentials.username,
         )
     )]
-    fn create_mock_session(
+    fn create_dry_run_session(
         server: &Server,
         credentials: &Credentials,
     ) -> Result<Session, SshError> {
         trace!(
-            scenario.event = ScenarioEvent::CreatedMockSession.as_str(),
+            scenario.event = ScenarioEvent::CreatedDryRunSession.as_str(),
             session.password = credentials.password.as_deref().unwrap_or("<ssh-agent>")
         );
 
@@ -650,13 +650,13 @@ mod tests {
     }
 
     #[test]
-    fn test_mock_session_creation() {
+    fn test_dry_run_session_creation() {
         // Given
         let server = test_server();
         let credentials = test_credentials(true);
 
         // When
-        let result = Session::create_mock_session(&server, &credentials);
+        let result = Session::create_dry_run_session(&server, &credentials);
 
         // Then
         assert!(result.is_ok());
@@ -677,14 +677,14 @@ mod tests {
         let credentials = test_credentials(false);
 
         // When
-        let result = Session::create_mock_session(&server, &credentials);
+        let result = Session::create_dry_run_session(&server, &credentials);
 
         // Then
         assert!(result.is_ok());
     }
 
     #[test]
-    fn test_session_new_in_debug_mode() {
+    fn test_session_new_in_dry_run_mode() {
         // Given
         let server = test_server();
         let credentials = test_credentials(true);
@@ -696,16 +696,16 @@ mod tests {
         assert!(result.is_ok());
         match result.unwrap().inner {
             SessionType::Mock => {}
-            SessionType::Real { .. } => panic!("Expected a mock session in debug mode"),
+            SessionType::Real { .. } => panic!("Expected a mock session in dry run mode"),
             SessionType::Test { .. } => {
-                panic!("Expected a mock session in debug mode, not a test session")
+                panic!("Expected a mock session in dry run mode, not a test session")
             }
             _ => panic!("Unexpected session type"),
         }
     }
 
     #[test]
-    fn test_session_new_without_debug_mode_connects_to_server() {
+    fn test_session_new_without_dry_run_connects_to_server() {
         // Given
         let (port, _rt) = start_test_ssh_server();
         let server = Server {

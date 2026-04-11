@@ -107,7 +107,7 @@ fn handle_key(app: &mut App, code: KeyCode, modifiers: KeyModifiers) {
                 app.open_file_picker_for_variable()
             }
             KeyCode::Char('d') if modifiers.contains(KeyModifiers::CONTROL) => {
-                app.toggle_debug_mode()
+                app.toggle_dry_run()
             }
             KeyCode::Tab | KeyCode::Down => app.next_field(),
             KeyCode::BackTab | KeyCode::Up => app.prev_field(),

@@ -101,8 +101,8 @@ fn draw_variables_screen(frame: &mut Frame, app: &App) {
     let area = frame.area();
 
     if app.variable_fields.is_empty() {
-        let title = if app.debug_mode {
-            " scenario-rs [DEBUG] "
+        let title = if app.dry_run {
+            " scenario-rs [DRY RUN] "
         } else {
             " scenario-rs "
         };
@@ -170,8 +170,8 @@ fn draw_variables_screen(frame: &mut Frame, app: &App) {
         })
         .collect();
 
-    let title = if app.debug_mode {
-        " Required Variables [DEBUG] "
+    let title = if app.dry_run {
+        " Required Variables [DRY RUN] "
     } else {
         " Required Variables "
     };
@@ -191,7 +191,7 @@ fn draw_variables_screen(frame: &mut Frame, app: &App) {
         Span::styled("Ctrl+B", Style::default().fg(Color::Cyan).bold()),
         Span::raw(" Browse  "),
         Span::styled("Ctrl+D", Style::default().fg(Color::Yellow).bold()),
-        Span::raw(" Debug  "),
+        Span::raw(" Dry Run  "),
         Span::styled("Enter", Style::default().fg(Color::Green).bold()),
         Span::raw(" Execute  "),
         Span::styled("Esc", Style::default().fg(Color::Red).bold()),
@@ -234,8 +234,8 @@ fn draw_execution_screen(frame: &mut Frame, app: &App) {
         Span::styled(status_text, Style::default().fg(status_color).bold()),
         Span::raw(format!("  Steps: {}/{}", completed, total)),
     ];
-    if app.debug_mode {
-        header_spans.push(Span::styled("  [DEBUG]", Style::default().fg(Color::Yellow).bold()));
+    if app.dry_run {
+        header_spans.push(Span::styled("  [DRY RUN]", Style::default().fg(Color::Yellow).bold()));
     }
     let header = Paragraph::new(Line::from(header_spans))
     .block(
@@ -571,7 +571,7 @@ mod tests {
             should_quit: false,
             file_browser: FileBrowser::from_cwd(Some("toml".to_string())),
             config_error: None,
-            debug_mode: false,
+            dry_run: false,
         }
     }
 
@@ -868,20 +868,20 @@ mod tests {
     }
 
     #[test]
-    fn draw_variables_empty_debug_mode() {
+    fn draw_variables_empty_dry_run() {
         // Given
         let mut app = app_at_screen(Screen::Variables);
-        app.debug_mode = true;
+        app.dry_run = true;
 
         // When & Then
         render(&app);
     }
 
     #[test]
-    fn draw_variables_with_fields_debug_mode() {
+    fn draw_variables_with_fields_dry_run() {
         // Given
         let mut app = app_at_screen(Screen::Variables);
-        app.debug_mode = true;
+        app.dry_run = true;
         app.variable_fields = vec![VariableField {
             name: "var".into(),
             label: "Var".into(),
@@ -895,12 +895,12 @@ mod tests {
     }
 
     #[test]
-    fn draw_executing_with_debug() {
+    fn draw_executing_with_dry_run() {
         // Given
         let mut app = app_at_screen(Screen::Executing);
         app.execution_state.status = ExecutionStatus::Running;
         app.execution_state.steps = vec![make_step(0, "step", StepStatus::Running)];
-        app.debug_mode = true;
+        app.dry_run = true;
 
         // When & Then
         render(&app);

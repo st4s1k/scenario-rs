@@ -410,7 +410,7 @@ impl ScenarioEventLayer {
                 | ScenarioEvent::OnFailStepCompleted
                 | ScenarioEvent::CreateSessionStarted
                 | ScenarioEvent::CreateSessionCompleted
-                | ScenarioEvent::CreatedMockSession
+                | ScenarioEvent::CreatedDryRunSession
                 | ScenarioEvent::SessionCreated
                 | ScenarioEvent::StepsStarted
                 | ScenarioEvent::RemoteSudoCompleted

@@ -121,7 +121,7 @@ pub struct ScenarioAppStateCore {
     pub(crate) config_path: String,
     pub(crate) scenario: Option<Scenario>,
     pub(crate) is_executing: Arc<AtomicBool>,
-    pub(crate) debug_mode: bool,
+    pub(crate) dry_run: bool,
     pub(crate) execution_state_manager: Option<Arc<ExecutionStateManager>>,
     pub(crate) state_storage: Box<dyn StateStorage>,
 }
@@ -462,7 +462,7 @@ impl ScenarioAppState {
                 config_path: String::new(),
                 scenario: None,
                 is_executing: Arc::new(AtomicBool::new(false)),
-                debug_mode: false,
+                dry_run: false,
                 execution_state_manager: None,
                 state_storage: Box::new(FileStateStorage::new(
                     ScenarioAppStateCore::DEFAULT_STATE_FILE_PATH.to_string(),
@@ -483,7 +483,7 @@ impl ScenarioAppState {
     pub fn execute_scenario(&mut self) {
         if let Some(scenario) = self.scenario.as_ref().cloned() {
             let is_executing = self.is_executing.clone();
-            let debug_mode = self.debug_mode;
+            let debug_mode = self.dry_run;
 
             // Create state manager with diff channel
             let (diff_tx, diff_rx) = std::sync::mpsc::channel();
@@ -649,7 +649,7 @@ mod tests {
             config_path: String::new(),
             scenario: None,
             is_executing: Arc::new(AtomicBool::new(false)),
-            debug_mode: false,
+            dry_run: false,
             execution_state_manager: None,
             state_storage: Box::new(InMemoryStateStorage::empty()),
         }
@@ -660,7 +660,7 @@ mod tests {
             config_path: String::new(),
             scenario: None,
             is_executing: Arc::new(AtomicBool::new(false)),
-            debug_mode: false,
+            dry_run: false,
             execution_state_manager: None,
             state_storage: Box::new(storage),
         }
@@ -673,7 +673,7 @@ mod tests {
             config_path: "../../example_configs/example-scenario.toml".to_string(),
             scenario: Some(scenario),
             is_executing: Arc::new(AtomicBool::new(false)),
-            debug_mode: false,
+            dry_run: false,
             execution_state_manager: None,
             state_storage: Box::new(InMemoryStateStorage::empty()),
         }
@@ -688,7 +688,7 @@ mod tests {
             config_path: "../../example_configs/example-scenario.toml".to_string(),
             scenario: Some(scenario),
             is_executing: Arc::new(AtomicBool::new(false)),
-            debug_mode: false,
+            dry_run: false,
             execution_state_manager: None,
             state_storage: Box::new(storage),
         }
@@ -1401,7 +1401,7 @@ mod tests {
             config_path: String::new(),
             scenario: None,
             is_executing: Arc::new(AtomicBool::new(false)),
-            debug_mode: false,
+            dry_run: false,
             execution_state_manager: None,
             state_storage: Box::new(FailingWriteStorage),
         };
@@ -1416,7 +1416,7 @@ mod tests {
             config_path: String::new(),
             scenario: None,
             is_executing: Arc::new(AtomicBool::new(false)),
-            debug_mode: false,
+            dry_run: false,
             execution_state_manager: None,
             state_storage: Box::new(FailingWriteStorage),
         };

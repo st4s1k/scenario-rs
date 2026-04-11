@@ -96,13 +96,13 @@ pub fn is_valid_config_path(path: &str) -> bool {
 }
 
 #[tauri::command(async)]
-pub fn get_debug_mode(state: State<'_, Mutex<ScenarioAppState>>) -> bool {
+pub fn get_dry_run(state: State<'_, Mutex<ScenarioAppState>>) -> bool {
     let state = state.safe_lock();
-    state.debug_mode
+    state.dry_run
 }
 
 #[tauri::command(async)]
-pub fn set_debug_mode(debug_mode: bool, state: State<'_, Mutex<ScenarioAppState>>) {
+pub fn set_dry_run(dry_run: bool, state: State<'_, Mutex<ScenarioAppState>>) {
     let mut state = state.safe_lock();
-    state.debug_mode = debug_mode;
+    state.dry_run = dry_run;
 }
