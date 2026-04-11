@@ -288,6 +288,16 @@ impl Variables {
                 output = output.replace(&placeholder, value);
             }
 
+            // Resolve {env:VAR} that appeared after variable expansion
+            if output.has_placeholders() {
+                output = Self::resolve_env_placeholders(&output)?;
+            }
+
+            // Resolve {now:format} that appeared after variable expansion
+            if output.has_placeholders() {
+                output = Self::resolve_now_placeholders(&output);
+            }
+
             if !output.has_placeholders() {
                 return Ok(output);
             }
@@ -300,11 +310,6 @@ impl Variables {
         // Post-pass: resolve {modifier:var} placeholders
         if output.has_placeholders() {
             output = Self::resolve_modifier_placeholders(&output, &all_variables);
-        }
-
-        // Resolve {now:format} placeholders (custom datetime formats, epoch, epoch_ms)
-        if output.has_placeholders() {
-            output = Self::resolve_now_placeholders(&output);
         }
 
         // Resolve {uuid} — each occurrence gets a unique value
@@ -785,6 +790,41 @@ mod tests {
         );
 
         std::env::remove_var("SCENARIO_RS_TEST_HOST");
+    }
+
+    #[test]
+    fn test_env_and_now_resolved_after_variable_expansion() {
+        // Given — {env:...} and {now:...} appear only after expanding defined variables
+        std::env::set_var("SCENARIO_RS_TEST_DEPLOY_USER", "deployer");
+        let mut variables = Variables::default();
+        variables.defined_mut().insert(
+            "service_name".to_string(),
+            "my-app".to_string(),
+        );
+        variables.required_mut().insert(
+            "timestamp".to_string(),
+            RequiredVariable::default()
+                .with_value("{now:YYYY-MM-DD}".to_string())
+                .with_read_only(true),
+        );
+        variables.defined_mut().insert(
+            "backup_path".to_string(),
+            "/backup/{service_name}/{service_name}-{timestamp}.{env:SCENARIO_RS_TEST_DEPLOY_USER}.jar".to_string(),
+        );
+
+        // When
+        let result = variables.resolve_placeholders("cp -a /deploy/app.jar {backup_path}");
+
+        // Then
+        assert!(result.is_ok());
+        let resolved = result.unwrap();
+        assert!(resolved.starts_with("cp -a /deploy/app.jar /backup/my-app/my-app-"));
+        assert!(resolved.ends_with(".deployer.jar"));
+        // Verify date portion was resolved (not raw {now:...})
+        assert!(!resolved.contains("{now:"));
+        assert!(!resolved.contains("{env:"));
+
+        std::env::remove_var("SCENARIO_RS_TEST_DEPLOY_USER");
     }
 
     // --- Path modifier tests ---
