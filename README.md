@@ -17,7 +17,7 @@ A powerful automation tool for executing remote commands and transferring files 
 - **File Transfer**: Copy files to remote servers via SFTP
 - **Variable Substitution**: Use variables in your commands and file paths, including `{env:VAR}` for environment variables
 - **Error Recovery**: Define fallback tasks to execute when operations fail
-- **Path Handling**: Special handling for file paths with automatic basename extraction
+- **Modifier System**: Path, string, and time modifiers (`{basename:var}`, `{now:YYYY-MM-DD}`, `{uuid}`, etc.)
 - **Progress Tracking**: Monitor execution progress with detailed feedback
 - **JSON Schema Validation**: Included schema file for TOML editor validation and autocompletion
 - **GUI, TUI & CLI Interfaces**: Choose between a graphical interface, terminal UI, or command-line tool
@@ -54,10 +54,17 @@ on-fail = "rollback_steps"  # Reference to a sequence for error recovery
 rollback_steps = ["rollback_deployment"]
 
 # Variables that must be provided by the user
-[variables.required]
-app_archive = { type = "Path", label = "Application Archive" }
-deployment_env = { type = "String", label = "Environment" }
-timestamp = { type = "Timestamp", label = "Deployment Time", format = "%Y-%m-%dT%H%M%S%:z", read_only = true }
+[variables.required.app_archive]
+label = "Application Archive"
+file_picker = true
+
+[variables.required.deployment_env]
+label = "Environment"
+
+[variables.required.timestamp]
+label = "Deployment Time"
+default = "{now:YYYY-MM-DDTHHMMSSZ}"
+read_only = true
 
 # Define variables to be used in commands and file paths
 [variables.defined]
@@ -89,25 +96,73 @@ description = "Copy configuration file"
 error_message = "Failed to copy configuration"
 ```
 
-### Variable Types
+### Required Variables
 
-The application supports different variable types:
+Required variables are defined in `[variables.required.<name>]` sections with optional metadata:
 
-- **String**: Regular text input
-- **Path**: File path with special handling (automatically extracts basename)
-- **Timestamp**: Automatically generated timestamp with specified format
+| Field | Description | Default |
+|---|---|---|
+| `label` | User-facing label in TUI/GUI | variable name |
+| `default` | Default value (supports placeholders) | empty |
+| `read_only` | Prevent user editing in TUI/GUI | `false` |
+| `file_picker` | Show file picker button in TUI/GUI | `false` |
 
 ### Placeholder Syntax
 
-Variables are referenced in commands and paths using `{variable_name}` placeholders. Two special modifiers are supported:
-
-- **`{basename:path_var}`** — Extracts the filename from a Path variable (e.g., `/home/user/app.jar` → `app.jar`)
-- **`{env:VAR_NAME}`** — Resolves to the value of an environment variable at runtime (errors if not set)
+Variables are referenced in commands and paths using `{variable_name}` placeholders.
 
 ```toml
 [variables.defined]
 remote_backup_path = "/backup/{service_name}/{service_name}-{timestamp}.{env:USER}.jar"
 ```
+
+#### 1. Path & File Modifiers
+
+These require a base variable that represents a file path.
+
+| Modifier | Description | Example |
+|---|---|---|
+| `{basename:var}` | File name with extension | `/usr/src/app.jar` → `app.jar` |
+| `{stem:var}` | File name without extension | `/usr/src/app.jar` → `app` |
+| `{dir:var}` | Parent directory path | `/usr/src/app.jar` → `/usr/src` |
+| `{ext:var}` | File extension only | `/usr/src/app.jar` → `jar` |
+| `{abspath:var}` | Resolve to absolute path | `./config/app.yml` → `/home/user/projects/config/app.yml` |
+
+#### 2. System Context Modifiers
+
+The `env:` modifier requires a target; the others are zero-input and generate data on the fly.
+
+| Modifier | Description | Example |
+|---|---|---|
+| `{env:VAR_NAME}` | Host environment variable | `{env:USER}` → `stanislav` |
+| `{hostname}` | Machine network name | `stanislav-macbook-pro` |
+| `{os}` | Operating system family | `linux`, `macos`, or `windows` |
+
+#### 3. Time & Uniqueness Modifiers
+
+Zero-input modifiers evaluated when the command is parsed — ideal for backups, logs, and temp files.
+
+| Modifier | Description | Example |
+|---|---|---|
+| `{uuid}` | Random v4 UUID (unique per occurrence) | `f47ac10b-58cc-4372-a567-0e02b2c3d479` |
+| `{now}` | Current date-time (ISO 8601) | `2026-04-11T14:53:34+02:00` |
+| `{now:YYYY-MM-DD}` | Custom date format | `2026-04-11` |
+| `{now:HHmmss}` | Custom time format | `145334` |
+| `{now:epoch}` | UNIX epoch (seconds) | `1712836241` |
+| `{now:epoch_ms}` | UNIX epoch (milliseconds) | `1712836241000` |
+
+**Format tokens:** `YYYY` (year), `YY` (2-digit year), `MM` (month), `DD` (day), `HH` (24h hour), `hh` (12h hour), `mm` (minute), `ss` (second), `SSS` (milliseconds), `Z` (timezone offset).
+
+#### 4. String Manipulation Modifiers
+
+These require a base variable and alter its text casing or encoding.
+
+| Modifier | Description | Example |
+|---|---|---|
+| `{uppercase:var}` | Convert to uppercase | `my_service` → `MY_SERVICE` |
+| `{lowercase:var}` | Convert to lowercase | `My_Service` → `my_service` |
+| `{base64:var}` | Base64 encode | `my_secret_token` → `bXlfc2VjcmV0X3Rva2Vu` |
+| `{trim:var}` | Remove leading/trailing whitespace | `  my_app  ` → `my_app` |
 
 ### Inheritance
 
@@ -122,8 +177,10 @@ username = "default-user"
 host = "default-host"
 port = 22
 
-[variables.required]
-timestamp = { type = "Timestamp", label = "Deployment Time", format = "%Y-%m-%d", read_only = true }
+[variables.required.timestamp]
+label = "Deployment Time"
+default = "{now:YYYY-MM-DD}"
+read_only = true
 
 [variables.defined]
 app_name = "default-app"
@@ -142,8 +199,8 @@ parent = "base.toml"  # Will inherit and override from parent
 [credentials]
 username = "specific-user"
 
-[variables.required]
-env_name = { type = "String", label = "Environment Name" }
+[variables.required.env_name]
+label = "Environment Name"
 
 [variables.defined]
 app_version = "1.0.0"  # Adds new variable while keeping app_name from parent
