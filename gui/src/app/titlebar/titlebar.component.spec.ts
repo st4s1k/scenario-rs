@@ -64,12 +64,38 @@ describe('TitlebarComponent', () => {
   });
 
   describe('clearState', () => {
-    it('should invoke clear_state command', () => {
+    it('should show confirm dialog', () => {
       // Given & When
       component.clearState();
 
       // Then
+      expect(component.showClearConfirm()).toBe(true);
+    });
+  });
+
+  describe('onClearConfirmed', () => {
+    it('should invoke clear_state and hide dialog when confirmed', () => {
+      // Given
+      component.showClearConfirm.set(true);
+
+      // When
+      component.onClearConfirmed(true);
+
+      // Then
+      expect(component.showClearConfirm()).toBe(false);
       tauri.expectInvoked('clear_state');
+    });
+
+    it('should hide dialog without invoking clear_state when cancelled', () => {
+      // Given
+      component.showClearConfirm.set(true);
+
+      // When
+      component.onClearConfirmed(false);
+
+      // Then
+      expect(component.showClearConfirm()).toBe(false);
+      tauri.expectNotInvoked('clear_state');
     });
   });
 

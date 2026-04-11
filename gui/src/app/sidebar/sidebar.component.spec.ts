@@ -1,15 +1,23 @@
 import { Renderer2 } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { SidebarComponent } from './sidebar.component';
+import { setupTauriMock, TauriTestHarness } from '../testing/tauri-mocks';
 
 describe('SidebarComponent', () => {
   let component: SidebarComponent;
   let mockRenderer: jasmine.SpyObj<Renderer2>;
   let mockDocument: Document;
+  let tauri: TauriTestHarness;
 
   beforeEach(() => {
+    tauri = setupTauriMock({
+      'save_config': undefined,
+      'discard_config_changes': undefined,
+    });
+    TestBed.configureTestingModule({});
     mockRenderer = jasmine.createSpyObj('Renderer2', ['addClass', 'removeClass']);
     mockDocument = document;
-    component = new SidebarComponent(mockRenderer, mockDocument);
+    component = TestBed.runInInjectionContext(() => new SidebarComponent(mockRenderer, mockDocument));
   });
 
   describe('getOnFailStepKey', () => {
@@ -367,6 +375,88 @@ describe('SidebarComponent', () => {
     it('should be callable without error', () => {
       // Given & When & Then
       expect(() => component.ngOnChanges()).not.toThrow();
+    });
+  });
+
+  describe('onTaskFieldChanged', () => {
+    it('should emit taskChanged with updated field', () => {
+      // Given
+      component.tasks = { deploy: { task_type: 'RemoteSudo', command: 'echo hi', description: 'Deploy', error_message: '' } };
+      spyOn(component.taskChanged, 'emit');
+      const event = { target: { value: 'echo updated' } } as unknown as Event;
+
+      // When
+      component.onTaskFieldChanged('deploy', 'command', event);
+
+      // Then
+      expect(component.taskChanged.emit).toHaveBeenCalledWith({
+        name: 'deploy',
+        task: jasmine.objectContaining({ command: 'echo updated' }),
+      });
+    });
+  });
+
+  describe('onTaskFieldInput', () => {
+    it('should mark config dirty', () => {
+      // When
+      component.onTaskFieldInput();
+
+      // Then
+      expect(component.configDirty()).toBe(true);
+    });
+  });
+
+  describe('onVariableChanged', () => {
+    it('should emit variableChanged event', () => {
+      // Given
+      spyOn(component.variableChanged, 'emit');
+      const event = { target: { value: 'new-value' } } as unknown as Event;
+
+      // When
+      component.onVariableChanged('host', event);
+
+      // Then
+      expect(component.variableChanged.emit).toHaveBeenCalledWith({ name: 'host', value: 'new-value' });
+    });
+  });
+
+  describe('onVariableInput', () => {
+    it('should mark config dirty', () => {
+      // When
+      component.onVariableInput();
+
+      // Then
+      expect(component.configDirty()).toBe(true);
+    });
+  });
+
+  describe('saveConfig', () => {
+    it('should invoke save_config and mark clean', async () => {
+      // Given
+      component.onTaskFieldInput(); // make dirty first
+
+      // When
+      await component.saveConfig();
+
+      // Then
+      tauri.expectInvoked('save_config');
+      expect(component.configDirty()).toBe(false);
+    });
+  });
+
+  describe('discardChanges', () => {
+    it('should invoke discard_config_changes, mark clean, and emit configDiscarded', async () => {
+      // Given
+      component.onTaskFieldInput();
+      spyOn(component.configDiscarded, 'emit');
+
+      // When
+      await component.discardChanges();
+
+      // Then
+      tauri.expectInvoked('discard_config_changes');
+      expect(component.configDirty()).toBe(false);
+      expect(component.configDiscarded.emit).toHaveBeenCalled();
     });
   });
 });

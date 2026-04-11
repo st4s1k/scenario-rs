@@ -706,4 +706,60 @@ describe('AppComponent', () => {
       });
     });
   });
+
+  describe('onTaskChanged', () => {
+    it('should invoke update_task, mark dirty, and refresh tasks and steps', async () => {
+      // Given
+      const task = makeTask({ command: 'echo updated' });
+      tauri.setResponse('update_task', undefined);
+
+      // When
+      await component.onTaskChanged({ name: 'deploy', task });
+
+      // Then
+      tauri.expectInvoked('update_task', { taskName: 'deploy', task });
+      tauri.expectInvoked('get_tasks');
+      tauri.expectInvoked('get_steps');
+    });
+  });
+
+  describe('onVariableChanged', () => {
+    it('should invoke update_defined_variable, mark dirty, and refresh variables', async () => {
+      // Given
+      tauri.setResponse('update_defined_variable', undefined);
+
+      // When
+      await component.onVariableChanged({ name: 'host', value: 'new-server' });
+
+      // Then
+      tauri.expectInvoked('update_defined_variable', { name: 'host', value: 'new-server' });
+      tauri.expectInvoked('get_resolved_variables');
+    });
+  });
+
+  describe('onConfigDiscarded', () => {
+    it('should refresh tasks, steps, and all variables', async () => {
+      // When
+      await component.onConfigDiscarded();
+
+      // Then
+      tauri.expectInvoked('get_tasks');
+      tauri.expectInvoked('get_steps');
+      tauri.expectInvoked('get_required_variables');
+      tauri.expectInvoked('get_resolved_variables');
+    });
+  });
+
+  describe('saveConfig', () => {
+    it('should invoke save_config and mark clean', async () => {
+      // Given
+      tauri.setResponse('save_config', undefined);
+
+      // When
+      await component.saveConfig();
+
+      // Then
+      tauri.expectInvoked('save_config');
+    });
+  });
 });
