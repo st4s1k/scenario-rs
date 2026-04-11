@@ -12,8 +12,8 @@ task = "upload_file"
 task = "run_command"
 
 [variables.required.local_file]
-type = "Path"
 label = "Local File Path"
+file_picker = true
 
 [variables.defined]
 remote_path = "/home/{username}/uploads"

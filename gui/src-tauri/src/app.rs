@@ -4,7 +4,7 @@ use scenario_rs::{
     scenario::{
         step::Step,
         task::Task,
-        variables::required::{RequiredVariable, VariableType},
+        variables::required::RequiredVariable,
         Scenario,
     },
     state::{
@@ -152,22 +152,17 @@ impl std::ops::DerefMut for ScenarioAppState {
 pub struct RequiredVariableDTO {
     label: String,
     value: String,
-    var_type: String,
     read_only: bool,
+    file_picker: bool,
 }
 
 impl From<&RequiredVariable> for RequiredVariableDTO {
     fn from(required_variable: &RequiredVariable) -> Self {
-        let var_type = match required_variable.var_type() {
-            VariableType::String => "text".to_string(),
-            VariableType::Path => "path".to_string(),
-            VariableType::Timestamp { .. } => "timestamp".to_string(),
-        };
         Self {
             label: required_variable.label().to_string(),
             value: required_variable.value().to_string(),
-            var_type,
             read_only: required_variable.read_only(),
+            file_picker: required_variable.file_picker(),
         }
     }
 }
@@ -882,9 +877,6 @@ mod tests {
         assert!(!dtos.is_empty());
         for dto in &dtos {
             assert!(!dto.label.is_empty());
-            assert!(
-                dto.var_type == "text" || dto.var_type == "path" || dto.var_type == "timestamp"
-            );
         }
     }
 

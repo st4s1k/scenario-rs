@@ -31,7 +31,7 @@
             <label for="required-var-{{requiredField.key}}">{{requiredField.value.label}}</label>
             <div class="field-container">
               <input id="required-var-{{requiredField.key}}" class="text-field" type="text" [formControlName]="requiredField.key" />
-              @if (requiredField.value.var_type === 'path') {
+              @if (requiredField.value.file_picker) {
               <button (click)="selectRequiredFile(requiredField.key)">Select</button>
               }
             </div>

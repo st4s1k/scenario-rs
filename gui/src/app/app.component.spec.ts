@@ -7,7 +7,7 @@ import { setupTauriMock, TauriTestHarness } from './testing/tauri-mocks';
 function makeRequiredField(overrides: Partial<any> = {}): any {
   return {
     label: 'App version',
-    var_type: 'text',
+    file_picker: false,
     value: '1.0.0',
     read_only: false,
     ...overrides,

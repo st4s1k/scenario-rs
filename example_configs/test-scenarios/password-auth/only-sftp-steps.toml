@@ -15,16 +15,16 @@ task = "upload_config"
 task = "upload_scripts"
 
 [variables.required.app_jar]
-type = "Path"
 label = "Application JAR"
+file_picker = true
 
 [variables.required.config_file]
-type = "Path"
 label = "Config File"
+file_picker = true
 
 [variables.required.scripts_archive]
-type = "Path"
 label = "Scripts Archive"
+file_picker = true
 
 [variables.defined]
 remote_base = "/home/{username}/deploy"

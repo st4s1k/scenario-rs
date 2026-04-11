@@ -12,8 +12,8 @@ task = "upload_config"
 task = "apply_config"
 
 [variables.required.config_file]
-type = "Path"
 label = "Config File"
+file_picker = true
 
 [variables.defined]
 remote_config_dir = "/etc/myapp"

@@ -1,9 +1,6 @@
 use crate::file_browser::FileBrowser;
 use scenario_rs::{
-    scenario::{
-        variables::required::VariableType,
-        Scenario,
-    },
+    scenario::Scenario,
     state::types::{
         ExecutionState, ExecutionStatus, OnFailStepExecState, StateDiff, StepExecState, StepStatus,
     },
@@ -84,7 +81,7 @@ impl App {
                 label: var.label().to_string(),
                 value: var.value().to_string(),
                 read_only: var.read_only(),
-                is_path: matches!(var.var_type(), VariableType::Path),
+                is_path: var.file_picker(),
             })
             .collect();
 

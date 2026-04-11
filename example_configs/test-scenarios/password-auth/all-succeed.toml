@@ -16,8 +16,8 @@ task = "run_command_one"
 task = "run_command_two"
 
 [variables.required.local_file]
-type = "Path"
 label = "Local File Path"
+file_picker = true
 
 [variables.defined]
 remote_path = "/home/{username}/uploads"

@@ -178,7 +178,21 @@
       "description": "Metadata for a single required variable.",
       "type": "object",
       "properties": {
+        "default": {
+          "description": "Default value (supports placeholders like `{now:YYYY-MM-DD}`, `{uuid}`, etc.).",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "file_picker": {
+          "description": "If true, the TUI/GUI shows a file picker for this variable.",
+          "type": "boolean",
+          "default": false
+        },
         "label": {
+          "description": "User-facing label displayed in the TUI/GUI.",
           "type": [
             "string",
             "null"
@@ -186,54 +200,11 @@
           "default": null
         },
         "read_only": {
+          "description": "If true, the user cannot edit this variable in the TUI/GUI.",
           "type": "boolean",
           "default": false
         }
-      },
-      "oneOf": [
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "const": "String"
-            }
-          },
-          "required": [
-            "type"
-          ]
-        },
-        {
-          "description": "Filesystem path — supports automatic basename extraction.",
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "const": "Path"
-            }
-          },
-          "required": [
-            "type"
-          ]
-        },
-        {
-          "description": "Initialized with the current time in the given format.",
-          "type": "object",
-          "properties": {
-            "format": {
-              "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "Timestamp"
-            }
-          },
-          "required": [
-            "type",
-            "format"
-          ]
-        }
-      ]
+      }
     },
     "RequiredVariablesConfig": {
       "description": "Map of variable names to their required variable configs.",

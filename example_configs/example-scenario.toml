@@ -41,21 +41,19 @@ recovery_restore_start = ["restore_backup", "start_service"]
 # Required Variables
 
 [variables.required.local_jar_path]
-type = "Path"
 label = "Local JAR Path"
+file_picker = true
 
 [variables.required.some_other_path]
-type = "Path"
 label = "Some Other Path"
+file_picker = true
 
 [variables.required.some_variable]
-type = "String"
 label = "Some Variable"
 
 [variables.required.timestamp]
-type = "Timestamp"
 label = "Timestamp"
-format = "%Y-%m-%dT%H%M%S%:z"
+default = "{now:YYYY-MM-DDTHHMMSSZ}"
 read_only = true
 
 # Defined Variables

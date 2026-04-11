@@ -4,7 +4,7 @@ export interface RequiredFields {
 
 export interface RequiredField {
   label: string;
-  var_type: string;
+  file_picker: boolean;
   value: string;
   read_only: boolean;
 }
