@@ -4642,7 +4642,7 @@ dependencies = [
 
 [[package]]
 name = "scenario-rs-cli"
-version = "0.11.0"
+version = "0.11.1"
 dependencies = [
  "chrono",
  "clap",
@@ -4655,7 +4655,7 @@ dependencies = [
 
 [[package]]
 name = "scenario-rs-core"
-version = "0.11.0"
+version = "0.11.1"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -4678,7 +4678,7 @@ dependencies = [
 
 [[package]]
 name = "scenario-rs-gui"
-version = "0.11.0"
+version = "0.11.1"
 dependencies = [
  "chrono",
  "scenario-rs-core",
@@ -4696,7 +4696,7 @@ dependencies = [
 
 [[package]]
 name = "scenario-rs-tui"
-version = "0.11.0"
+version = "0.11.1"
 dependencies = [
  "clap",
  "crossterm",
