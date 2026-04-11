@@ -77,7 +77,7 @@ impl TryFrom<PartialVariablesConfig> for VariablesConfig {
 mod tests {
     use crate::config::variables::{
         defined::DefinedVariablesConfig,
-        required::{RequiredVariableConfig, RequiredVariablesConfig, VariableTypeConfig},
+        required::{RequiredVariableConfig, RequiredVariablesConfig},
         PartialVariablesConfig, VariablesConfig,
     };
     use std::collections::HashMap;
@@ -98,11 +98,9 @@ mod tests {
         // Given
         let toml_str = r#"
             [required.username]
-            type = "String"
             label = "Username"
 
             [required.deploy_path]
-            type = "Path"
             label = "Deployment Path"
             read_only = true
 
@@ -186,17 +184,16 @@ mod tests {
         required_vars.insert(
             "username".to_string(),
             RequiredVariableConfig {
-                var_type: VariableTypeConfig::String,
                 label: Some("Admin Username".to_string()),
                 read_only: true,
+                ..Default::default()
             },
         );
         required_vars.insert(
             "api_key".to_string(),
             RequiredVariableConfig {
-                var_type: VariableTypeConfig::String,
                 label: Some("API Key".to_string()),
-                read_only: false,
+                ..Default::default()
             },
         );
 
@@ -241,17 +238,15 @@ mod tests {
         required_vars.insert(
             "username".to_string(),
             RequiredVariableConfig {
-                var_type: VariableTypeConfig::String,
                 label: Some("Username".to_string()),
-                read_only: false,
+                ..Default::default()
             },
         );
         required_vars.insert(
             "environment".to_string(),
             RequiredVariableConfig {
-                var_type: VariableTypeConfig::String,
                 label: Some("Environment".to_string()),
-                read_only: false,
+                ..Default::default()
             },
         );
 
@@ -329,9 +324,8 @@ mod tests {
         required_vars.insert(
             "username".to_string(),
             RequiredVariableConfig {
-                var_type: VariableTypeConfig::String,
                 label: Some("Username".to_string()),
-                read_only: false,
+                ..Default::default()
             },
         );
 
@@ -379,9 +373,8 @@ mod tests {
             required: Some(RequiredVariablesConfig::from(HashMap::from([(
                 "api_key".to_string(),
                 RequiredVariableConfig {
-                    var_type: VariableTypeConfig::String,
                     label: Some("API Key".to_string()),
-                    read_only: false,
+                    ..Default::default()
                 },
             )]))),
             defined: None,
@@ -405,17 +398,17 @@ mod tests {
         required_vars.insert(
             "username".to_string(),
             RequiredVariableConfig {
-                var_type: VariableTypeConfig::String,
                 label: Some("Username".to_string()),
-                read_only: false,
+                ..Default::default()
             },
         );
         required_vars.insert(
             "config_path".to_string(),
             RequiredVariableConfig {
-                var_type: VariableTypeConfig::Path,
                 label: Some("Config Path".to_string()),
                 read_only: true,
+                file_picker: true,
+                ..Default::default()
             },
         );
 
