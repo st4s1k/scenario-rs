@@ -15,10 +15,11 @@ A powerful automation tool for executing remote commands and transferring files 
 - **Scenario Configuration**: Define your tasks in TOML files with inheritance support
 - **Remote Command Execution**: Run commands on remote servers with sudo support
 - **File Transfer**: Copy files to remote servers via SFTP
-- **Variable Substitution**: Use variables in your commands and file paths
+- **Variable Substitution**: Use variables in your commands and file paths, including `{env:VAR}` for environment variables
 - **Error Recovery**: Define fallback tasks to execute when operations fail
 - **Path Handling**: Special handling for file paths with automatic basename extraction
 - **Progress Tracking**: Monitor execution progress with detailed feedback
+- **JSON Schema Validation**: Included schema file for TOML editor validation and autocompletion
 - **GUI, TUI & CLI Interfaces**: Choose between a graphical interface, terminal UI, or command-line tool
 
 ## Usage
@@ -96,6 +97,18 @@ The application supports different variable types:
 - **Path**: File path with special handling (automatically extracts basename)
 - **Timestamp**: Automatically generated timestamp with specified format
 
+### Placeholder Syntax
+
+Variables are referenced in commands and paths using `{variable_name}` placeholders. Two special modifiers are supported:
+
+- **`{basename:path_var}`** — Extracts the filename from a Path variable (e.g., `/home/user/app.jar` → `app.jar`)
+- **`{env:VAR_NAME}`** — Resolves to the value of an environment variable at runtime (errors if not set)
+
+```toml
+[variables.defined]
+remote_backup_path = "/backup/{service_name}/{service_name}-{timestamp}.{env:USER}.jar"
+```
+
 ### Inheritance
 
 You can split your configuration across multiple files and use inheritance:
@@ -134,6 +147,24 @@ env_name = { type = "String", label = "Environment Name" }
 
 [variables.defined]
 app_version = "1.0.0"  # Adds new variable while keeping app_name from parent
+```
+
+### JSON Schema Validation
+
+A JSON Schema file (`scenario-schema.json`) is included at the repository root, generated from the Rust config types. Add a `#:schema` directive as the first line of your TOML files to enable editor validation and autocompletion (supported by [Even Better TOML](https://marketplace.visualstudio.com/items?itemName=tamasfe.even-better-toml) and [taplo](https://taplo.tamasfe.dev/)):
+
+```toml
+#:schema ../scenario-schema.json
+
+[credentials]
+username = "my-user"
+# ...
+```
+
+Regenerate the schema after config type changes with:
+
+```
+just schema > scenario-schema.json
 ```
 
 ## GUI
