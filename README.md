@@ -307,149 +307,47 @@ cargo install just
 
 Run `just` to list all available recipes.
 
+#### Run
+
 | Command | Description |
 |---|---|
-| `just` | List all available recipes |
+| `just cli` | Run CLI in development mode |
+| `just tui` | Run TUI in development mode |
+| `just gui` | Run GUI in development mode |
+
+#### Build
+
+| Command | Description |
+|---|---|
 | `just check` | Run `cargo check` on the workspace |
-| `just schema` | Generate JSON Schema for scenario config |
 | `just build` | Build the workspace (debug) |
 | `just build-release` | Build the workspace (release) |
+| `just tui-build` | Build TUI (release) |
+| `just tauri-build-debug` | Build GUI (debug) |
+| `just tauri-build` | Build GUI (release) |
+| `just build-all` | Build everything (Rust + GUI debug) |
+| `just build-all-release` | Build everything (Rust + GUI release) |
+
+#### Test
+
+| Command | Description |
+|---|---|
 | `just test` | Run Rust tests with coverage (requires [cargo-tarpaulin](https://github.com/xd009642/tarpaulin)) |
 | `just ng-test` | Run Angular unit tests with coverage |
 | `just test-all` | Run all tests with coverage (Rust + Angular) |
+| `just verify` | Full verification: check + all tests + Angular build |
+
+#### Frontend
+
+| Command | Description |
+|---|---|
 | `just npm-install` | Install frontend dependencies |
 | `just ng-build` | Build Angular frontend |
-| `just tui-run` | Run TUI in development mode |
-| `just tui-build` | Build TUI (release) |
-| `just tauri-dev` | Run GUI in development mode |
-| `just tauri-build` | Build GUI (release) |
-| `just tauri-build-debug` | Build GUI (debug) |
-| `just build-all` | Build everything (Rust + GUI debug) |
-| `just build-all-release` | Build everything (Rust + GUI release) |
-| `just verify` | Full verification: check + all tests + Angular build |
+
+#### General
+
+| Command | Description |
+|---|---|
 | `just version` | Show current version |
 | `just bump-version x.y.z` | Set version across all packages |
-
-## DIY
-
-### ✨ [gui]
-
-❗ **go to:**
-
-```
-<cloned-dir>/scenario-rs/gui/
-```
-
-### ✨ [gui.dev] 🚧
-
-▶️ **run:**
-
-```
-npm run tauri dev
-```
-
-🛠️ **build:**
-
-```
-npm run tauri build -- --debug
-```
-
-⚡ **run executable:**
-
-```
-<cloned-dir>/scenario-rs/target/debug/scenario-rs.exe
-```
-
-### ✨ [gui.release] 🎁
-
-🛠️ **build:**
-
-```
-npm run tauri build
-```
-
-⚡ **run executable:**
-
-```
-<cloned-dir>/scenario-rs/target/release/scenario-rs.exe
-```
-
-### �️ [tui]
-
-▶️ **run:**
-
-```
-cargo run -p scenario-rs-tui
-```
-
-or with a config:
-
-```
-cargo run -p scenario-rs-tui -- -c ./example_configs/example-scenario.toml
-```
-
-🛠️ **build (release):**
-
-```
-cargo build -p scenario-rs-tui --release
-```
-
-⚡ **run executable:**
-
-```
-<cloned-dir>/scenario-rs/target/release/scenario-rs-tui.exe
-```
-
-### �📟 [cli]
-
-❗ **go to:**
-
-```
-<cloned-dir>/scenario-rs/cli
-```
-
-### 📟 [cli.dev] 🚧
-
-▶️ **run:**
-
-```
-cargo run -- -c ./example_configs/example-scenario.toml
-```
-
-🛠️ **build:**
-
-```
-cargo build
-```
-
-⚡ **run executable:**
-
-```
-<cloned-dir>/scenario-rs/target/debug/scenario-rs-cli.exe --config-path ./example_configs/example-scenario.toml
-```
-
-or
-
-```
-<cloned-dir>/scenario-rs/target/debug/scenario-rs-cli.exe -c ./example_configs/example-scenario.toml
-```
-
-### 📟 [cli.release] 🎁
-
-🛠️ **build:**
-
-```
-cargo build --release
-```
-
-⚡ **run executable:**
-
-```
-<cloned-dir>/scenario-rs/target/release/scenario-rs-cli.exe --config-path ./example_configs/example-scenario.toml
-```
-
-or
-
-```
-<cloned-dir>/scenario-rs/target/release/scenario-rs-cli.exe -c ./example_configs/example-scenario.toml
-```
+| `just schema` | Generate JSON Schema for scenario config |
