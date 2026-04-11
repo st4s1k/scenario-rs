@@ -2,6 +2,7 @@
 **/dist
 /target
 /.idea
+/.claude
 **/scenario-app-state.json
 tarpaulin-report.*
 **/coverage
