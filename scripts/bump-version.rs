@@ -19,6 +19,15 @@ fn main() {
     update_file("Cargo.toml", "version = \"", &version);
     update_file("gui/package.json", "\"version\": \"", &version);
 
+    let cargo = if cfg!(windows) { "cargo.exe" } else { "cargo" };
+    let status = Command::new(cargo)
+        .args(["generate-lockfile"])
+        .status()
+        .expect("Failed to run cargo");
+    if !status.success() {
+        std::process::exit(1);
+    }
+
     let npm = if cfg!(windows) { "npm.cmd" } else { "npm" };
     let status = Command::new(npm)
         .args(["install", "--package-lock-only"])
@@ -31,6 +40,7 @@ fn main() {
 
     println!("Version updated to {version} in:");
     println!("  - Cargo.toml (workspace)");
+    println!("  - Cargo.lock");
     println!("  - gui/package.json");
     println!("  - gui/package-lock.json");
 }
