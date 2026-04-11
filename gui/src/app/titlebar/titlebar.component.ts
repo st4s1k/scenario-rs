@@ -2,12 +2,14 @@ import { Component, signal } from '@angular/core';
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { TooltipComponent } from '../shared/tooltip/tooltip.component';
+import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 const appWindow = getCurrentWebviewWindow()
 
 @Component({
   selector: 'titlebar',
   imports: [
-    TooltipComponent
+    TooltipComponent,
+    ConfirmDialogComponent
   ],
   templateUrl: './titlebar.component.html',
   styleUrl: './titlebar.component.scss'
@@ -15,6 +17,7 @@ const appWindow = getCurrentWebviewWindow()
 export class TitlebarComponent {
 
   dryRun = signal(false);
+  showClearConfirm = signal(false);
 
   async ngOnInit(): Promise<void> {
     const dryRun = await invoke<boolean>('get_dry_run');
@@ -31,12 +34,15 @@ export class TitlebarComponent {
     invoke('save_state');
   }
 
-  saveConfig(): void {
-    invoke('save_config');
+  clearState(): void {
+    this.showClearConfirm.set(true);
   }
 
-  clearState(): void {
-    invoke('clear_state');
+  onClearConfirmed(confirmed: boolean): void {
+    this.showClearConfirm.set(false);
+    if (confirmed) {
+      invoke('clear_state');
+    }
   }
 
   minimize(): void {

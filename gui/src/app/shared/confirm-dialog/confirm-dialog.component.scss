@@ -1,0 +1,61 @@
+@use '../../../styles.scss';
+
+:host {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .dialog {
+    background-color: styles.$secondary-color-lighter-5;
+    border: styles.$border-width solid styles.$primary-color;
+    padding: styles.$gap-large;
+    min-width: 18rem;
+    display: flex;
+    flex-direction: column;
+    gap: styles.$gap-medium;
+
+    .dialog-title {
+      font-weight: 700;
+      font-size: styles.$font-size-default;
+      color: styles.$primary-color;
+      border-bottom: styles.$border-width solid styles.$secondary-color-lighter-20;
+      padding-bottom: styles.$gap-small;
+    }
+
+    .dialog-message {
+      color: styles.$secondary-color-lighter-60;
+      font-size: styles.$font-size-default;
+      line-height: 1.5;
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: styles.$gap-medium;
+      padding-top: styles.$gap-small;
+
+      button.cancel {
+        background-color: transparent;
+        color: styles.$secondary-color-lighter-60;
+        border: styles.$border-width solid styles.$secondary-color-lighter-40;
+        outline: none;
+
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.05);
+          color: styles.$secondary-color-lighter-70;
+          border-color: styles.$secondary-color-lighter-60;
+        }
+
+        &:active {
+          background-color: transparent;
+          color: styles.$secondary-color-lighter-60;
+          outline: none;
+        }
+      }
+    }
+  }
+}

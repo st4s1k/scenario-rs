@@ -1,0 +1,8 @@
+<div class="dialog unselectable" (click)="$event.stopPropagation()">
+  <div class="dialog-title">{{ title }}</div>
+  <div class="dialog-message">{{ message }}</div>
+  <div class="dialog-actions">
+    <button class="cancel" (click)="cancel()">Cancel</button>
+    <button class="confirm" (click)="confirm()">Confirm</button>
+  </div>
+</div>

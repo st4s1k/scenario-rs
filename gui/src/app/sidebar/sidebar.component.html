@@ -3,6 +3,18 @@
   <div class="resize-handle" (mousedown)="startResize($event)"></div>
 
   <div class="sidebar-inner">
+    @if (!isCollapsed) {
+    <div class="action-bar">
+      <div class="icon-btn" [class.disabled]="!configDirty()" (click)="configDirty() && discardChanges()">
+        <i class="codicon codicon-discard"></i>
+        <tooltip text="Discard changes" arrow="top"></tooltip>
+      </div>
+      <div class="icon-btn" [class.disabled]="!configDirty()" (click)="configDirty() && saveConfig()">
+        <i class="codicon codicon-check"></i>
+        <tooltip text="Save config to file" arrow="top"></tooltip>
+      </div>
+    </div>
+    }
     <div class="content-area">
       @switch (activeTab) {
       @case ('variables') {
@@ -12,7 +24,7 @@
           <div class="variable">
             <label for="sidebar-var-{{variable[0]}}">{{variable[0]}}</label>
             <input id="sidebar-var-{{variable[0]}}" class="text-field" type="text" [value]="variable[1]"
-              (change)="onVariableChanged(variable[0], $event)" />
+              (keydown)="onVariableInput()" (change)="onVariableChanged(variable[0], $event)" />
           </div>
           }
         </div>
@@ -36,7 +48,7 @@
                 <div class="task-item">
                   <info-block label="Command" variant="primary">
                     <input class="text-field" type="text" [value]="task[1].command"
-                      (change)="onTaskFieldChanged(task[0], 'command', $event)" />
+                      (keydown)="onTaskFieldInput()" (change)="onTaskFieldChanged(task[0], 'command', $event)" />
                   </info-block>
                 </div>
                 }
@@ -44,11 +56,11 @@
                 <div class="task-item">
                   <info-block label="Source" variant="primary">
                     <input class="text-field" type="text" [value]="task[1].source_path"
-                      (change)="onTaskFieldChanged(task[0], 'source_path', $event)" />
+                      (keydown)="onTaskFieldInput()" (change)="onTaskFieldChanged(task[0], 'source_path', $event)" />
                   </info-block>
                   <info-block label="Destination" variant="primary">
                     <input class="text-field" type="text" [value]="task[1].destination_path"
-                      (change)="onTaskFieldChanged(task[0], 'destination_path', $event)" />
+                      (keydown)="onTaskFieldInput()" (change)="onTaskFieldChanged(task[0], 'destination_path', $event)" />
                   </info-block>
                 </div>
                 }

@@ -1,10 +1,13 @@
-import { Component, Input, Output, EventEmitter, HostListener, OnChanges, Renderer2, Inject, WritableSignal, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, HostListener, OnChanges, Renderer2, Inject, WritableSignal, signal, inject } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
+import { invoke } from '@tauri-apps/api/core';
 import { ExpandableComponent } from '../shared/expandable/expandable.component';
 import { InfoBlockComponent } from '../shared/info-block/info-block.component';
 import { Step, Task, Tasks } from '../models/scenario.model';
 import { ExpandableTitleComponent } from '../shared/expandable/expandable-title/expandable-title.component';
 import { ComponentColorVariant } from '../models/enums';
+import { ConfigDirtyService } from '../services/config-dirty.service';
+import { TooltipComponent } from '../shared/tooltip/tooltip.component';
 
 interface TabConfig {
   id: string;
@@ -17,7 +20,8 @@ interface TabConfig {
     CommonModule,
     ExpandableComponent,
     InfoBlockComponent,
-    ExpandableTitleComponent
+    ExpandableTitleComponent,
+    TooltipComponent
   ],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss'
@@ -35,6 +39,10 @@ export class SidebarComponent implements OnChanges {
 
   @Output() taskChanged = new EventEmitter<{ name: string; task: Task }>();
   @Output() variableChanged = new EventEmitter<{ name: string; value: string }>();
+  @Output() configDiscarded = new EventEmitter<void>();
+
+  private configDirtyService = inject(ConfigDirtyService);
+  configDirty = this.configDirtyService.isDirty;
 
   activeTab: string = 'variables';
   sidebarWidth = this.titleSize;
@@ -169,8 +177,27 @@ export class SidebarComponent implements OnChanges {
     this.taskChanged.emit({ name: taskName, task });
   }
 
+  onTaskFieldInput(): void {
+    this.configDirtyService.markDirty();
+  }
+
   onVariableChanged(name: string, event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.variableChanged.emit({ name, value });
+  }
+
+  onVariableInput(): void {
+    this.configDirtyService.markDirty();
+  }
+
+  async saveConfig(): Promise<void> {
+    await invoke('save_config');
+    this.configDirtyService.markClean();
+  }
+
+  async discardChanges(): Promise<void> {
+    await invoke('discard_config_changes');
+    this.configDirtyService.markClean();
+    this.configDiscarded.emit();
   }
 }

@@ -132,3 +132,15 @@ pub fn save_config(state: State<'_, Mutex<ScenarioAppState>>) -> Result<(), Stri
     let state = state.safe_lock();
     state.save_config()
 }
+
+#[tauri::command(async)]
+pub fn has_unsaved_config_changes(state: State<'_, Mutex<ScenarioAppState>>) -> bool {
+    let state = state.safe_lock();
+    state.has_unsaved_config_changes()
+}
+
+#[tauri::command(async)]
+pub fn discard_config_changes(state: State<'_, Mutex<ScenarioAppState>>) {
+    let mut state = state.safe_lock();
+    state.discard_config_changes();
+}

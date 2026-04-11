@@ -16,6 +16,7 @@ import { ExpandableComponent } from './shared/expandable/expandable.component';
 import { TooltipComponent } from './shared/tooltip/tooltip.component';
 import { ExpandableTitleComponent } from './shared/expandable/expandable-title/expandable-title.component';
 import { ExecutionStateService } from './services/execution-state.service';
+import { ConfigDirtyService } from './services/config-dirty.service';
 
 interface RequiredFieldsForm {
   [key: string]: FormControl<string | null>;
@@ -76,6 +77,7 @@ export class AppComponent implements OnDestroy {
   Object = Object;
 
   private executionStateService = inject(ExecutionStateService);
+  private configDirtyService = inject(ConfigDirtyService);
 
   scenarioConfigPath = new FormControl<string>('', {
     asyncValidators: this.configPathValidator(),
@@ -346,16 +348,28 @@ export class AppComponent implements OnDestroy {
 
   async onTaskChanged(event: { name: string; task: Task }): Promise<void> {
     await invoke('update_task', { taskName: event.name, task: event.task });
+    this.configDirtyService.markDirty();
     await this.getTasks();
     await this.getSteps();
   }
 
   async onVariableChanged(event: { name: string; value: string }): Promise<void> {
     await invoke('update_defined_variable', { name: event.name, value: event.value });
+    this.configDirtyService.markDirty();
     await this.getResolvedVariables();
+  }
+
+  async onConfigDiscarded(): Promise<void> {
+    await Promise.all([
+      this.getTasks(),
+      this.getSteps(),
+      this.getRequiredVariables(),
+      this.getResolvedVariables(),
+    ]);
   }
 
   async saveConfig(): Promise<void> {
     await invoke('save_config');
+    this.configDirtyService.markClean();
   }
 }

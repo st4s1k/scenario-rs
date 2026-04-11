@@ -98,5 +98,6 @@
     </div>
   </div>
   <sidebar [resolvedVariables]="resolvedVariables" [tasks]="tasks" [steps]="steps"
-    (taskChanged)="onTaskChanged($event)" (variableChanged)="onVariableChanged($event)"></sidebar>
+    (taskChanged)="onTaskChanged($event)" (variableChanged)="onVariableChanged($event)"
+    (configDiscarded)="onConfigDiscarded()"></sidebar>
 </div>

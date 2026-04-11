@@ -51,10 +51,52 @@
   .sidebar-inner {
     display: grid;
     grid-template-columns: 1fr auto;
+    grid-template-rows: auto 1fr;
     overflow: hidden;
+
+    .action-bar {
+      grid-column: 1;
+      display: flex;
+      justify-content: flex-end;
+
+      .icon-btn {
+        display: grid;
+        position: relative;
+        place-content: center;
+        width: styles.$titlebar-height;
+        padding-top: styles.$gap-medium;
+        padding-bottom: 0;
+        transition: background-color 0.2s;
+        cursor: pointer;
+
+        i.codicon {
+          font-size: 0.875rem;
+          color: styles.$primary-color;
+        }
+
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        &:active {
+          background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        &.disabled {
+          opacity: 0.3;
+          pointer-events: none;
+        }
+
+        tooltip[arrow="top"] {
+          justify-self: center;
+          top: 100%;
+        }
+      }
+    }
 
     .content-area {
       display: grid;
+      grid-row: 2;
       opacity: 1;
       visibility: visible;
       min-width: 0;
@@ -62,7 +104,7 @@
 
       .tab-content {
         display: grid;
-        padding: styles.$gap-medium;
+        padding: styles.$gap-small styles.$gap-medium styles.$gap-medium;
         overflow: auto;
       }
     }
@@ -115,6 +157,8 @@
 
     .tabs {
       display: grid;
+      grid-row: 1 / -1;
+      grid-column: 2;
       grid-auto-rows: min-content;
       width: $collapsed-width;
       background-color: styles.$secondary-color-lighter-5;

@@ -549,6 +549,27 @@ impl ScenarioAppStateCore {
         Ok(())
     }
 
+    /// Compares the in-memory leaf config against the on-disk file to detect unsaved changes.
+    pub fn has_unsaved_config_changes(&self) -> bool {
+        let Some(leaf) = &self.leaf_config else { return false };
+        if self.config_path.is_empty() { return false };
+
+        let Ok(current_toml) = toml::to_string_pretty(leaf) else { return false };
+        let Ok(file_contents) = std::fs::read_to_string(&self.config_path) else { return false };
+        let Ok(file_leaf) = toml::from_str::<PartialScenarioConfig>(&file_contents) else { return false };
+        let Ok(normalized_file_toml) = toml::to_string_pretty(&file_leaf) else { return false };
+
+        current_toml != normalized_file_toml
+    }
+
+    /// Discards in-memory config changes by reloading from the config file on disk.
+    pub fn discard_config_changes(&mut self) {
+        if !self.config_path.is_empty() {
+            let path = self.config_path.clone();
+            self.load_config(&path);
+        }
+    }
+
     /// Serializes the leaf config to TOML and writes it to the config file.
     #[instrument(skip_all)]
     pub fn save_config(&self) -> Result<(), String> {
