@@ -648,6 +648,155 @@ impl ScenarioAppStateCore {
         info!("Config saved to {}", self.config_path);
         Ok(())
     }
+
+    /// Reads the on-disk config, returning a default if the path is empty or the file can't be read/parsed.
+    fn read_disk_config(&self) -> Result<PartialScenarioConfig, String> {
+        if self.config_path.is_empty() {
+            return Err("No config path set".to_string());
+        }
+        let contents = std::fs::read_to_string(&self.config_path)
+            .map_err(|e| format!("Failed to read config file: {}", e))?;
+        toml::from_str::<PartialScenarioConfig>(&contents)
+            .map_err(|e| format!("Failed to parse config file: {}", e))
+    }
+
+    /// Persists a single task's current in-memory value to the on-disk config file.
+    #[instrument(skip_all)]
+    pub fn save_task_config(&self, task_name: &str) -> Result<(), String> {
+        let leaf = self.leaf_config.as_ref().ok_or("No leaf config loaded")?;
+        let mut disk = self.read_disk_config()?;
+        let leaf_tasks = leaf.tasks.as_ref();
+
+        let leaf_remote = leaf_tasks.and_then(|t| t.remote_sudo.as_ref()).and_then(|m| m.get(task_name)).cloned();
+        let leaf_sftp = leaf_tasks.and_then(|t| t.sftp_copy.as_ref()).and_then(|m| m.get(task_name)).cloned();
+
+        let disk_tasks = disk.tasks.get_or_insert_with(Default::default);
+
+        match (leaf_remote, leaf_sftp) {
+            (Some(task), _) => {
+                disk_tasks.remote_sudo.get_or_insert_with(Default::default).insert(task_name.to_string(), task);
+                if let Some(sftp) = disk_tasks.sftp_copy.as_mut() { sftp.remove(task_name); }
+            }
+            (None, Some(task)) => {
+                disk_tasks.sftp_copy.get_or_insert_with(Default::default).insert(task_name.to_string(), task);
+                if let Some(remote) = disk_tasks.remote_sudo.as_mut() { remote.remove(task_name); }
+            }
+            (None, None) => {
+                if let Some(remote) = disk_tasks.remote_sudo.as_mut() { remote.remove(task_name); }
+                if let Some(sftp) = disk_tasks.sftp_copy.as_mut() { sftp.remove(task_name); }
+            }
+        }
+
+        let toml_string = toml::to_string_pretty(&disk)
+            .map_err(|e| format!("Failed to serialize config: {}", e))?;
+        std::fs::write(&self.config_path, toml_string)
+            .map_err(|e| format!("Failed to write config file: {}", e))?;
+        info!("Task '{}' saved", task_name);
+        Ok(())
+    }
+
+    /// Reverts a single task's in-memory value to match the on-disk config file.
+    #[instrument(skip_all)]
+    pub fn discard_task_config(&mut self, task_name: &str) -> Result<(), String> {
+        let disk = self.read_disk_config()?;
+        let scenario = self.scenario.as_mut().ok_or("No scenario loaded")?;
+        let leaf = self.leaf_config.as_mut().ok_or("No leaf config loaded")?;
+
+        let disk_tasks = disk.tasks.as_ref();
+        let disk_remote = disk_tasks.and_then(|t| t.remote_sudo.as_ref()).and_then(|m| m.get(task_name)).cloned();
+        let disk_sftp = disk_tasks.and_then(|t| t.sftp_copy.as_ref()).and_then(|m| m.get(task_name)).cloned();
+
+        let leaf_tasks = leaf.tasks.get_or_insert_with(Default::default);
+
+        match (disk_remote, disk_sftp) {
+            (Some(cfg), _) => {
+                let task = Task::RemoteSudo {
+                    description: cfg.description.clone().unwrap_or_default(),
+                    error_message: cfg.error_message.clone().unwrap_or_default(),
+                    remote_sudo: scenario_rs::scenario::remote_sudo::RemoteSudo::new(cfg.command.clone()),
+                };
+                scenario.tasks_mut().insert(task_name.to_string(), task);
+                leaf_tasks.remote_sudo.get_or_insert_with(Default::default).insert(task_name.to_string(), cfg);
+                if let Some(sftp) = leaf_tasks.sftp_copy.as_mut() { sftp.remove(task_name); }
+            }
+            (None, Some(cfg)) => {
+                let task = Task::SftpCopy {
+                    description: cfg.description.clone().unwrap_or_default(),
+                    error_message: cfg.error_message.clone().unwrap_or_default(),
+                    sftp_copy: scenario_rs::scenario::sftp_copy::SftpCopy {
+                        source_path: cfg.source.clone(),
+                        destination_path: cfg.destination.clone(),
+                    },
+                };
+                scenario.tasks_mut().insert(task_name.to_string(), task);
+                leaf_tasks.sftp_copy.get_or_insert_with(Default::default).insert(task_name.to_string(), cfg);
+                if let Some(remote) = leaf_tasks.remote_sudo.as_mut() { remote.remove(task_name); }
+            }
+            (None, None) => {
+                scenario.tasks_mut().remove(task_name);
+                if let Some(remote) = leaf_tasks.remote_sudo.as_mut() { remote.remove(task_name); }
+                if let Some(sftp) = leaf_tasks.sftp_copy.as_mut() { sftp.remove(task_name); }
+            }
+        }
+        info!("Task '{}' discarded", task_name);
+        Ok(())
+    }
+
+    /// Persists a single defined variable's current in-memory value to the on-disk config file.
+    #[instrument(skip_all)]
+    pub fn save_variable_config(&self, name: &str) -> Result<(), String> {
+        let leaf = self.leaf_config.as_ref().ok_or("No leaf config loaded")?;
+        let mut disk = self.read_disk_config()?;
+
+        let leaf_value = leaf.variables.as_ref()
+            .and_then(|v| v.defined.as_ref())
+            .and_then(|d| d.get(name))
+            .cloned();
+
+        let disk_defined = disk.variables.get_or_insert_with(Default::default)
+            .defined.get_or_insert_with(Default::default);
+
+        match leaf_value {
+            Some(value) => { disk_defined.insert(name.to_string(), value); }
+            None => { disk_defined.remove(name); }
+        }
+
+        let toml_string = toml::to_string_pretty(&disk)
+            .map_err(|e| format!("Failed to serialize config: {}", e))?;
+        std::fs::write(&self.config_path, toml_string)
+            .map_err(|e| format!("Failed to write config file: {}", e))?;
+        info!("Variable '{}' saved", name);
+        Ok(())
+    }
+
+    /// Reverts a single defined variable's in-memory value to match the on-disk config file.
+    #[instrument(skip_all)]
+    pub fn discard_variable_config(&mut self, name: &str) -> Result<(), String> {
+        let disk = self.read_disk_config()?;
+        let scenario = self.scenario.as_mut().ok_or("No scenario loaded")?;
+        let leaf = self.leaf_config.as_mut().ok_or("No leaf config loaded")?;
+
+        let disk_value = disk.variables.as_ref()
+            .and_then(|v| v.defined.as_ref())
+            .and_then(|d| d.get(name))
+            .cloned();
+
+        let leaf_defined = leaf.variables.get_or_insert_with(Default::default)
+            .defined.get_or_insert_with(Default::default);
+
+        match disk_value {
+            Some(value) => {
+                scenario.variables_mut().defined_mut().insert(name.to_string(), value.clone());
+                leaf_defined.insert(name.to_string(), value);
+            }
+            None => {
+                scenario.variables_mut().defined_mut().remove(name);
+                leaf_defined.remove(name);
+            }
+        }
+        info!("Variable '{}' discarded", name);
+        Ok(())
+    }
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -2082,5 +2231,195 @@ mod tests {
         // Then
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("No config path set"));
+    }
+
+    // ── save_task_config / discard_task_config / save_variable_config / discard_variable_config ──
+
+    #[test]
+    fn test_save_task_config_persists_only_that_task() {
+        // Given: fixture has `my_task`. Modify it in memory and also add a dirty variable.
+        let (mut core, _dir) = test_core_loaded_from_file();
+        core.update_task(
+            "my_task".to_string(),
+            TaskDTO {
+                description: "updated".to_string(),
+                error_message: String::new(),
+                task_type: "RemoteSudo".to_string(),
+                command: Some("echo new".to_string()),
+                source_path: None,
+                destination_path: None,
+            },
+        )
+        .unwrap();
+        core.update_defined_variable("vv".to_string(), "val".to_string()).unwrap();
+
+        // When
+        core.save_task_config("my_task").unwrap();
+
+        // Then: diff shows task is clean, variable still dirty
+        let diff = core.get_config_diff();
+        assert!(!diff.modified_tasks.contains(&"my_task".to_string()));
+        assert!(diff.modified_variables.contains(&"vv".to_string()));
+    }
+
+    #[test]
+    fn test_save_task_config_removes_task_missing_in_leaf() {
+        // Given: pretend leaf has no tasks for this name — disk still has it
+        let (mut core, _dir) = test_core_loaded_from_file();
+        if let Some(leaf) = core.leaf_config.as_mut() {
+            if let Some(tasks) = leaf.tasks.as_mut() {
+                if let Some(rs) = tasks.remote_sudo.as_mut() { rs.remove("my_task"); }
+            }
+        }
+
+        // When
+        core.save_task_config("my_task").unwrap();
+
+        // Then: disk no longer has the task
+        let disk = core.read_disk_config().unwrap();
+        let remote = disk.tasks.as_ref().and_then(|t| t.remote_sudo.as_ref());
+        assert!(remote.map_or(true, |m| !m.contains_key("my_task")));
+    }
+
+    #[test]
+    fn test_save_task_config_errors_without_leaf() {
+        let core = test_core_empty();
+        let err = core.save_task_config("x").unwrap_err();
+        assert!(err.contains("No leaf config loaded"));
+    }
+
+    #[test]
+    fn test_save_task_config_errors_without_path() {
+        let mut core = test_core_empty();
+        core.leaf_config = Some(Default::default());
+        let err = core.save_task_config("x").unwrap_err();
+        assert!(err.contains("No config path set"));
+    }
+
+    #[test]
+    fn test_discard_task_config_restores_disk_value() {
+        // Given
+        let (mut core, _dir) = test_core_loaded_from_file();
+        core.update_task(
+            "my_task".to_string(),
+            TaskDTO {
+                description: "tmp".to_string(),
+                error_message: String::new(),
+                task_type: "RemoteSudo".to_string(),
+                command: Some("echo changed".to_string()),
+                source_path: None,
+                destination_path: None,
+            },
+        )
+        .unwrap();
+        assert!(core.get_config_diff().modified_tasks.contains(&"my_task".to_string()));
+
+        // When
+        core.discard_task_config("my_task").unwrap();
+
+        // Then
+        assert!(!core.get_config_diff().modified_tasks.contains(&"my_task".to_string()));
+    }
+
+    #[test]
+    fn test_discard_task_config_removes_task_missing_on_disk() {
+        // Given: add a new task in memory that doesn't exist on disk
+        let (mut core, _dir) = test_core_loaded_from_file();
+        core.update_task(
+            "ghost".to_string(),
+            TaskDTO {
+                description: "g".to_string(),
+                error_message: String::new(),
+                task_type: "RemoteSudo".to_string(),
+                command: Some("echo g".to_string()),
+                source_path: None,
+                destination_path: None,
+            },
+        )
+        .unwrap();
+
+        // When
+        core.discard_task_config("ghost").unwrap();
+
+        // Then
+        assert!(!core.scenario.as_ref().unwrap().tasks().contains_key("ghost"));
+    }
+
+    #[test]
+    fn test_discard_task_config_errors_without_path() {
+        let mut core = test_core_empty();
+        let err = core.discard_task_config("x").unwrap_err();
+        assert!(err.contains("No config path set"));
+    }
+
+    #[test]
+    fn test_save_variable_config_persists_only_that_variable() {
+        let (mut core, _dir) = test_core_loaded_from_file();
+        core.update_defined_variable("a".to_string(), "1".to_string()).unwrap();
+        core.update_defined_variable("b".to_string(), "2".to_string()).unwrap();
+
+        core.save_variable_config("a").unwrap();
+
+        let diff = core.get_config_diff();
+        assert!(!diff.modified_variables.contains(&"a".to_string()));
+        assert!(diff.modified_variables.contains(&"b".to_string()));
+    }
+
+    #[test]
+    fn test_save_variable_config_removes_missing_variable() {
+        let (mut core, _dir) = test_core_loaded_from_file();
+        core.update_defined_variable("a".to_string(), "1".to_string()).unwrap();
+        core.save_variable_config("a").unwrap();
+        // Remove from leaf, then save — should drop from disk
+        if let Some(v) = core.leaf_config.as_mut().and_then(|c| c.variables.as_mut()).and_then(|v| v.defined.as_mut()) {
+            v.remove("a");
+        }
+        core.save_variable_config("a").unwrap();
+
+        let disk = core.read_disk_config().unwrap();
+        let defined = disk.variables.as_ref().and_then(|v| v.defined.as_ref());
+        assert!(defined.map_or(true, |d| !d.contains_key("a")));
+    }
+
+    #[test]
+    fn test_save_variable_config_errors_without_leaf() {
+        let core = test_core_empty();
+        let err = core.save_variable_config("x").unwrap_err();
+        assert!(err.contains("No leaf config loaded"));
+    }
+
+    #[test]
+    fn test_discard_variable_config_restores_disk_value() {
+        let (mut core, _dir) = test_core_loaded_from_file();
+        core.update_defined_variable("new".to_string(), "v".to_string()).unwrap();
+        assert!(core.get_config_diff().modified_variables.contains(&"new".to_string()));
+
+        core.discard_variable_config("new").unwrap();
+
+        assert!(!core.get_config_diff().modified_variables.contains(&"new".to_string()));
+        assert!(core.scenario.as_ref().unwrap().variables().defined().get("new").is_none());
+    }
+
+    #[test]
+    fn test_discard_variable_config_errors_without_path() {
+        let mut core = test_core_empty();
+        let err = core.discard_variable_config("x").unwrap_err();
+        assert!(err.contains("No config path set"));
+    }
+
+    #[test]
+    fn test_read_disk_config_errors_on_missing_file() {
+        let mut core = test_core_empty();
+        core.config_path = "/nonexistent/file.toml".to_string();
+        let err = core.read_disk_config().unwrap_err();
+        assert!(err.contains("Failed to read"));
+    }
+
+    #[test]
+    fn test_read_disk_config_errors_on_bad_toml() {
+        let (mut core, _dir) = test_core_loaded_from_file();
+        std::fs::write(&core.config_path, "][not toml").unwrap();
+        let err = core.read_disk_config().unwrap_err();
+        assert!(err.contains("Failed to parse"));
     }
 }

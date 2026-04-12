@@ -144,3 +144,27 @@ pub fn discard_config_changes(state: State<'_, Mutex<ScenarioAppState>>) {
     let mut state = state.safe_lock();
     state.discard_config_changes();
 }
+
+#[tauri::command(async)]
+pub fn save_task_config(state: State<'_, Mutex<ScenarioAppState>>, task_name: String) -> Result<(), String> {
+    let state = state.safe_lock();
+    state.save_task_config(&task_name)
+}
+
+#[tauri::command(async)]
+pub fn discard_task_config(state: State<'_, Mutex<ScenarioAppState>>, task_name: String) -> Result<(), String> {
+    let mut state = state.safe_lock();
+    state.discard_task_config(&task_name)
+}
+
+#[tauri::command(async)]
+pub fn save_variable_config(state: State<'_, Mutex<ScenarioAppState>>, name: String) -> Result<(), String> {
+    let state = state.safe_lock();
+    state.save_variable_config(&name)
+}
+
+#[tauri::command(async)]
+pub fn discard_variable_config(state: State<'_, Mutex<ScenarioAppState>>, name: String) -> Result<(), String> {
+    let mut state = state.safe_lock();
+    state.discard_variable_config(&name)
+}
