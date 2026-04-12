@@ -862,7 +862,7 @@ mod tests {
         let subscriber = Registry::default().with(layer);
         let _guard = subscriber::set_default(subscriber);
 
-        // When & Then — on_new_span is invoked when a span is created
+        // When & Then
         let _span = span!(
             Level::DEBUG,
             "sftp_copy",
@@ -879,7 +879,7 @@ mod tests {
         let subscriber = Registry::default().with(layer);
         let _guard = subscriber::set_default(subscriber);
 
-        // When — on_record is invoked when span fields are recorded dynamically
+        // When
         let span = span!(
             Level::DEBUG,
             "sftp_copy",
@@ -898,7 +898,6 @@ mod tests {
         let subscriber = Registry::default().with(layer);
         let _guard = subscriber::set_default(subscriber);
 
-        // Create a span with sftp fields (simulating the #[instrument] span)
         let span = span!(
             Level::DEBUG,
             "sftp_copy",
@@ -907,8 +906,7 @@ mod tests {
         );
         let _entered = span.enter();
 
-        // When — emit SftpCopyCompleted inside the span;
-        // source/destination come from span context via merge
+        // When
         debug!(
             scenario.event = ScenarioEvent::SftpCopyCompleted.as_str(),
             sftp_copy.elapsed_ms = 1500u64,
