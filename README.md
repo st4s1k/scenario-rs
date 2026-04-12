@@ -143,11 +143,11 @@ The `env:` modifier requires a target; the others are zero-input and generate da
 
 #### 3. Time & Uniqueness Modifiers
 
-Zero-input modifiers evaluated when the command is parsed — ideal for backups, logs, and temp files.
+Modifier placeholders are evaluated per occurrence. If you want the same generated value reused across multiple places, assign it once in a required or defined variable and reference that variable instead.
 
 | Modifier | Description | Example |
 |---|---|---|
-| `{uuid}` | Random v4 UUID (unique per occurrence) | `f47ac10b-58cc-4372-a567-0e02b2c3d479` |
+| `{uuid}` | Random v4 UUID | `f47ac10b-58cc-4372-a567-0e02b2c3d479` |
 | `{now}` | Current date-time (ISO 8601) | `2026-04-11T14:53:34+02:00` |
 | `{now:YYYY-MM-DD}` | Custom date format | `2026-04-11` |
 | `{now:HHmmss}` | Custom time format | `145334` |

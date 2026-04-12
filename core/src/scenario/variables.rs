@@ -92,8 +92,7 @@ impl Variables {
         Ok(output)
     }
 
-    /// Returns a map of built-in variables that produce the same value for every
-    /// occurrence within a single resolution pass (`hostname`, `os`, `now`).
+    /// Returns built-in variables that can be treated like stable plain variables.
     fn builtin_variables() -> HashMap<&'static str, String> {
         let mut builtins = HashMap::new();
         builtins.insert(
@@ -104,9 +103,37 @@ impl Variables {
                 .unwrap_or_default(),
         );
         builtins.insert("os", env::consts::OS.to_string());
-        // {now} with default ISO 8601 format
-        builtins.insert("now", Local::now().format("%Y-%m-%dT%H:%M:%S%:z").to_string());
         builtins
+    }
+
+    /// Resolves zero-input built-ins like `{now}` per occurrence.
+    ///
+    /// User-defined variables keep precedence: if `variables` already contains one of these names,
+    /// the placeholder is left unchanged for the regular variable-substitution loop.
+    fn resolve_zero_input_placeholders(input: &str, variables: &HashMap<&str, &str>) -> String {
+        let zero_input_regex = Regex::new(r"\{(hostname|os|now)\}")
+            .expect("zero_input_regex should be a valid regex");
+
+        zero_input_regex
+            .replace_all(input, |captures: &regex::Captures| {
+                let placeholder_name = captures.get(1).unwrap().as_str();
+
+                if variables.contains_key(placeholder_name) {
+                    captures.get(0).unwrap().as_str().to_string()
+                } else {
+                    match placeholder_name {
+                        "hostname" => hostname::get()
+                            .ok()
+                            .and_then(|h| h.into_string().ok())
+                            .unwrap_or_default(),
+                        "os" => env::consts::OS.to_string(),
+                        "now" => Local::now().format("%Y-%m-%dT%H:%M:%S%:z").to_string(),
+                        #[cfg(not(tarpaulin_include))]
+                        _ => captures.get(0).unwrap().as_str().to_string(),
+                    }
+                }
+            })
+            .into_owned()
     }
 
     /// Replaces every `{uuid}` occurrence with a freshly generated UUID v4,
@@ -155,26 +182,21 @@ impl Variables {
         let now_regex = Regex::new(r"\{now:([^}]+)\}")
             .expect("now_regex should be a valid regex");
 
-        let now = Local::now();
-        let mut output = input.to_string();
+        now_regex
+            .replace_all(input, |captures: &regex::Captures| {
+                let format_arg = captures.get(1).unwrap().as_str();
+                let now = Local::now();
 
-        for captures in now_regex.captures_iter(input) {
-            let full_match = captures.get(0).unwrap().as_str();
-            let format_arg = captures.get(1).unwrap().as_str();
-
-            let value = match format_arg {
-                "epoch" => now.timestamp().to_string(),
-                "epoch_ms" => now.timestamp_millis().to_string(),
-                _ => {
-                    let chrono_fmt = Self::translate_datetime_format(format_arg);
-                    now.format(&chrono_fmt).to_string()
+                match format_arg {
+                    "epoch" => now.timestamp().to_string(),
+                    "epoch_ms" => now.timestamp_millis().to_string(),
+                    _ => {
+                        let chrono_fmt = Self::translate_datetime_format(format_arg);
+                        now.format(&chrono_fmt).to_string()
+                    }
                 }
-            };
-
-            output = output.replace(full_match, &value);
-        }
-
-        output
+            })
+            .into_owned()
     }
 
     /// Resolves `{modifier:var}` patterns by looking up `var` in the provided variables map
@@ -187,58 +209,53 @@ impl Variables {
         let modifier_regex = Regex::new(r"\{(basename|stem|dir|ext|abspath|uppercase|lowercase|base64|trim):([^}]+)\}")
             .expect("modifier_regex should be a valid regex");
 
-        let mut output = input.to_string();
+        modifier_regex
+            .replace_all(input, |captures: &regex::Captures| {
+                let modifier = captures.get(1).unwrap().as_str();
+                let var_name = captures.get(2).unwrap().as_str();
 
-        for captures in modifier_regex.captures_iter(input) {
-            let full_match = captures.get(0).unwrap().as_str();
-            let modifier = captures.get(1).unwrap().as_str();
-            let var_name = captures.get(2).unwrap().as_str();
-
-            if let Some(&var_value) = variables.get(var_name) {
-                let result = match modifier {
-                    "basename" => Path::new(var_value)
-                        .file_name()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or(var_value)
-                        .to_string(),
-                    "stem" => Path::new(var_value)
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or(var_value)
-                        .to_string(),
-                    "dir" => Path::new(var_value)
-                        .parent()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or("")
-                        .to_string(),
-                    "ext" => Path::new(var_value)
-                        .extension()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or("")
-                        .to_string(),
-                    "abspath" => std::fs::canonicalize(var_value)
-                        .ok()
-                        .and_then(|p| p.to_str().map(|s| s.to_string()))
-                        .unwrap_or_else(|| {
-                            env::current_dir()
-                                .ok()
-                                .map(|cwd| cwd.join(var_value).to_string_lossy().to_string())
-                                .unwrap_or_else(|| var_value.to_string())
-                        }),
-                    "uppercase" => var_value.to_uppercase(),
-                    "lowercase" => var_value.to_lowercase(),
-                    "base64" => BASE64.encode(var_value),
-                    "trim" => var_value.trim().to_string(),
-                    // The modifier regex only matches known modifiers, so this arm
-                    // is structurally required by Rust but never reachable at runtime.
-                    #[cfg(not(tarpaulin_include))]
-                    _ => continue,
-                };
-                output = output.replace(full_match, &result);
-            }
-        }
-
-        output
+                variables.get(var_name).map_or_else(
+                    || captures.get(0).unwrap().as_str().to_string(),
+                    |&var_value| match modifier {
+                        "basename" => Path::new(var_value)
+                            .file_name()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or(var_value)
+                            .to_string(),
+                        "stem" => Path::new(var_value)
+                            .file_stem()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or(var_value)
+                            .to_string(),
+                        "dir" => Path::new(var_value)
+                            .parent()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("")
+                            .to_string(),
+                        "ext" => Path::new(var_value)
+                            .extension()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("")
+                            .to_string(),
+                        "abspath" => std::fs::canonicalize(var_value)
+                            .ok()
+                            .and_then(|p| p.to_str().map(|s| s.to_string()))
+                            .unwrap_or_else(|| {
+                                env::current_dir()
+                                    .ok()
+                                    .map(|cwd| cwd.join(var_value).to_string_lossy().to_string())
+                                    .unwrap_or_else(|| var_value.to_string())
+                            }),
+                        "uppercase" => var_value.to_uppercase(),
+                        "lowercase" => var_value.to_lowercase(),
+                        "base64" => BASE64.encode(var_value),
+                        "trim" => var_value.trim().to_string(),
+                        #[cfg(not(tarpaulin_include))]
+                        _ => captures.get(0).unwrap().as_str().to_string(),
+                    },
+                )
+            })
+            .into_owned()
     }
 
     /// Replaces `{variable_name}` placeholders in the input string, supporting nested resolution.
@@ -272,7 +289,7 @@ impl Variables {
             .map(|(key, value)| (*key, *value))
             .collect::<HashMap<&str, &str>>();
 
-        // Inject built-in zero-input variables (user variables take precedence)
+        // Inject stable built-in zero-input variables (user variables take precedence)
         let builtins = Self::builtin_variables();
         let builtin_refs: HashMap<&str, &str> = builtins
             .iter()
@@ -299,6 +316,11 @@ impl Variables {
             // Resolve {now:format} that appeared after variable expansion
             if output.has_placeholders() {
                 output = Self::resolve_now_placeholders(&output);
+            }
+
+            // Resolve zero-input built-ins like {now} after variable expansion.
+            if output.has_placeholders() {
+                output = Self::resolve_zero_input_placeholders(&output, &variables);
             }
 
             if !output.has_placeholders() {
@@ -999,6 +1021,20 @@ mod tests {
     }
 
     #[test]
+    fn test_builtin_now_resolved_per_occurrence() {
+        let variables = Variables::default();
+
+        let result = variables.resolve_placeholders("{now}|{now}");
+
+        assert!(result.is_ok());
+        let resolved = result.unwrap();
+        let parts = resolved.split('|').collect::<Vec<_>>();
+        assert_eq!(parts.len(), 2);
+        assert!(parts.iter().all(|part| part.len() >= 25));
+        assert!(parts.iter().all(|part| part.chars().nth(10) == Some('T')));
+    }
+
+    #[test]
     fn test_builtin_now_epoch() {
         // Given
         let variables = Variables::default();
@@ -1044,6 +1080,21 @@ mod tests {
     }
 
     #[test]
+    fn test_builtin_now_custom_format_resolved_per_occurrence() {
+        let variables = Variables::default();
+
+        let result = variables.resolve_placeholders("{now:YYYY-MM-DD}|{now:YYYY-MM-DD}");
+
+        assert!(result.is_ok());
+        let resolved = result.unwrap();
+        let parts = resolved.split('|').collect::<Vec<_>>();
+        assert_eq!(parts.len(), 2);
+        assert!(parts.iter().all(|part| part.len() == 10));
+        assert!(parts.iter().all(|part| part.chars().nth(4) == Some('-')));
+        assert!(parts.iter().all(|part| part.chars().nth(7) == Some('-')));
+    }
+
+    #[test]
     fn test_builtin_now_time_format() {
         // Given
         let variables = Variables::default();
@@ -1069,6 +1120,17 @@ mod tests {
 
         let result = variables.resolve_placeholders("{hostname}");
         assert_eq!(result.unwrap(), "custom-host");
+    }
+
+    #[test]
+    fn test_user_variable_overrides_builtin_now() {
+        let mut variables = Variables::default();
+        variables
+            .defined_mut()
+            .insert("now".to_string(), "fixed-time".to_string());
+
+        let result = variables.resolve_placeholders("{now}");
+        assert_eq!(result.unwrap(), "fixed-time");
     }
 
     // --- Combined modifier with other placeholders ---
@@ -1101,6 +1163,17 @@ mod tests {
         let result =
             variables.resolve_placeholders("{basename:file}-{uppercase:svc}");
         assert_eq!(result.unwrap(), "app.tar.gz-MY_SERVICE");
+    }
+
+    #[test]
+    fn test_repeated_modifier_occurrences_are_each_resolved() {
+        let mut variables = Variables::default();
+        variables
+            .defined_mut()
+            .insert("file".to_string(), "/usr/src/app.tar.gz".to_string());
+
+        let result = variables.resolve_placeholders("{basename:file}|{basename:file}");
+        assert_eq!(result.unwrap(), "app.tar.gz|app.tar.gz");
     }
 
     #[test]
