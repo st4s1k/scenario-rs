@@ -109,6 +109,11 @@
       }
     }
 
+    .modified-marker {
+      color: styles.$primary-color;
+      margin-right: styles.$gap-small;
+    }
+
     .variables {
       display: grid;
       grid-auto-flow: row;

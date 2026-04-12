@@ -397,12 +397,14 @@ describe('SidebarComponent', () => {
   });
 
   describe('onTaskFieldInput', () => {
-    it('should mark config dirty', () => {
+    it('should mark config dirty and tag the specific task', () => {
       // When
       component.onTaskFieldInput('deploy');
 
       // Then
       expect(component.configDirty()).toBe(true);
+      expect(component.isTaskModified('deploy')).toBe(true);
+      expect(component.isTaskModified('other')).toBe(false);
     });
   });
 
@@ -421,12 +423,14 @@ describe('SidebarComponent', () => {
   });
 
   describe('onVariableInput', () => {
-    it('should mark config dirty', () => {
+    it('should mark config dirty and tag the specific variable', () => {
       // When
       component.onVariableInput('host');
 
       // Then
       expect(component.configDirty()).toBe(true);
+      expect(component.isVariableModified('host')).toBe(true);
+      expect(component.isVariableModified('other')).toBe(false);
     });
   });
 

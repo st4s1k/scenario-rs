@@ -44,6 +44,9 @@ export class SidebarComponent implements OnChanges {
   private configDirtyService = inject(ConfigDirtyService);
   configDirty = this.configDirtyService.isDirty;
 
+  isTaskModified = (name: string): boolean => this.configDirtyService.isTaskModified(name);
+  isVariableModified = (name: string): boolean => this.configDirtyService.isVariableModified(name);
+
   activeTab: string = 'variables';
   sidebarWidth = this.titleSize;
   isResizing = false;

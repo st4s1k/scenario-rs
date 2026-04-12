@@ -22,7 +22,7 @@
         <div class="variables">
           @for (variable of Object.entries(resolvedVariables); track variable[0]) {
           <div class="variable">
-            <label for="sidebar-var-{{variable[0]}}">{{variable[0]}}</label>
+            <label for="sidebar-var-{{variable[0]}}">@if (isVariableModified(variable[0])) {<span class="modified-marker">*</span>}{{variable[0]}}</label>
             <input id="sidebar-var-{{variable[0]}}" class="text-field" type="text" [value]="variable[1]"
               (keydown)="onVariableInput(variable[0])" (change)="onVariableChanged(variable[0], $event)" />
           </div>
@@ -39,6 +39,7 @@
           <expandable [(expanded)]="taskExpandedMap[task[0]]" [showSeparator]="$index > 0"
             [separatorVariant]="separatorVariant">
             <expandable-title>
+              @if (isTaskModified(task[0])) {<div class="modified-marker">*</div>}
               <div>{{task[1].description}}</div>
             </expandable-title>
             <div class="task">
