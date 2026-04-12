@@ -22,7 +22,21 @@
         <div class="variables">
           @for (variable of Object.entries(resolvedVariables); track variable[0]) {
           <div class="variable">
-            <label for="sidebar-var-{{variable[0]}}">@if (isVariableModified(variable[0])) {<span class="modified-marker">*</span>}{{variable[0]}}</label>
+            <div class="variable-label-row">
+              <label for="sidebar-var-{{variable[0]}}">@if (isVariableModified(variable[0])) {<span class="modified-marker">*</span>}{{variable[0]}}</label>
+              @if (isVariableModified(variable[0])) {
+              <div class="item-actions">
+                <div class="icon-btn" (click)="discardVariable(variable[0], $event)">
+                  <i class="codicon codicon-discard"></i>
+                  <tooltip text="Discard changes" arrow="top"></tooltip>
+                </div>
+                <div class="icon-btn" (click)="saveVariable(variable[0], $event)">
+                  <i class="codicon codicon-check"></i>
+                  <tooltip text="Save to file" arrow="top"></tooltip>
+                </div>
+              </div>
+              }
+            </div>
             <input id="sidebar-var-{{variable[0]}}" class="text-field" type="text" [value]="variable[1]"
               (keydown)="onVariableInput(variable[0])" (change)="onVariableChanged(variable[0], $event)" />
           </div>
@@ -41,6 +55,18 @@
             <expandable-title>
               @if (isTaskModified(task[0])) {<div class="modified-marker">*</div>}
               <div>{{task[1].description}}</div>
+              @if (isTaskModified(task[0])) {
+              <div class="item-actions">
+                <div class="icon-btn" (click)="discardTask(task[0], $event)">
+                  <i class="codicon codicon-discard"></i>
+                  <tooltip text="Discard changes" arrow="top"></tooltip>
+                </div>
+                <div class="icon-btn" (click)="saveTask(task[0], $event)">
+                  <i class="codicon codicon-check"></i>
+                  <tooltip text="Save to file" arrow="top"></tooltip>
+                </div>
+              </div>
+              }
             </expandable-title>
             <div class="task">
               <info-block [label]="task[1].task_type" variant="secondary">

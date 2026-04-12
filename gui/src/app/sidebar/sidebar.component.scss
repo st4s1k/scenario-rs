@@ -66,20 +66,14 @@
         width: styles.$titlebar-height;
         padding-top: styles.$gap-medium;
         padding-bottom: 0;
-        transition: background-color 0.2s;
-        cursor: pointer;
-
         i.codicon {
           font-size: 0.875rem;
           color: styles.$primary-color;
+          transition: color 0.2s;
         }
 
-        &:hover {
-          background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        &:active {
-          background-color: rgba(255, 255, 255, 0.2);
+        &:hover i.codicon {
+          color: styles.$primary-color-lighter-40;
         }
 
         &.disabled {
@@ -113,6 +107,41 @@
       color: styles.$primary-color;
       margin-right: styles.$gap-small;
     }
+
+    .item-actions {
+      display: flex;
+      margin-left: auto;
+      gap: styles.$gap-small;
+
+      .icon-btn {
+        display: grid;
+        position: relative;
+        place-content: center;
+        padding: 0 styles.$gap-small;
+        i.codicon {
+          font-size: 0.875rem;
+          color: styles.$primary-color;
+          transition: color 0.2s;
+        }
+
+        &:hover i.codicon {
+          color: styles.$primary-color-lighter-40;
+        }
+
+        tooltip[arrow="top"] {
+          justify-self: center;
+          top: 100%;
+        }
+      }
+    }
+
+    .variable-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: styles.$gap-small;
+    }
+
 
     .variables {
       display: grid;

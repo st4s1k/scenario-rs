@@ -13,6 +13,11 @@ describe('SidebarComponent', () => {
     tauri = setupTauriMock({
       'save_config': undefined,
       'discard_config_changes': undefined,
+      'save_task_config': undefined,
+      'discard_task_config': undefined,
+      'save_variable_config': undefined,
+      'discard_variable_config': undefined,
+      'get_config_diff': { modified_tasks: [], modified_variables: [] },
     });
     TestBed.configureTestingModule({});
     mockRenderer = jasmine.createSpyObj('Renderer2', ['addClass', 'removeClass']);
@@ -460,6 +465,79 @@ describe('SidebarComponent', () => {
       // Then
       tauri.expectInvoked('discard_config_changes');
       expect(component.configDirty()).toBe(false);
+      expect(component.configDiscarded.emit).toHaveBeenCalled();
+    });
+  });
+
+  describe('saveTask', () => {
+    it('should stopPropagation, invoke save_task_config, and sync diff', async () => {
+      // Given
+      component.onTaskFieldInput('deploy');
+      tauri.setResponse('get_config_diff', { modified_tasks: [], modified_variables: [] });
+      const event = jasmine.createSpyObj<Event>('Event', ['stopPropagation']);
+
+      // When
+      await component.saveTask('deploy', event);
+
+      // Then
+      expect(event.stopPropagation).toHaveBeenCalled();
+      tauri.expectInvoked('save_task_config', { taskName: 'deploy' });
+      tauri.expectInvoked('get_config_diff');
+      expect(component.isTaskModified('deploy')).toBe(false);
+    });
+  });
+
+  describe('discardTask', () => {
+    it('should stopPropagation, invoke discard_task_config, sync diff, and emit configDiscarded', async () => {
+      // Given
+      component.onTaskFieldInput('deploy');
+      tauri.setResponse('get_config_diff', { modified_tasks: [], modified_variables: [] });
+      spyOn(component.configDiscarded, 'emit');
+      const event = jasmine.createSpyObj<Event>('Event', ['stopPropagation']);
+
+      // When
+      await component.discardTask('deploy', event);
+
+      // Then
+      expect(event.stopPropagation).toHaveBeenCalled();
+      tauri.expectInvoked('discard_task_config', { taskName: 'deploy' });
+      expect(component.isTaskModified('deploy')).toBe(false);
+      expect(component.configDiscarded.emit).toHaveBeenCalled();
+    });
+  });
+
+  describe('saveVariable', () => {
+    it('should stopPropagation, invoke save_variable_config, and sync diff', async () => {
+      // Given
+      component.onVariableInput('host');
+      tauri.setResponse('get_config_diff', { modified_tasks: [], modified_variables: [] });
+      const event = jasmine.createSpyObj<Event>('Event', ['stopPropagation']);
+
+      // When
+      await component.saveVariable('host', event);
+
+      // Then
+      expect(event.stopPropagation).toHaveBeenCalled();
+      tauri.expectInvoked('save_variable_config', { name: 'host' });
+      expect(component.isVariableModified('host')).toBe(false);
+    });
+  });
+
+  describe('discardVariable', () => {
+    it('should stopPropagation, invoke discard_variable_config, sync diff, and emit configDiscarded', async () => {
+      // Given
+      component.onVariableInput('host');
+      tauri.setResponse('get_config_diff', { modified_tasks: [], modified_variables: [] });
+      spyOn(component.configDiscarded, 'emit');
+      const event = jasmine.createSpyObj<Event>('Event', ['stopPropagation']);
+
+      // When
+      await component.discardVariable('host', event);
+
+      // Then
+      expect(event.stopPropagation).toHaveBeenCalled();
+      tauri.expectInvoked('discard_variable_config', { name: 'host' });
+      expect(component.isVariableModified('host')).toBe(false);
       expect(component.configDiscarded.emit).toHaveBeenCalled();
     });
   });

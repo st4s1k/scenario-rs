@@ -127,7 +127,8 @@ export class AppComponent implements OnDestroy {
         this.getRequiredVariables(),
         this.getResolvedVariables(),
         this.getTasks(),
-        this.getSteps()
+        this.getSteps(),
+        this.configDirtyService.syncFromBackend(),
       ]));
 
     this.setupFormValueChangeListener();

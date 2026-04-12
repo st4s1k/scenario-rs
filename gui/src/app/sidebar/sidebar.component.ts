@@ -203,4 +203,30 @@ export class SidebarComponent implements OnChanges {
     this.configDirtyService.markClean();
     this.configDiscarded.emit();
   }
+
+  async saveTask(name: string, event: Event): Promise<void> {
+    event.stopPropagation();
+    await invoke('save_task_config', { taskName: name });
+    await this.configDirtyService.syncFromBackend();
+  }
+
+  async discardTask(name: string, event: Event): Promise<void> {
+    event.stopPropagation();
+    await invoke('discard_task_config', { taskName: name });
+    await this.configDirtyService.syncFromBackend();
+    this.configDiscarded.emit();
+  }
+
+  async saveVariable(name: string, event: Event): Promise<void> {
+    event.stopPropagation();
+    await invoke('save_variable_config', { name });
+    await this.configDirtyService.syncFromBackend();
+  }
+
+  async discardVariable(name: string, event: Event): Promise<void> {
+    event.stopPropagation();
+    await invoke('discard_variable_config', { name });
+    await this.configDirtyService.syncFromBackend();
+    this.configDiscarded.emit();
+  }
 }

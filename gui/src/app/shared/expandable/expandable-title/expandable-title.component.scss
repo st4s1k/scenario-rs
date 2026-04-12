@@ -1,11 +1,14 @@
 @use '../../../../styles.scss';
 
 :host {
+    display: block;
+    width: 100%;
+
     .expandable-title {
-        display: grid;
-        grid-auto-flow: column;
+        display: flex;
         align-items: center;
         gap: styles.$gap-small;
+        width: 100%;
 
       .color-indicator {
         display: inline-block;

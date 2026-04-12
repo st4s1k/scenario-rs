@@ -56,7 +56,7 @@
       min-height: $title-size;
       height: $title-size;
       display: grid;
-      grid-template-columns: auto auto 1fr;
+      grid-template-columns: auto 1fr auto;
       align-items: center;
       gap: styles.$gap-small;
 
