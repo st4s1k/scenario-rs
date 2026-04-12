@@ -49,6 +49,7 @@ describe('AppComponent', () => {
       'get_steps': [],
       'execute_scenario': undefined,
       'update_required_variables': undefined,
+      'get_config_diff': { modified_tasks: [], modified_variables: [] },
     });
 
     executionStateService = jasmine.createSpyObj('ExecutionStateService', ['init', 'destroy', 'reset', 'isExecuting'], {
@@ -718,6 +719,7 @@ describe('AppComponent', () => {
 
       // Then
       tauri.expectInvoked('update_task', { taskName: 'deploy', task });
+      tauri.expectInvoked('get_config_diff');
       tauri.expectInvoked('get_tasks');
       tauri.expectInvoked('get_steps');
     });
@@ -733,6 +735,7 @@ describe('AppComponent', () => {
 
       // Then
       tauri.expectInvoked('update_defined_variable', { name: 'host', value: 'new-server' });
+      tauri.expectInvoked('get_config_diff');
       tauri.expectInvoked('get_resolved_variables');
     });
   });

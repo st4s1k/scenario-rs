@@ -2,6 +2,9 @@ use crate::trace::{self, AppEvent, FrontendEventHandler};
 use scenario_rs::{
     config::scenario::{PartialScenarioConfig, ScenarioConfig},
     config::task::{RemoteSudoTaskConfig, SftpCopyTaskConfig},
+    config::tasks::TasksConfig,
+    config::variables::PartialVariablesConfig,
+    config::variables::defined::DefinedVariablesConfig,
     scenario::on_fail_step::OnFailStep,
     scenario::{
         step::Step,
@@ -238,6 +241,12 @@ impl From<&OnFailStep> for OnFailStepDTO {
 }
 
 /// DTO for a scenario execution step.
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct ConfigDiff {
+    pub modified_tasks: Vec<String>,
+    pub modified_variables: Vec<String>,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct StepDTO {
     index: usize,
@@ -549,17 +558,68 @@ impl ScenarioAppStateCore {
         Ok(())
     }
 
-    /// Compares the in-memory leaf config against the on-disk file to detect unsaved changes.
-    pub fn has_unsaved_config_changes(&self) -> bool {
-        let Some(leaf) = &self.leaf_config else { return false };
-        if self.config_path.is_empty() { return false };
+    /// Computes a per-item diff between the in-memory leaf config and the on-disk file.
+    /// Returns the names of modified (or added/removed) tasks and defined variables.
+    pub fn get_config_diff(&self) -> ConfigDiff {
+        let mut diff = ConfigDiff::default();
 
-        let Ok(current_toml) = toml::to_string_pretty(leaf) else { return false };
-        let Ok(file_contents) = std::fs::read_to_string(&self.config_path) else { return false };
-        let Ok(file_leaf) = toml::from_str::<PartialScenarioConfig>(&file_contents) else { return false };
-        let Ok(normalized_file_toml) = toml::to_string_pretty(&file_leaf) else { return false };
+        let Some(current) = &self.leaf_config else { return diff };
+        if self.config_path.is_empty() { return diff };
 
-        current_toml != normalized_file_toml
+        let Ok(file_contents) = std::fs::read_to_string(&self.config_path) else { return diff };
+        let Ok(disk) = toml::from_str::<PartialScenarioConfig>(&file_contents) else { return diff };
+
+        let empty_tasks = TasksConfig::default();
+        let current_tasks = current.tasks.as_ref().unwrap_or(&empty_tasks);
+        let disk_tasks = disk.tasks.as_ref().unwrap_or(&empty_tasks);
+
+        let empty_remote: HashMap<String, RemoteSudoTaskConfig> = HashMap::new();
+        let current_remote = current_tasks.remote_sudo.as_ref().unwrap_or(&empty_remote);
+        let disk_remote = disk_tasks.remote_sudo.as_ref().unwrap_or(&empty_remote);
+        for (name, task) in current_remote {
+            if disk_remote.get(name) != Some(task) {
+                diff.modified_tasks.push(name.clone());
+            }
+        }
+        for name in disk_remote.keys() {
+            if !current_remote.contains_key(name) && !diff.modified_tasks.contains(name) {
+                diff.modified_tasks.push(name.clone());
+            }
+        }
+
+        let empty_sftp: HashMap<String, SftpCopyTaskConfig> = HashMap::new();
+        let current_sftp = current_tasks.sftp_copy.as_ref().unwrap_or(&empty_sftp);
+        let disk_sftp = disk_tasks.sftp_copy.as_ref().unwrap_or(&empty_sftp);
+        for (name, task) in current_sftp {
+            if disk_sftp.get(name) != Some(task) {
+                diff.modified_tasks.push(name.clone());
+            }
+        }
+        for name in disk_sftp.keys() {
+            if !current_sftp.contains_key(name) && !diff.modified_tasks.contains(name) {
+                diff.modified_tasks.push(name.clone());
+            }
+        }
+
+        let empty_vars = PartialVariablesConfig::default();
+        let current_vars = current.variables.as_ref().unwrap_or(&empty_vars);
+        let disk_vars = disk.variables.as_ref().unwrap_or(&empty_vars);
+
+        let empty_defined = DefinedVariablesConfig::default();
+        let current_defined = current_vars.defined.as_ref().unwrap_or(&empty_defined);
+        let disk_defined = disk_vars.defined.as_ref().unwrap_or(&empty_defined);
+        for (name, value) in current_defined.iter() {
+            if disk_defined.get(name) != Some(value) {
+                diff.modified_variables.push(name.clone());
+            }
+        }
+        for name in disk_defined.keys() {
+            if !current_defined.contains_key(name) && !diff.modified_variables.contains(name) {
+                diff.modified_variables.push(name.clone());
+            }
+        }
+
+        diff
     }
 
     /// Discards in-memory config changes by reloading from the config file on disk.
@@ -1145,8 +1205,6 @@ mod tests {
         assert_eq!(batch.unwrap().len(), 1);
     }
 
-    // ── From<&ScenarioAppStateCore> ──────────────────────────────
-
     #[test]
     fn test_from_core_without_scenario_produces_empty_config() {
         let core = test_core_empty();
@@ -1187,8 +1245,6 @@ mod tests {
             .config_paths
             .contains_key("../../example_configs/example-scenario.toml"));
     }
-
-    // ── load_state ──────────────────────────────────────────────
 
     #[test]
     fn test_load_state_empty_storage_is_noop() {
@@ -1266,8 +1322,6 @@ mod tests {
         assert!(core.scenario.is_none());
     }
 
-    // ── save_state ──────────────────────────────────────────────
-
     #[test]
     fn test_save_state_to_empty_storage() {
         // Given
@@ -1331,8 +1385,6 @@ mod tests {
         );
     }
 
-    // ── load_config ─────────────────────────────────────────────
-
     #[test]
     fn test_load_config_valid_path() {
         let mut core = test_core_empty();
@@ -1376,8 +1428,6 @@ mod tests {
         assert!(core.scenario.is_some());
     }
 
-    // ── clear_state ─────────────────────────────────────────────
-
     #[test]
     fn test_clear_state_writes_empty_state() {
         let storage = InMemoryStateStorage::with_content("old content");
@@ -1390,8 +1440,6 @@ mod tests {
         assert!(cleared.last_config_path.is_empty());
         assert!(cleared.config_paths.is_empty());
     }
-
-    // ── get_execution_state ─────────────────────────────────────
 
     #[test]
     fn test_get_execution_state_none_when_no_manager() {
@@ -1417,8 +1465,6 @@ mod tests {
         assert_eq!(state.unwrap().status, ExecutionStatus::Running);
     }
 
-    // ── get_required_variables ──────────────────────────────────
-
     #[test]
     fn test_get_required_variables_empty_when_no_scenario() {
         let core = test_core_empty();
@@ -1437,8 +1483,6 @@ mod tests {
             assert!(!dto.label.is_empty());
         }
     }
-
-    // ── update_required_variables ───────────────────────────────
 
     #[test]
     fn test_update_required_variables_noop_when_no_scenario() {
@@ -1481,8 +1525,6 @@ mod tests {
         }
     }
 
-    // ── get_tasks ───────────────────────────────────────────────
-
     #[test]
     fn test_get_tasks_empty_when_no_scenario() {
         let core = test_core_empty();
@@ -1496,8 +1538,6 @@ mod tests {
         let tasks = core.get_tasks();
         assert!(!tasks.is_empty());
     }
-
-    // ── get_resolved_variables ──────────────────────────────────
 
     #[test]
     fn test_get_resolved_variables_empty_when_no_scenario() {
@@ -1515,8 +1555,6 @@ mod tests {
         assert!(!vars.is_empty());
     }
 
-    // ── get_steps ───────────────────────────────────────────────
-
     #[test]
     fn test_get_steps_empty_when_no_scenario() {
         let core = test_core_empty();
@@ -1533,8 +1571,6 @@ mod tests {
             assert!(!step.task.description.is_empty());
         }
     }
-
-    // ── save_state / clear_state error paths ────────────────────
 
     #[test]
     fn test_save_state_with_write_failure_does_not_panic() {
@@ -1568,8 +1604,6 @@ mod tests {
         core.clear_state();
     }
 
-    // ── get_resolved_variables error path ───────────────────────
-
     #[test]
     fn test_get_resolved_variables_error_returns_empty() {
         // Given
@@ -1596,8 +1630,6 @@ mod tests {
         // Then
         assert!(vars.is_empty());
     }
-
-    // ── collect_batch zero timeout ──────────────────────────────
 
     #[test]
     fn test_collect_batch_with_zero_timeout_returns_first_diff_only() {
@@ -1852,8 +1884,6 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // ── update_defined_variable ─────────────────────────────────
-
     #[test]
     fn test_update_defined_variable_success() {
         // Given
@@ -1883,49 +1913,131 @@ mod tests {
     }
 
     #[test]
-    fn test_has_unsaved_config_changes_false_when_unchanged() {
+    fn test_get_config_diff_empty_when_unchanged() {
         // Given
         let (core, _dir) = test_core_loaded_from_file();
 
-        // When & Then
-        assert!(!core.has_unsaved_config_changes());
+        // When
+        let diff = core.get_config_diff();
+
+        // Then
+        assert!(diff.modified_tasks.is_empty());
+        assert!(diff.modified_variables.is_empty());
     }
 
     #[test]
-    fn test_has_unsaved_config_changes_true_after_modification() {
+    fn test_get_config_diff_detects_added_variable() {
         // Given
         let (mut core, _dir) = test_core_loaded_from_file();
 
-        // When — modify the leaf config
+        // When
         core.update_defined_variable("added_var".to_string(), "value".to_string()).unwrap();
+        let diff = core.get_config_diff();
 
         // Then
-        assert!(core.has_unsaved_config_changes());
+        assert!(diff.modified_variables.contains(&"added_var".to_string()));
     }
 
     #[test]
-    fn test_has_unsaved_config_changes_false_without_leaf() {
+    fn test_get_config_diff_detects_modified_task() {
+        // Given
+        let (mut core, _dir) = test_core_loaded_from_file();
+        let task_name = core
+            .leaf_config
+            .as_ref()
+            .and_then(|c| c.tasks.as_ref())
+            .and_then(|t| t.remote_sudo.as_ref())
+            .and_then(|m| m.keys().next().cloned())
+            .expect("fixture must have at least one remote_sudo task");
+
+        // When
+        core.update_task(
+            task_name.clone(),
+            TaskDTO {
+                description: "new description".to_string(),
+                error_message: "err".to_string(),
+                task_type: "RemoteSudo".to_string(),
+                command: Some("echo hi".to_string()),
+                source_path: None,
+                destination_path: None,
+            },
+        )
+        .unwrap();
+        let diff = core.get_config_diff();
+
+        // Then
+        assert!(diff.modified_tasks.contains(&task_name));
+    }
+
+    #[test]
+    fn test_get_config_diff_empty_without_leaf() {
         // Given
         let core = test_core_empty();
 
-        // When & Then
-        assert!(!core.has_unsaved_config_changes());
+        // When
+        let diff = core.get_config_diff();
+
+        // Then
+        assert!(diff.modified_tasks.is_empty());
+        assert!(diff.modified_variables.is_empty());
     }
 
-    // ── discard_config_changes ─────────────────────────────────
+    #[test]
+    fn test_get_config_diff_empty_without_path() {
+        // Given
+        let (mut core, _dir) = test_core_loaded_from_file();
+        core.config_path.clear();
+
+        // When
+        let diff = core.get_config_diff();
+
+        // Then
+        assert!(diff.modified_tasks.is_empty());
+        assert!(diff.modified_variables.is_empty());
+    }
+
+    #[test]
+    fn test_get_config_diff_empty_when_file_missing() {
+        // Given
+        let (mut core, _dir) = test_core_loaded_from_file();
+        core.config_path = "/nonexistent/path/to/config.toml".to_string();
+
+        // When
+        let diff = core.get_config_diff();
+
+        // Then
+        assert!(diff.modified_tasks.is_empty());
+        assert!(diff.modified_variables.is_empty());
+    }
+
+    #[test]
+    fn test_get_config_diff_empty_when_file_unparseable() {
+        // Given
+        let (core, _dir) = test_core_loaded_from_file();
+        std::fs::write(&core.config_path, "this is not valid toml ][{{").unwrap();
+
+        // When
+        let diff = core.get_config_diff();
+
+        // Then
+        assert!(diff.modified_tasks.is_empty());
+        assert!(diff.modified_variables.is_empty());
+    }
 
     #[test]
     fn test_discard_config_changes_reloads_from_disk() {
         // Given
         let (mut core, _dir) = test_core_loaded_from_file();
         core.update_defined_variable("tmp_var".to_string(), "val".to_string()).unwrap();
-        assert!(core.has_unsaved_config_changes());
+        assert!(!core.get_config_diff().modified_variables.is_empty());
 
         // When
         core.discard_config_changes();
 
         // Then
-        assert!(!core.has_unsaved_config_changes());
+        let diff = core.get_config_diff();
+        assert!(diff.modified_tasks.is_empty());
+        assert!(diff.modified_variables.is_empty());
     }
 
     #[test]
@@ -1933,14 +2045,16 @@ mod tests {
         // Given
         let (mut core, _dir) = test_core_loaded_from_file();
         core.update_defined_variable("save_var".to_string(), "save_val".to_string()).unwrap();
-        assert!(core.has_unsaved_config_changes());
+        assert!(!core.get_config_diff().modified_variables.is_empty());
 
         // When
         let result = core.save_config();
 
         // Then
         assert!(result.is_ok());
-        assert!(!core.has_unsaved_config_changes());
+        let diff = core.get_config_diff();
+        assert!(diff.modified_tasks.is_empty());
+        assert!(diff.modified_variables.is_empty());
     }
 
     #[test]

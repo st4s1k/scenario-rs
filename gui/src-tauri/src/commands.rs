@@ -1,5 +1,5 @@
 use crate::{
-    app::{RequiredVariableDTO, ScenarioAppState, StepDTO, TaskDTO},
+    app::{ConfigDiff, RequiredVariableDTO, ScenarioAppState, StepDTO, TaskDTO},
     utils::SafeLock,
 };
 use scenario_rs::state::types::ExecutionState;
@@ -134,9 +134,9 @@ pub fn save_config(state: State<'_, Mutex<ScenarioAppState>>) -> Result<(), Stri
 }
 
 #[tauri::command(async)]
-pub fn has_unsaved_config_changes(state: State<'_, Mutex<ScenarioAppState>>) -> bool {
+pub fn get_config_diff(state: State<'_, Mutex<ScenarioAppState>>) -> ConfigDiff {
     let state = state.safe_lock();
-    state.has_unsaved_config_changes()
+    state.get_config_diff()
 }
 
 #[tauri::command(async)]

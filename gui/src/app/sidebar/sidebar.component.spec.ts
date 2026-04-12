@@ -399,7 +399,7 @@ describe('SidebarComponent', () => {
   describe('onTaskFieldInput', () => {
     it('should mark config dirty', () => {
       // When
-      component.onTaskFieldInput();
+      component.onTaskFieldInput('deploy');
 
       // Then
       expect(component.configDirty()).toBe(true);
@@ -423,7 +423,7 @@ describe('SidebarComponent', () => {
   describe('onVariableInput', () => {
     it('should mark config dirty', () => {
       // When
-      component.onVariableInput();
+      component.onVariableInput('host');
 
       // Then
       expect(component.configDirty()).toBe(true);
@@ -433,7 +433,7 @@ describe('SidebarComponent', () => {
   describe('saveConfig', () => {
     it('should invoke save_config and mark clean', async () => {
       // Given
-      component.onTaskFieldInput(); // make dirty first
+      component.onTaskFieldInput('deploy'); // make dirty first
 
       // When
       await component.saveConfig();
@@ -447,7 +447,7 @@ describe('SidebarComponent', () => {
   describe('discardChanges', () => {
     it('should invoke discard_config_changes, mark clean, and emit configDiscarded', async () => {
       // Given
-      component.onTaskFieldInput();
+      component.onTaskFieldInput('deploy');
       spyOn(component.configDiscarded, 'emit');
 
       // When

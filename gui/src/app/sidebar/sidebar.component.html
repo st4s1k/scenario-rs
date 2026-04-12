@@ -24,7 +24,7 @@
           <div class="variable">
             <label for="sidebar-var-{{variable[0]}}">{{variable[0]}}</label>
             <input id="sidebar-var-{{variable[0]}}" class="text-field" type="text" [value]="variable[1]"
-              (keydown)="onVariableInput()" (change)="onVariableChanged(variable[0], $event)" />
+              (keydown)="onVariableInput(variable[0])" (change)="onVariableChanged(variable[0], $event)" />
           </div>
           }
         </div>
@@ -48,7 +48,7 @@
                 <div class="task-item">
                   <info-block label="Command" variant="primary">
                     <input class="text-field" type="text" [value]="task[1].command"
-                      (keydown)="onTaskFieldInput()" (change)="onTaskFieldChanged(task[0], 'command', $event)" />
+                      (keydown)="onTaskFieldInput(task[0])" (change)="onTaskFieldChanged(task[0], 'command', $event)" />
                   </info-block>
                 </div>
                 }
@@ -56,11 +56,11 @@
                 <div class="task-item">
                   <info-block label="Source" variant="primary">
                     <input class="text-field" type="text" [value]="task[1].source_path"
-                      (keydown)="onTaskFieldInput()" (change)="onTaskFieldChanged(task[0], 'source_path', $event)" />
+                      (keydown)="onTaskFieldInput(task[0])" (change)="onTaskFieldChanged(task[0], 'source_path', $event)" />
                   </info-block>
                   <info-block label="Destination" variant="primary">
                     <input class="text-field" type="text" [value]="task[1].destination_path"
-                      (keydown)="onTaskFieldInput()" (change)="onTaskFieldChanged(task[0], 'destination_path', $event)" />
+                      (keydown)="onTaskFieldInput(task[0])" (change)="onTaskFieldChanged(task[0], 'destination_path', $event)" />
                   </info-block>
                 </div>
                 }

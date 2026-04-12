@@ -6,7 +6,7 @@ use crate::{
     commands::{
         clear_state, execute_scenario, get_config_path, get_dry_run, get_execution_state,
         get_required_variables, get_resolved_variables, get_steps, get_tasks,
-        discard_config_changes, has_unsaved_config_changes, is_valid_config_path, load_config,
+        discard_config_changes, get_config_diff, is_valid_config_path, load_config,
         save_config, save_state, set_dry_run, update_defined_variable, update_required_variables,
         update_task,
     },
@@ -86,7 +86,7 @@ fn main() {
             update_task,
             update_defined_variable,
             save_config,
-            has_unsaved_config_changes,
+            get_config_diff,
             discard_config_changes
         ])
         .run(tauri::generate_context!())

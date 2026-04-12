@@ -177,8 +177,8 @@ export class SidebarComponent implements OnChanges {
     this.taskChanged.emit({ name: taskName, task });
   }
 
-  onTaskFieldInput(): void {
-    this.configDirtyService.markDirty();
+  onTaskFieldInput(taskName: string): void {
+    this.configDirtyService.markTaskDirty(taskName);
   }
 
   onVariableChanged(name: string, event: Event): void {
@@ -186,8 +186,8 @@ export class SidebarComponent implements OnChanges {
     this.variableChanged.emit({ name, value });
   }
 
-  onVariableInput(): void {
-    this.configDirtyService.markDirty();
+  onVariableInput(name: string): void {
+    this.configDirtyService.markVariableDirty(name);
   }
 
   async saveConfig(): Promise<void> {

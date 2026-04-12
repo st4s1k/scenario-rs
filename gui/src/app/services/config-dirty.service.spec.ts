@@ -8,61 +8,83 @@ describe('ConfigDirtyService', () => {
 
   beforeEach(() => {
     tauri = setupTauriMock({
-      'has_unsaved_config_changes': false,
+      'get_config_diff': { modified_tasks: [], modified_variables: [] },
     });
     TestBed.configureTestingModule({});
     service = TestBed.inject(ConfigDirtyService);
   });
 
-  it('should start as not dirty', () => {
+  it('should start clean', () => {
     expect(service.isDirty()).toBe(false);
+    expect(service.modifiedTasks().size).toBe(0);
+    expect(service.modifiedVariables().size).toBe(0);
   });
 
-  describe('markDirty', () => {
-    it('should set isDirty to true', () => {
-      // When
-      service.markDirty();
+  describe('markTaskDirty', () => {
+    it('should add task name to modified set and make dirty', () => {
+      service.markTaskDirty('task_a');
 
-      // Then
       expect(service.isDirty()).toBe(true);
+      expect(service.isTaskModified('task_a')).toBe(true);
+      expect(service.isTaskModified('task_b')).toBe(false);
+    });
+
+    it('should accumulate multiple task names', () => {
+      service.markTaskDirty('task_a');
+      service.markTaskDirty('task_b');
+
+      expect(service.modifiedTasks().size).toBe(2);
+    });
+  });
+
+  describe('markVariableDirty', () => {
+    it('should add variable name to modified set and make dirty', () => {
+      service.markVariableDirty('var_a');
+
+      expect(service.isDirty()).toBe(true);
+      expect(service.isVariableModified('var_a')).toBe(true);
+      expect(service.isVariableModified('var_b')).toBe(false);
     });
   });
 
   describe('markClean', () => {
-    it('should set isDirty to false', () => {
-      // Given
-      service.markDirty();
+    it('should clear both sets', () => {
+      service.markTaskDirty('task_a');
+      service.markVariableDirty('var_a');
 
-      // When
       service.markClean();
 
-      // Then
       expect(service.isDirty()).toBe(false);
+      expect(service.modifiedTasks().size).toBe(0);
+      expect(service.modifiedVariables().size).toBe(0);
     });
   });
 
   describe('syncFromBackend', () => {
-    it('should set isDirty from backend when true', async () => {
-      // Given
-      tauri.setResponse('has_unsaved_config_changes', true);
+    it('should populate both sets from diff', async () => {
+      tauri.setResponse('get_config_diff', {
+        modified_tasks: ['task_a', 'task_b'],
+        modified_variables: ['var_a'],
+      });
 
-      // When
       await service.syncFromBackend();
 
-      // Then
-      tauri.expectInvoked('has_unsaved_config_changes');
+      tauri.expectInvoked('get_config_diff');
       expect(service.isDirty()).toBe(true);
+      expect(service.isTaskModified('task_a')).toBe(true);
+      expect(service.isTaskModified('task_b')).toBe(true);
+      expect(service.isVariableModified('var_a')).toBe(true);
     });
 
-    it('should set isDirty from backend when false', async () => {
-      // Given
-      service.markDirty();
-      tauri.setResponse('has_unsaved_config_changes', false);
+    it('should clear sets when backend reports no changes', async () => {
+      service.markTaskDirty('task_a');
+      tauri.setResponse('get_config_diff', {
+        modified_tasks: [],
+        modified_variables: [],
+      });
 
-      // When
       await service.syncFromBackend();
 
-      // Then
       expect(service.isDirty()).toBe(false);
     });
   });
