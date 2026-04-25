@@ -1,10 +1,11 @@
-import { Injectable, signal, computed } from '@angular/core';
-import { listen, UnlistenFn } from '@tauri-apps/api/event';
+import { Injectable, inject, signal, computed } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { invoke } from '@tauri-apps/api/core';
 import {
   ExecutionState,
   StateDiff,
 } from '../models/step-state.model';
+import { TauriEventBridgeService } from '../warp-core/tauri-event-bridge.service';
 
 @Injectable({ providedIn: 'root' })
 export class ExecutionStateService {
@@ -15,39 +16,40 @@ export class ExecutionStateService {
     return state?.status.kind === 'Running';
   });
 
-  private unlistenDiff?: UnlistenFn;
+  private bridgeService = inject(TauriEventBridgeService);
+  private diffSub?: Subscription;
   private hydrating = false;
   private pendingDiffs: StateDiff[][] = [];
 
   async init(): Promise<void> {
     await this.hydrate();
 
-    this.unlistenDiff = await listen<StateDiff[]>('execution-diff', (event) => {
-      const hasRunningTransition = event.payload.some(
+    this.diffSub = this.bridgeService.getStream<StateDiff[]>('execution-diff').subscribe(payload => {
+      const hasRunningTransition = payload.some(
         d => d.kind === 'ExecutionStatusChanged' && d.status.kind === 'Running'
       );
 
       if (hasRunningTransition) {
         this.executionState.set(null);
-        this.pendingDiffs.push(event.payload);
+        this.pendingDiffs.push(payload);
         this.hydrateAndFlush();
         return;
       }
 
       if (this.hydrating || !this.executionState()) {
-        this.pendingDiffs.push(event.payload);
+        this.pendingDiffs.push(payload);
         if (!this.hydrating) {
           this.hydrateAndFlush();
         }
         return;
       }
 
-      this.applyDiffs(event.payload);
+      this.applyDiffs(payload);
     });
   }
 
   async destroy(): Promise<void> {
-    this.unlistenDiff?.();
+    this.diffSub?.unsubscribe();
   }
 
   reset(): void {

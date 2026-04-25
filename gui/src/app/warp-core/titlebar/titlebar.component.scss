@@ -1,0 +1,54 @@
+@use '../../../styles.scss';
+
+:host {
+  display: fixed;
+  width: 100vw;
+
+  $size: styles.$titlebar-height;
+
+  .titlebar {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto auto;
+    height: $size;
+    background: styles.$secondary-color-lighter-5;
+    border-bottom: styles.$border-width solid styles.$secondary-color-lighter-20;
+    box-sizing: border-box;
+
+    #spacer {
+      flex: 1;
+    }
+
+    .button {
+      display: grid;
+      position: relative;
+      place-content: center;
+      width: calc($size - styles.$border-width);
+      height: calc($size - styles.$border-width);
+      background-repeat: no-repeat;
+      background-position: center;
+      transition: background-color 0.2s;
+
+      svg {
+        width: 0.875rem;
+        height: 0.875rem;
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      &#close:hover {
+        background-color: rgba(255, 0, 0, 0.8);
+
+        svg {
+          color: rgba(255, 255, 255, 0.8);
+        }
+      }
+
+      &:active {
+        background-color: rgba(255, 255, 255, 0.2);
+      }
+    }
+  }
+}

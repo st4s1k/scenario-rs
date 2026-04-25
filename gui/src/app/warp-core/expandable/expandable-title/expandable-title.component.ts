@@ -1,5 +1,5 @@
 import { Component, Input, signal, WritableSignal } from '@angular/core';
-import { ComponentColorVariant } from '../../../models/enums';
+import { ComponentColorVariant } from '../../component-types';
 import { CommonModule } from '@angular/common';
 
 @Component({

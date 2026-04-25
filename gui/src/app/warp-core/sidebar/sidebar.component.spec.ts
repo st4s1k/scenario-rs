@@ -1,49 +1,46 @@
 import { Renderer2 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { SidebarComponent } from './sidebar.component';
-import { setupTauriMock, TauriTestHarness } from '../testing/tauri-mocks';
+
+const DEFAULT_TABS = [
+  { id: 'steps', title: 'Steps' },
+  { id: 'tasks', title: 'Tasks' },
+  { id: 'variables', title: 'Variables' },
+];
 
 describe('SidebarComponent', () => {
   let component: SidebarComponent;
   let mockRenderer: jasmine.SpyObj<Renderer2>;
   let mockDocument: Document;
-  let tauri: TauriTestHarness;
 
   beforeEach(() => {
-    tauri = setupTauriMock({
-      'save_config': undefined,
-      'discard_config_changes': undefined,
-      'save_task_config': undefined,
-      'discard_task_config': undefined,
-      'save_variable_config': undefined,
-      'discard_variable_config': undefined,
-      'get_config_diff': { modified_tasks: [], modified_variables: [] },
-    });
     TestBed.configureTestingModule({});
     mockRenderer = jasmine.createSpyObj('Renderer2', ['addClass', 'removeClass']);
     mockDocument = document;
     component = TestBed.runInInjectionContext(() => new SidebarComponent(mockRenderer, mockDocument));
+    component.tabs = DEFAULT_TABS;
+    component.ngOnInit();
   });
 
-  describe('getOnFailStepKey', () => {
-    it('should return hyphenated index key', () => {
-      // Given & When & Then
-      expect(component.getOnFailStepKey(2, 3)).toBe('2-3');
-    });
-  });
+  describe('ngOnInit', () => {
+    it('should set activeTab to last tab by default', () => {
+      // Given & When (ngOnInit already called in beforeEach)
 
-  describe('onFailStepExpanded', () => {
-    it('should return false when key not in map', () => {
-      // Given & When & Then
-      expect(component.onFailStepExpanded(0, 1)).toBe(false);
+      // Then
+      expect(component.activeTab()).toBe('variables');
     });
 
-    it('should return true when key is in map as true', () => {
+    it('should not overwrite a pre-set activeTab', () => {
       // Given
-      component.onFailStepExpandedMap['1-2'] = true;
+      const freshComponent = TestBed.runInInjectionContext(() => new SidebarComponent(mockRenderer, mockDocument));
+      freshComponent.tabs = DEFAULT_TABS;
+      freshComponent.activeTab.set('steps');
 
-      // When & Then
-      expect(component.onFailStepExpanded(1, 2)).toBe(true);
+      // When
+      freshComponent.ngOnInit();
+
+      // Then
+      expect(freshComponent.activeTab()).toBe('steps');
     });
   });
 
@@ -51,7 +48,6 @@ describe('SidebarComponent', () => {
     it('should return false when collapsed', () => {
       // Given
       component.isCollapsed = true;
-      component.activeTab = 'variables';
 
       // When & Then
       expect(component.isTabActive('variables')).toBe(false);
@@ -60,7 +56,7 @@ describe('SidebarComponent', () => {
     it('should return true when not collapsed and tab matches', () => {
       // Given
       component.isCollapsed = false;
-      component.activeTab = 'variables';
+      component.activeTab.set('variables');
 
       // When & Then
       expect(component.isTabActive('variables')).toBe(true);
@@ -69,7 +65,7 @@ describe('SidebarComponent', () => {
     it('should return false when not collapsed but tab does not match', () => {
       // Given
       component.isCollapsed = false;
-      component.activeTab = 'steps';
+      component.activeTab.set('steps');
 
       // When & Then
       expect(component.isTabActive('variables')).toBe(false);
@@ -80,7 +76,7 @@ describe('SidebarComponent', () => {
     it('should collapse when toggling the active tab', () => {
       // Given
       component.isCollapsed = false;
-      component.activeTab = 'steps';
+      component.activeTab.set('steps');
       component.sidebarWidth = 15;
 
       // When
@@ -93,7 +89,7 @@ describe('SidebarComponent', () => {
     it('should expand when toggling the active tab from collapsed', () => {
       // Given
       component.isCollapsed = true;
-      component.activeTab = 'steps';
+      component.activeTab.set('steps');
 
       // When
       component.toggleTab('steps');
@@ -105,33 +101,33 @@ describe('SidebarComponent', () => {
     it('should switch tab and expand when selecting a different tab while collapsed', () => {
       // Given
       component.isCollapsed = true;
-      component.activeTab = 'steps';
+      component.activeTab.set('steps');
 
       // When
       component.toggleTab('variables');
 
       // Then
       expect(component.isCollapsed).toBe(false);
-      expect(component.activeTab).toBe('variables');
+      expect(component.activeTab()).toBe('variables');
     });
 
     it('should switch tab without collapsing when selecting a different tab while expanded', () => {
       // Given
       component.isCollapsed = false;
-      component.activeTab = 'steps';
+      component.activeTab.set('steps');
 
       // When
       component.toggleTab('variables');
 
       // Then
       expect(component.isCollapsed).toBe(false);
-      expect(component.activeTab).toBe('variables');
+      expect(component.activeTab()).toBe('variables');
     });
 
     it('should preserve previous width when collapsing', () => {
       // Given
       component.isCollapsed = false;
-      component.activeTab = 'steps';
+      component.activeTab.set('steps');
       component.sidebarWidth = 20;
 
       // When
@@ -268,7 +264,7 @@ describe('SidebarComponent', () => {
     it('should switch to tab on Alt+1', () => {
       // Given
       component.isCollapsed = false;
-      component.activeTab = 'variables';
+      component.activeTab.set('variables');
       const event = new KeyboardEvent('keydown', { altKey: true, key: '1' });
       spyOn(event, 'preventDefault');
 
@@ -307,7 +303,7 @@ describe('SidebarComponent', () => {
     it('should ignore Alt+non-number key', () => {
       // Given
       component.isCollapsed = false;
-      component.activeTab = 'variables';
+      component.activeTab.set('variables');
       const event = new KeyboardEvent('keydown', { altKey: true, key: 'a' });
       spyOn(event, 'preventDefault');
 
@@ -316,7 +312,7 @@ describe('SidebarComponent', () => {
 
       // Then
       expect(event.preventDefault).not.toHaveBeenCalled();
-      expect(component.activeTab).toBe('variables');
+      expect(component.activeTab()).toBe('variables');
     });
   });
 
@@ -329,7 +325,7 @@ describe('SidebarComponent', () => {
       (component as any).startWidth = 15;
       (component as any).startX = 500 / (component as any).htmlFontSize;
       const collapseThreshold = (component as any).collapseThreshold;
-      const clientX = (500 + 15 * (component as any).htmlFontSize - collapseThreshold * (component as any).htmlFontSize + (component as any).htmlFontSize) ;
+      const clientX = (500 + 15 * (component as any).htmlFontSize - collapseThreshold * (component as any).htmlFontSize + (component as any).htmlFontSize);
       const event = new MouseEvent('mousemove', { clientX });
       spyOn(event, 'preventDefault');
 
@@ -373,172 +369,6 @@ describe('SidebarComponent', () => {
 
       // Then
       expect(component.sidebarWidth).toBe(originalWidth);
-    });
-  });
-
-  describe('ngOnChanges', () => {
-    it('should be callable without error', () => {
-      // Given & When & Then
-      expect(() => component.ngOnChanges()).not.toThrow();
-    });
-  });
-
-  describe('onTaskFieldChanged', () => {
-    it('should emit taskChanged with updated field', () => {
-      // Given
-      component.tasks = { deploy: { task_type: 'RemoteSudo', command: 'echo hi', description: 'Deploy', error_message: '' } };
-      spyOn(component.taskChanged, 'emit');
-      const event = { target: { value: 'echo updated' } } as unknown as Event;
-
-      // When
-      component.onTaskFieldChanged('deploy', 'command', event);
-
-      // Then
-      expect(component.taskChanged.emit).toHaveBeenCalledWith({
-        name: 'deploy',
-        task: jasmine.objectContaining({ command: 'echo updated' }),
-      });
-    });
-  });
-
-  describe('onTaskFieldInput', () => {
-    it('should mark config dirty and tag the specific task', () => {
-      // When
-      component.onTaskFieldInput('deploy');
-
-      // Then
-      expect(component.configDirty()).toBe(true);
-      expect(component.isTaskModified('deploy')).toBe(true);
-      expect(component.isTaskModified('other')).toBe(false);
-    });
-  });
-
-  describe('onVariableChanged', () => {
-    it('should emit variableChanged event', () => {
-      // Given
-      spyOn(component.variableChanged, 'emit');
-      const event = { target: { value: 'new-value' } } as unknown as Event;
-
-      // When
-      component.onVariableChanged('host', event);
-
-      // Then
-      expect(component.variableChanged.emit).toHaveBeenCalledWith({ name: 'host', value: 'new-value' });
-    });
-  });
-
-  describe('onVariableInput', () => {
-    it('should mark config dirty and tag the specific variable', () => {
-      // When
-      component.onVariableInput('host');
-
-      // Then
-      expect(component.configDirty()).toBe(true);
-      expect(component.isVariableModified('host')).toBe(true);
-      expect(component.isVariableModified('other')).toBe(false);
-    });
-  });
-
-  describe('saveConfig', () => {
-    it('should invoke save_config and mark clean', async () => {
-      // Given
-      component.onTaskFieldInput('deploy'); // make dirty first
-
-      // When
-      await component.saveConfig();
-
-      // Then
-      tauri.expectInvoked('save_config');
-      expect(component.configDirty()).toBe(false);
-    });
-  });
-
-  describe('discardChanges', () => {
-    it('should invoke discard_config_changes, mark clean, and emit configDiscarded', async () => {
-      // Given
-      component.onTaskFieldInput('deploy');
-      spyOn(component.configDiscarded, 'emit');
-
-      // When
-      await component.discardChanges();
-
-      // Then
-      tauri.expectInvoked('discard_config_changes');
-      expect(component.configDirty()).toBe(false);
-      expect(component.configDiscarded.emit).toHaveBeenCalled();
-    });
-  });
-
-  describe('saveTask', () => {
-    it('should stopPropagation, invoke save_task_config, and sync diff', async () => {
-      // Given
-      component.onTaskFieldInput('deploy');
-      tauri.setResponse('get_config_diff', { modified_tasks: [], modified_variables: [] });
-      const event = jasmine.createSpyObj<Event>('Event', ['stopPropagation']);
-
-      // When
-      await component.saveTask('deploy', event);
-
-      // Then
-      expect(event.stopPropagation).toHaveBeenCalled();
-      tauri.expectInvoked('save_task_config', { taskName: 'deploy' });
-      tauri.expectInvoked('get_config_diff');
-      expect(component.isTaskModified('deploy')).toBe(false);
-    });
-  });
-
-  describe('discardTask', () => {
-    it('should stopPropagation, invoke discard_task_config, sync diff, and emit configDiscarded', async () => {
-      // Given
-      component.onTaskFieldInput('deploy');
-      tauri.setResponse('get_config_diff', { modified_tasks: [], modified_variables: [] });
-      spyOn(component.configDiscarded, 'emit');
-      const event = jasmine.createSpyObj<Event>('Event', ['stopPropagation']);
-
-      // When
-      await component.discardTask('deploy', event);
-
-      // Then
-      expect(event.stopPropagation).toHaveBeenCalled();
-      tauri.expectInvoked('discard_task_config', { taskName: 'deploy' });
-      expect(component.isTaskModified('deploy')).toBe(false);
-      expect(component.configDiscarded.emit).toHaveBeenCalled();
-    });
-  });
-
-  describe('saveVariable', () => {
-    it('should stopPropagation, invoke save_variable_config, and sync diff', async () => {
-      // Given
-      component.onVariableInput('host');
-      tauri.setResponse('get_config_diff', { modified_tasks: [], modified_variables: [] });
-      const event = jasmine.createSpyObj<Event>('Event', ['stopPropagation']);
-
-      // When
-      await component.saveVariable('host', event);
-
-      // Then
-      expect(event.stopPropagation).toHaveBeenCalled();
-      tauri.expectInvoked('save_variable_config', { name: 'host' });
-      expect(component.isVariableModified('host')).toBe(false);
-    });
-  });
-
-  describe('discardVariable', () => {
-    it('should stopPropagation, invoke discard_variable_config, sync diff, and emit configDiscarded', async () => {
-      // Given
-      component.onVariableInput('host');
-      tauri.setResponse('get_config_diff', { modified_tasks: [], modified_variables: [] });
-      spyOn(component.configDiscarded, 'emit');
-      const event = jasmine.createSpyObj<Event>('Event', ['stopPropagation']);
-
-      // When
-      await component.discardVariable('host', event);
-
-      // Then
-      expect(event.stopPropagation).toHaveBeenCalled();
-      tauri.expectInvoked('discard_variable_config', { name: 'host' });
-      expect(component.isVariableModified('host')).toBe(false);
-      expect(component.configDiscarded.emit).toHaveBeenCalled();
     });
   });
 });

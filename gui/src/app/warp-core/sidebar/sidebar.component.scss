@@ -1,0 +1,105 @@
+@use '../../../styles.scss';
+
+:host {
+  height: 100%;
+  position: sticky;
+  top: 0;
+}
+
+.sidebar {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-rows: 1fr;
+  background-color: styles.$secondary-color-lighter-2;
+  box-sizing: border-box;
+  border-left: styles.$border-width solid styles.$secondary-color-lighter-20;
+  max-height: calc(100vh - #{styles.$titlebar-height});
+
+  &.resizing {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  $collapsed-width: 1.5rem;
+
+  &.collapsed {
+    width: $collapsed-width;
+    min-width: $collapsed-width;
+    border: none;
+
+    .resize-handle {
+      display: none;
+    }
+  }
+
+  .resize-handle {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    bottom: 0;
+    width: calc(4 * styles.$border-width);
+    cursor: ew-resize;
+    z-index: 10;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: styles.$secondary-color-lighter-20;
+    }
+  }
+
+  .sidebar-inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
+
+    .action-bar {
+      grid-column: 1;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .content-area {
+      display: grid;
+      grid-row: 2;
+      opacity: 1;
+      visibility: visible;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .tabs {
+      display: grid;
+      grid-row: 1 / -1;
+      grid-column: 2;
+      grid-auto-rows: min-content;
+      width: $collapsed-width;
+      background-color: styles.$secondary-color-lighter-5;
+      box-sizing: border-box;
+      border-left: styles.$border-width solid styles.$secondary-color-lighter-20;
+
+      .tab {
+        display: grid;
+        writing-mode: vertical-lr;
+        align-items: center;
+        justify-items: center;
+        width: 100%;
+        padding: styles.$gap-medium 0;
+        box-sizing: border-box;
+        border-bottom: styles.$border-width solid styles.$secondary-color-lighter-20;
+
+        &:focus,
+        &:hover {
+          .tab-title {
+            color: styles.$primary-color-lighter-40;
+          }
+        }
+
+        &.active {
+          background-color: styles.$secondary-color-lighter-10;
+        }
+      }
+    }
+  }
+}

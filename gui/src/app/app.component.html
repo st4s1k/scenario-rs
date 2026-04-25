@@ -1,5 +1,38 @@
 <div>
-  <titlebar></titlebar>
+  <titlebar>
+    <div class="titlebar-controls">
+      @if (showClearConfirm()) {
+      <confirm-dialog
+        title="Clear State"
+        message="Are you sure you want to clear the application state?"
+        (result)="onClearConfirmed($event)">
+      </confirm-dialog>
+      }
+      <div class="titlebar-btn" id="clear" (click)="clearState()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="20 15 40 52">
+          <path fill="currentColor" d="M52 33v29H28V33H52 M57 28H23v39h34V28L57 28z" />
+          <path fill="currentColor" d="M45 20v-3H35v3H20v5h40v-5H45z" />
+        </svg>
+        <tooltip text="Clear application state" arrow="left"></tooltip>
+      </div>
+
+      <div class="dry-run-toggle" (click)="toggleDryRun()">
+        <div class="toggle-track" [class.active]="dryRun()">
+          <div class="toggle-thumb"></div>
+        </div>
+        <span class="toggle-label">Dry Run</span>
+        <tooltip [text]="dryRun() ? 'Using simulated SSH (no real connections)' : 'Using real SSH connections'" arrow="left"></tooltip>
+      </div>
+
+      <div class="titlebar-btn" id="save" (click)="saveState()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+          <path fill="currentColor"
+            d="M5 5v22h22V9.594l-.281-.313l-4-4L22.406 5zm2 2h3v6h12V7.437l3 3V25h-2v-9H9v9H7zm5 0h4v2h2V7h2v4h-8zm-1 11h10v7H11z" />
+        </svg>
+        <tooltip text="Save application state" arrow="top"></tooltip>
+      </div>
+    </div>
+  </titlebar>
 </div>
 
 <div class="app-container unselectable" #container>
@@ -53,8 +86,63 @@
           Execution progress:
         </expandable-title>
         <div class="section">
-          <execution-progress [steps]="steps" [stepExecStates]="stepExecStates()" [isExecuting]="isExecuting()">
-          </execution-progress>
+          <progress-stepper [steps]="progressSteps()" [isExecuting]="isExecuting()" subStepsLabel="On-Fail Steps">
+            <ng-template #stepBody let-step>
+              @if (scenarioStepData(step); as stepData) {
+              <div class="scenario-progress-body">
+                @switch (stepData.task.task_type) {
+                @case ('RemoteSudo') {
+                <div class="scenario-progress-item">
+                  <info-block label="Command" variant="primary">
+                    @let command = stepData.progress && stepData.progress.type === 'RemoteSudo'
+                    ? stepData.progress.command
+                    : stepData.task.command;
+                    <input class="text-field" type="text" [value]="command" readonly />
+                  </info-block>
+                </div>
+
+                @if (stepData.output) {
+                <div class="scenario-progress-item">
+                  <info-block class="output" label="Output" variant="secondary">
+                    <textarea wrap="off" spellcheck="false" [value]="stepData.output" readonly>
+                    </textarea>
+                  </info-block>
+                </div>
+                }
+
+                @if (step.status === 'Running') {
+                <div class="executing-indicator">
+                  <div class="dot-pulse"></div>
+                </div>
+                }
+                }
+                @case ('SftpCopy') {
+                @let progress = stepData.progress && stepData.progress.type === 'SftpCopy' ? stepData.progress : null;
+                @let source = progress ? progress.source : stepData.task.source_path;
+                @let destination = progress ? progress.destination : stepData.task.destination_path;
+                @let current = progress ? progress.bytes_transferred : 0;
+                @let total = progress ? progress.bytes_total : 0;
+                <div class="scenario-progress-item">
+                  <info-block label="Source" variant="primary">
+                    <input class="text-field" type="text" [value]="source" readonly />
+                  </info-block>
+
+                  <info-block label="Destination" variant="primary">
+                    <input class="text-field" type="text" [value]="destination" readonly />
+                  </info-block>
+
+                  <div class="progress-bar" role="progressbar" aria-label="File transfer progress"
+                    [attr.aria-valuemin]="0" [attr.aria-valuemax]="total" [attr.aria-valuenow]="current"
+                    [attr.data-content]="transferLabel(progress)"
+                    [style.--progress-percentage]="transferProgress(progress) + '%'">
+                  </div>
+                </div>
+                }
+                }
+              </div>
+              }
+            </ng-template>
+          </progress-stepper>
           @if (executionError()) {
           <div class="execution-error">
             <span class="execution-error-label">Execution failed:</span>
@@ -79,7 +167,7 @@
                 </svg>
                 <tooltip text="Copy log" arrow="left"></tooltip>
               </div>
-              <div><!-- Empty div for spacing: auto 1fr auto --></div>
+              <div><!-- spacing --></div>
               <div class="log-button" (click)="clearLog()">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="20 15 40 52">
                   <path fill="currentColor" d="M52 33v29H28V33H52 M57 28H23v39h34V28L57 28z" />
@@ -97,7 +185,201 @@
       </expandable>
     </div>
   </div>
-  <sidebar [resolvedVariables]="resolvedVariables" [tasks]="tasks" [steps]="steps"
-    (taskChanged)="onTaskChanged($event)" (variableChanged)="onVariableChanged($event)"
-    (configDiscarded)="onConfigDiscarded()"></sidebar>
+
+  <sidebar [tabs]="sidebarTabs" #sidebarRef>
+    <div sidebar-actions>
+      <div class="sidebar-icon-btn" [class.disabled]="!configDirty()" (click)="configDirty() && discardChanges()">
+        <i class="codicon codicon-discard"></i>
+        <tooltip text="Discard changes" arrow="top"></tooltip>
+      </div>
+      <div class="sidebar-icon-btn" [class.disabled]="!configDirty()" (click)="configDirty() && saveConfig()">
+        <i class="codicon codicon-check"></i>
+        <tooltip text="Save config to file" arrow="top"></tooltip>
+      </div>
+    </div>
+
+    <div sidebar-content>
+      @switch (sidebarRef.activeTab()) {
+      @case ('variables') {
+      <div class="tab-content">
+        <div class="sidebar-variables">
+          @for (variable of Object.entries(resolvedVariables); track variable[0]) {
+          <div class="sidebar-variable">
+            <div class="variable-label-row">
+              <label for="sidebar-var-{{variable[0]}}">
+                @if (isVariableModified(variable[0])) {<span class="modified-marker">*</span>}{{variable[0]}}
+              </label>
+              @if (isVariableModified(variable[0])) {
+              <div class="item-actions">
+                <div class="sidebar-icon-btn" (click)="discardVariable(variable[0], $event)">
+                  <i class="codicon codicon-discard"></i>
+                  <tooltip text="Discard changes" arrow="top"></tooltip>
+                </div>
+                <div class="sidebar-icon-btn" (click)="saveVariable(variable[0], $event)">
+                  <i class="codicon codicon-check"></i>
+                  <tooltip text="Save to file" arrow="top"></tooltip>
+                </div>
+              </div>
+              }
+            </div>
+            <input id="sidebar-var-{{variable[0]}}" class="text-field" type="text" [value]="variable[1]"
+              (keydown)="onVariableInput(variable[0])" (change)="onVariableChanged({ name: variable[0], value: $any($event.target).value })" />
+          </div>
+          }
+        </div>
+      </div>
+      }
+      @case ('tasks') {
+      <div class="tab-content">
+        <div class="sidebar-tasks">
+          @for (task of Object.entries(tasks); track $index) {
+          @let previousExpanded = $index > 0 && !taskExpandedMap[Object.entries(tasks)[$index - 1][0]];
+          @let separatorVariant = previousExpanded ? 'line' : 'gap';
+          <expandable [(expanded)]="taskExpandedMap[task[0]]" [showSeparator]="$index > 0"
+            [separatorVariant]="separatorVariant">
+            <expandable-title>
+              @if (isTaskModified(task[0])) {<div class="modified-marker">*</div>}
+              <div>{{task[1].description}}</div>
+              @if (isTaskModified(task[0])) {
+              <div class="item-actions">
+                <div class="sidebar-icon-btn" (click)="discardTask(task[0], $event)">
+                  <i class="codicon codicon-discard"></i>
+                  <tooltip text="Discard changes" arrow="top"></tooltip>
+                </div>
+                <div class="sidebar-icon-btn" (click)="saveTask(task[0], $event)">
+                  <i class="codicon codicon-check"></i>
+                  <tooltip text="Save to file" arrow="top"></tooltip>
+                </div>
+              </div>
+              }
+            </expandable-title>
+            <div class="sidebar-task">
+              <info-block [label]="task[1].task_type" variant="secondary">
+                @switch (task[1].task_type) {
+                @case ('RemoteSudo') {
+                <div class="sidebar-task-item">
+                  <info-block label="Command" variant="primary">
+                    <input class="text-field" type="text" [value]="task[1].command"
+                      (keydown)="onTaskFieldInput(task[0])" (change)="onTaskFieldChanged(task[0], 'command', $event)" />
+                  </info-block>
+                </div>
+                }
+                @case ('SftpCopy') {
+                <div class="sidebar-task-item">
+                  <info-block label="Source" variant="primary">
+                    <input class="text-field" type="text" [value]="task[1].source_path"
+                      (keydown)="onTaskFieldInput(task[0])" (change)="onTaskFieldChanged(task[0], 'source_path', $event)" />
+                  </info-block>
+                  <info-block label="Destination" variant="primary">
+                    <input class="text-field" type="text" [value]="task[1].destination_path"
+                      (keydown)="onTaskFieldInput(task[0])" (change)="onTaskFieldChanged(task[0], 'destination_path', $event)" />
+                  </info-block>
+                </div>
+                }
+                @default {
+                <div class="sidebar-task-item">
+                  <span>No specific details for this task type</span>
+                </div>
+                }
+                }
+              </info-block>
+            </div>
+          </expandable>
+          }
+        </div>
+      </div>
+      }
+      @case ('steps') {
+      <div class="tab-content">
+        <div class="sidebar-tasks">
+          @if (steps && steps.length > 0) {
+          @for (step of steps; track step.index) {
+          @let previousExpanded = step.index > 0 && !stepExpandedMap[step.index - 1];
+          @let separatorVariant = previousExpanded ? 'line' : 'gap';
+          <expandable [(expanded)]="stepExpandedMap[step.index]" [showSeparator]="step.index > 0"
+            [separatorVariant]="separatorVariant">
+            <expandable-title>
+              <div>[{{step.index + 1}}]</div>
+              <div>{{step.task.description}}</div>
+            </expandable-title>
+            <div class="sidebar-task">
+              <info-block [label]="step.task.task_type" variant="secondary">
+                @switch (step.task.task_type) {
+                @case ('RemoteSudo') {
+                <div class="sidebar-task-item">
+                  <info-block label="Command" variant="primary">
+                    <input class="text-field" type="text" [value]="step.task.command" readonly />
+                  </info-block>
+                </div>
+                }
+                @case ('SftpCopy') {
+                <div class="sidebar-task-item">
+                  <info-block label="Source" variant="primary">
+                    <input class="text-field" type="text" [value]="step.task.source_path" readonly />
+                  </info-block>
+                  <info-block label="Destination" variant="primary">
+                    <input class="text-field" type="text" [value]="step.task.destination_path" readonly />
+                  </info-block>
+                </div>
+                }
+                }
+              </info-block>
+
+              @if (step.on_fail_steps && step.on_fail_steps.length > 0) {
+              <div class="sidebar-task-item on-fail">
+                <expandable [nested]="true" [(expanded)]="onFailExpandedMap[step.index]">
+                  <expandable-title>
+                    <div>On-Fail Steps</div>
+                    <div>[{{step.on_fail_steps.length}}]</div>
+                  </expandable-title>
+                  <div class="sidebar-tasks">
+                    @for (onFailStep of step.on_fail_steps; track onFailStep.index) {
+                    @let onFailStepKey = getOnFailStepKey(step.index, onFailStep.index);
+                    @let prevOnFailExpanded = onFailStepExpanded(step.index, onFailStep.index - 1);
+                    @let showSeparator = onFailStep.index > 0 && !prevOnFailExpanded;
+                    <expandable [(expanded)]="onFailStepExpandedMap[onFailStepKey]" [showSeparator]="showSeparator"
+                      separatorVariant="gap" separatorSize="small">
+                      <expandable-title>
+                        <div>[{{onFailStep.index + 1}}]</div>
+                        <div>{{onFailStep.task.description}}</div>
+                      </expandable-title>
+                      <div class="sidebar-task">
+                        <info-block [label]="onFailStep.task.task_type" variant="secondary">
+                          @switch (onFailStep.task.task_type) {
+                          @case ('RemoteSudo') {
+                          <div class="sidebar-task-item">
+                            <info-block label="Command" variant="primary">
+                              <input class="text-field" type="text" [value]="onFailStep.task.command" readonly />
+                            </info-block>
+                          </div>
+                          }
+                          @case ('SftpCopy') {
+                          <div class="sidebar-task-item">
+                            <info-block label="Source" variant="primary">
+                              <input class="text-field" type="text" [value]="onFailStep.task.source_path" readonly />
+                            </info-block>
+                            <info-block label="Destination" variant="primary">
+                              <input class="text-field" type="text" [value]="onFailStep.task.destination_path" readonly />
+                            </info-block>
+                          </div>
+                          }
+                          }
+                        </info-block>
+                      </div>
+                    </expandable>
+                    }
+                  </div>
+                </expandable>
+              </div>
+              }
+            </div>
+          </expandable>
+          }
+          }
+        </div>
+      </div>
+      }
+      }
+    </div>
+  </sidebar>
 </div>

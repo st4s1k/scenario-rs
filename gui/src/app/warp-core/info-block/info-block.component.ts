@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { ComponentColorVariant } from '../../models/enums';
+import { ComponentColorVariant } from '../component-types';
 
 @Component({
   selector: 'info-block',

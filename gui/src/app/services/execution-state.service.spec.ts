@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { ExecutionStateService } from './execution-state.service';
+import { TauriEventBridgeService } from '../warp-core/tauri-event-bridge.service';
 import { setupTauriMock, TauriTestHarness } from '../testing/tauri-mocks';
+import { Subject, EMPTY } from 'rxjs';
 import {
   ExecutionState,
   StepExecState,
@@ -45,9 +47,23 @@ function makeState(overrides: Partial<ExecutionState> = {}): ExecutionState {
 
 describe('ExecutionStateService', () => {
   let service: ExecutionStateService;
+  let executionDiffSubject: Subject<StateDiff[]>;
+  let bridgeServiceMock: any;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    executionDiffSubject = new Subject<StateDiff[]>();
+    bridgeServiceMock = {
+      getStream: (id: string) => {
+        if (id === 'execution-diff') return executionDiffSubject.asObservable();
+        return EMPTY;
+      },
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: TauriEventBridgeService, useValue: bridgeServiceMock },
+      ],
+    });
     service = TestBed.inject(ExecutionStateService);
   });
 
@@ -397,25 +413,22 @@ describe('ExecutionStateService', () => {
       expect(service.executionState()).toEqual(state);
     });
 
-    it('should register listener for execution-diff events', async () => {
+    it('should subscribe to execution-diff stream from bridge service', async () => {
       // Given & When
       await service.init();
 
       // Then
-      tauri.expectInvoked('plugin:event|listen');
-      const calls = tauri.invokeSpy.calls.allArgs();
-      const listenCall = calls.find((a: any[]) => a[0] === 'plugin:event|listen');
-      expect(listenCall![1].event).toBe('execution-diff');
+      expect((service as any).diffSub).toBeTruthy();
     });
 
-    it('should apply diffs received via event listener', async () => {
+    it('should apply diffs received via bridge service', async () => {
       // Given
       const state = makeState({ steps: [makeStep()] });
       tauri.setResponse('get_execution_state', state);
       await service.init();
 
       // When
-      tauri.emitEvent('execution-diff', [{ kind: 'StepStatusChanged', step_index: 0, status: 'Running' }]);
+      executionDiffSubject.next([{ kind: 'StepStatusChanged', step_index: 0, status: 'Running' }] as StateDiff[]);
 
       // Then
       expect(service.executionState()!.steps[0].status).toBe('Running');
@@ -432,7 +445,7 @@ describe('ExecutionStateService', () => {
       await service.init();
 
       // When
-      tauri.emitEvent('execution-diff', [{ kind: 'StepStatusChanged', step_index: 0, status: 'Running' }]);
+      executionDiffSubject.next([{ kind: 'StepStatusChanged', step_index: 0, status: 'Running' }] as StateDiff[]);
 
       await new Promise(resolve => setTimeout(resolve, 10));
 
@@ -442,18 +455,17 @@ describe('ExecutionStateService', () => {
   });
 
   describe('destroy', () => {
-    it('should call unlisten function', async () => {
+    it('should unsubscribe diff subscription', async () => {
       // Given
-      const tauri = setupTauriMock({
-        'get_execution_state': null,
-      });
+      setupTauriMock({ 'get_execution_state': null });
       await service.init();
+      const unsubSpy = spyOn((service as any).diffSub, 'unsubscribe').and.callThrough();
 
       // When
       await service.destroy();
 
       // Then
-      tauri.expectInvoked('plugin:event|unlisten');
+      expect(unsubSpy).toHaveBeenCalled();
     });
 
     it('should not throw when called without init', async () => {
@@ -503,9 +515,9 @@ describe('ExecutionStateService', () => {
       await service.init();
 
       // When
-      tauri.emitEvent('execution-diff', [
+      executionDiffSubject.next([
         { kind: 'ExecutionStatusChanged', status: { kind: 'Running' } },
-      ]);
+      ] as StateDiff[]);
 
       await new Promise(resolve => setTimeout(resolve, 10));
 

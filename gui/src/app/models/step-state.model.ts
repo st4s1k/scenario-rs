@@ -1,7 +1,5 @@
-// --- Execution State Machine Types ---
-
 export type ExecutionStatus =
-  { kind: 'Idle' }
+  | { kind: 'Idle' }
   | { kind: 'Running' }
   | { kind: 'Completed' }
   | { kind: 'Failed'; error: string };
@@ -35,8 +33,6 @@ export interface ExecutionState {
   status: ExecutionStatus;
   steps: StepExecState[];
 }
-
-// --- State Diffs (streamed from backend) ---
 
 export type StateDiff =
   | { kind: 'ExecutionStatusChanged'; status: ExecutionStatus }

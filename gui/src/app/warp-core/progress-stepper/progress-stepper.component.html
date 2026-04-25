@@ -1,0 +1,57 @@
+<div class="progress-stepper">
+  @if (displayStates.length === 0) {
+  <div class="empty-state">{{ emptyMessage }}</div>
+  } @else {
+  @for (step of displayStates; track step.index) {
+
+  @let ui = uiStates[$index];
+
+  @let previousExpanded = $index > 0 && uiStates[$index - 1]?.expanded;
+  @let separatorVariant = previousExpanded ? 'gap' : 'line';
+  <expandable [(expanded)]="ui.expanded" [showSeparator]="$index > 0"
+    [separatorVariant]="separatorVariant">
+    <expandable-title [colorIndicator]="ui.statusColor">
+      <div>[{{$index + 1}}]</div>
+      <div>{{step.title}}</div>
+    </expandable-title>
+    <div class="step-body">
+      @if (bodyTemplate) {
+      <ng-container *ngTemplateOutlet="bodyTemplate; context: { $implicit: step, index: $index }">
+      </ng-container>
+      }
+
+      @if (step.status === 'Failed' && step.errors.length > 0) {
+      <expandable variant="red" [(expanded)]="ui.errorsExpanded">
+        <expandable-title>
+          Errors:
+        </expandable-title>
+        <div class="step-errors">
+          @for (error of step.errors; track $index) {
+          <info-block class="error" label="Error" variant="red">
+            <textarea spellcheck="false" [value]="error" readonly>
+          </textarea>
+          </info-block>
+          }
+        </div>
+      </expandable>
+      }
+
+      @if (step.status === 'Failed' && hasSubSteps(step)) {
+      <expandable [nested]="true" [(expanded)]="ui.subStepsExpanded">
+        <expandable-title [colorIndicator]="ui.subStepsStatusColor">
+          {{ subStepsLabel }}:
+        </expandable-title>
+        <progress-stepper
+          [steps]="step.subSteps!"
+          [isExecuting]="isExecuting"
+          [bodyTemplate]="bodyTemplate"
+          [emptyMessage]="emptyMessage"
+          [subStepsLabel]="subStepsLabel">
+        </progress-stepper>
+      </expandable>
+      }
+    </div>
+  </expandable>
+  }
+  }
+</div>

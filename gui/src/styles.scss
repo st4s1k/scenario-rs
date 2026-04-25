@@ -209,5 +209,141 @@ html {
         border: $border-width solid $primary-color;
       }
     }
+
+    .scenario-progress-body {
+      display: grid;
+      gap: $gap-medium;
+
+      .scenario-progress-item {
+        display: grid;
+        gap: $gap-medium;
+
+        .progress-bar {
+          $progress-track-color: $secondary-color;
+          $progress-fill-color: $primary-color;
+
+          position: relative;
+          overflow: hidden;
+          height: 1.25rem;
+
+          &::before,
+          &::after {
+            content: attr(data-content);
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            font-size: $font-size-small;
+            font-weight: 700;
+          }
+
+          &::before {
+            z-index: 1;
+            color: $progress-fill-color;
+            background: $progress-track-color;
+            border: $border-width solid $progress-fill-color;
+            box-sizing: border-box;
+          }
+
+          &::after {
+            z-index: 2;
+            color: $progress-track-color;
+            background: $progress-fill-color;
+            outline: calc(2 * $border-width) solid $progress-track-color;
+            outline-offset: calc(-3 * $border-width);
+            clip-path: inset(0 calc(100% - var(--progress-percentage, 0%)) 0 0);
+            transition: clip-path 0.2s ease;
+          }
+        }
+
+        info-block {
+          background-color: $secondary-color-lighter-5;
+
+          .text-field {
+            height: auto;
+            border: none;
+
+            &:focus {
+              outline: none;
+            }
+          }
+
+          textarea {
+            border: none;
+            padding: $gap-small;
+            resize: none;
+            overflow: hidden;
+
+            @supports (field-sizing: content) {
+              field-sizing: content;
+            }
+
+            @supports not (field-sizing: content) {
+              min-height: 2rem;
+              overflow-y: auto;
+            }
+          }
+
+          &.output textarea {
+            max-height: 12.5rem;
+          }
+        }
+      }
+    }
+
+    .executing-indicator {
+      display: grid;
+      justify-content: center;
+      margin-top: 0.5rem;
+
+      .dot-pulse {
+        position: relative;
+        display: inline-block;
+        width: 0.5rem;
+        height: 0.5rem;
+        margin-right: 0.25rem;
+        background-color: $primary-color;
+        animation: pulse 1.5s infinite linear;
+
+        &::before,
+        &::after {
+          content: '';
+          display: inline-block;
+          position: absolute;
+          top: 0;
+          width: 0.5rem;
+          height: 0.5rem;
+          margin-right: 0.25rem;
+          background-color: $primary-color;
+          opacity: 0.7;
+        }
+
+        &::before {
+          left: -0.75rem;
+          animation: pulse 1.5s infinite linear -0.5s;
+        }
+
+        &::after {
+          left: 0.75rem;
+          animation: pulse 1.5s infinite linear -1s;
+        }
+      }
+    }
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 0.2;
+  }
+
+  100% {
+    opacity: 0.7;
   }
 }

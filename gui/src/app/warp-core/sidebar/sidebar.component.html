@@ -1,0 +1,23 @@
+<div class="sidebar unselectable" [style.width.rem]="sidebarWidth" [class.resizing]="isResizing"
+  [class.collapsed]="isCollapsed">
+  <div class="resize-handle" (mousedown)="startResize($event)"></div>
+
+  <div class="sidebar-inner">
+    @if (!isCollapsed) {
+    <div class="action-bar">
+      <ng-content select="[sidebar-actions]"></ng-content>
+    </div>
+    }
+    <div class="content-area">
+      <ng-content select="[sidebar-content]"></ng-content>
+    </div>
+
+    <div class="tabs">
+      @for (tab of tabs; track tab.id) {
+      <div class="tab" [class.active]="isTabActive(tab.id)" (click)="toggleTab(tab.id)">
+        <div class="tab-title">{{tab.title}}</div>
+      </div>
+      }
+    </div>
+  </div>
+</div>

@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, HostBinding } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ComponentSize } from '../../models/enums';
+import { ComponentSize } from '../component-types';
 
 export type ExpandableSeparatorVariant = 'line' | 'gap';
 
