@@ -8,3 +8,5 @@ tarpaulin-report.*
 **/coverage
 **/*dump
 **/*profraw
+/AGENTS.md
+/CLAUDE.md
